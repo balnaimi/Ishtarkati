@@ -78,7 +78,14 @@
     "required": "مطلوب",
     "invalidNumber": "رقم غير صالح"
   },
+  "due": {
+    "captionToday": "مستحق اليوم",
+    "captionTomorrow": "مستحق غدًا",
+    "captionDays": "بعد {{count}} يومًا",
+    "captionOverdue": "متأخر {{count}} يومًا"
+  },
   "detail": {
+    "dueProgressTitle": "تقدّم الفترة حتى الاستحقاق",
     "payments": "سجل الدفعات",
     "addPayment": "تسجيل دفعة",
     "renewDomain": "تسجيل تجديد النطاق",

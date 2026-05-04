@@ -7,6 +7,7 @@ import {
   type SubscriptionListRow,
 } from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
+import { DueProgressBar } from "../components/DueProgressBar";
 
 export function HomePage() {
   const { t } = useTranslation();
@@ -150,6 +151,23 @@ export function HomePage() {
                     {s.is_domain ? (
                       <span className="me-2 mt-1 inline-block sk-chip">{t("list.domain")}</span>
                     ) : null}
+                    {s.next_due_date ? (
+                      <div className="mt-2">
+                        <DueProgressBar
+                          sub={{
+                            next_due_date: s.next_due_date,
+                            start_date: s.start_date,
+                            billing_model: s.billing_model,
+                            interval_unit: s.interval_unit,
+                            interval_months: s.interval_months,
+                          }}
+                          size="sm"
+                          showCaption={false}
+                        />
+                      </div>
+                    ) : (
+                      <span className="mt-1 block text-xs text-cream-500">—</span>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
                   <td className="px-3 py-3 text-cream-800">{billingLabel(s.billing_model)}</td>

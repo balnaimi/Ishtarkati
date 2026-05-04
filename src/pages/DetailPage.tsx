@@ -17,6 +17,7 @@ import {
   parseDateInput,
 } from "../lib/schedule";
 import type { IntervalUnit } from "../types";
+import { DueProgressBar } from "../components/DueProgressBar";
 
 export function DetailPage() {
   const { t } = useTranslation();
@@ -149,6 +150,22 @@ export function DetailPage() {
           </button>
         </div>
       </div>
+
+      {sub.next_due_date ? (
+        <div className="sk-card space-y-3">
+          <h3 className="font-semibold text-cream-900">{t("detail.dueProgressTitle")}</h3>
+          <DueProgressBar
+            sub={{
+              next_due_date: sub.next_due_date,
+              start_date: sub.start_date,
+              billing_model: sub.billing_model,
+              interval_unit: sub.interval_unit,
+              interval_months: sub.interval_months,
+            }}
+            size="md"
+          />
+        </div>
+      ) : null}
 
       {sub.notes ? (
         <p className="sk-card text-cream-800 leading-relaxed">{sub.notes}</p>
