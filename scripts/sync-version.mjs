@@ -13,3 +13,11 @@ const tauriPath = join(root, "src-tauri", "tauri.conf.json");
 const tauri = JSON.parse(readFileSync(tauriPath, "utf8"));
 tauri.version = pkg.version;
 writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + "\n");
+
+const cargoPath = join(root, "src-tauri", "Cargo.toml");
+let cargoToml = readFileSync(cargoPath, "utf8");
+cargoToml = cargoToml.replace(
+  /^version = "[^"]+"/m,
+  `version = "${pkg.version}"`,
+);
+writeFileSync(cargoPath, cargoToml);

@@ -1,6 +1,6 @@
 [package]
 name = "ishtarkati"
-version = "0.1.0"
+version = "0.1.7"
 description = "Local subscription and renewal tracker"
 authors = ["mrn"]
 edition = "2021"
