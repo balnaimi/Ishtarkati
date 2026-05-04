@@ -4,6 +4,7 @@ import {
   startOfDay,
   subMonths,
 } from "date-fns";
+import type { TFunction } from "i18next";
 import type { IntervalUnit } from "../types";
 import { intervalToMonths, parseDateInput } from "./schedule";
 
@@ -122,4 +123,28 @@ export const DUE_TONE_TRACK: Record<
 export function dueProgressWidthPercent(r: DueProgressResult): number {
   if (r.isOverdue) return 100;
   return Math.min(100, Math.max(0, r.ratio * 100));
+}
+
+/** Short Arabic line for list cells / tooltips (same keys as DueProgressBar). */
+export function relativeDueCaption(
+  t: TFunction<"translation">,
+  p: DueProgressResult,
+): string {
+  if (p.isOverdue) {
+    return t("due.captionOverdue", { count: Math.abs(p.daysUntilDue) });
+  }
+  if (p.daysUntilDue <= 0) return t("due.captionToday");
+  if (p.daysUntilDue === 1) return t("due.captionTomorrow");
+  return t("due.captionDays", { count: p.daysUntilDue });
+}
+
+export type DueTone = ReturnType<typeof dueProgressTone>;
+
+/** Subtle table row background by urgency (empty if safe or unknown). */
+export function dueListRowHighlightClass(tone: DueTone): string {
+  if (tone === "safe") return "";
+  if (tone === "warn") return "bg-amber-50/50";
+  if (tone === "urgent") return "bg-orange-50/45";
+  if (tone === "due") return "bg-red-50/55";
+  return "bg-red-100/50";
 }

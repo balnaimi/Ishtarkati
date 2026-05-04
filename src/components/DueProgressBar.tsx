@@ -1,26 +1,13 @@
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import {
   computeDueProgress,
   dueProgressTone,
   DUE_TONE_BAR,
   DUE_TONE_TRACK,
   dueProgressWidthPercent,
+  relativeDueCaption,
   type DueProgressInput,
 } from "../lib/dueProgress";
-
-function captionForDue(
-  t: TFunction<"translation">,
-  p: NonNullable<ReturnType<typeof computeDueProgress>>,
-) {
-  if (p.isOverdue) {
-    const d = Math.abs(p.daysUntilDue);
-    return t("due.captionOverdue", { count: d });
-  }
-  if (p.daysUntilDue <= 0) return t("due.captionToday");
-  if (p.daysUntilDue === 1) return t("due.captionTomorrow");
-  return t("due.captionDays", { count: p.daysUntilDue });
-}
 
 export function DueProgressBar({
   sub,
@@ -37,7 +24,7 @@ export function DueProgressBar({
   const tone = dueProgressTone(p);
   const w = dueProgressWidthPercent(p);
   const barH = size === "md" ? "h-2.5" : "h-1.5";
-  const caption = captionForDue(t, p);
+  const caption = relativeDueCaption(t, p);
   const pulse = tone === "overdue" || tone === "due" ? " motion-safe:animate-pulse" : "";
 
   return (

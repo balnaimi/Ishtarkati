@@ -3,12 +3,14 @@ import { useTranslation } from "react-i18next";
 import {
   getSetting,
   setSetting,
+  loadSubscriptions,
   loadCurrencies,
   addCurrency,
   updateCurrencySort,
   deleteCurrency,
   type AppCurrency,
 } from "../db/repo";
+import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/tableExport";
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 
@@ -26,6 +28,8 @@ export function SettingsPage() {
   const [currencies, setCurrencies] = useState<AppCurrency[]>([]);
   const [newCurCode, setNewCurCode] = useState("");
   const [newCurOrder, setNewCurOrder] = useState("0");
+  const [remindersOn, setRemindersOn] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
   const { hydrate, refresh, fx } = useFxManager();
 
   const reloadCurrencies = useCallback(async () => {
@@ -51,6 +55,8 @@ export function SettingsPage() {
       const raw = await getSetting(OVERRIDES_KEY);
       if (raw) setOverridesText(raw);
       await syncFxAt();
+      const rem = await getSetting("reminders_enabled");
+      setRemindersOn(rem === "1");
     })();
   }, [syncFxAt]);
 
@@ -131,9 +137,72 @@ export function SettingsPage() {
     }
   }
 
+  async function handleExportCsv() {
+    setExportBusy(true);
+    try {
+      const rows = await loadSubscriptions({});
+      downloadSubscriptionsCsv(rows, t);
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function handleExportIcs() {
+    setExportBusy(true);
+    try {
+      const rows = await loadSubscriptions({});
+      downloadSubscriptionsIcs(rows, t);
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function setRemindersEnabled(on: boolean) {
+    await setSetting("reminders_enabled", on ? "1" : "0");
+    setRemindersOn(on);
+  }
+
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
+
+      <section className="sk-card space-y-4">
+        <h3 className="text-base font-semibold text-cream-900">{t("export.csvTitle")}</h3>
+        <p className="text-sm text-cream-700">{t("export.csvHint")}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <button
+            type="button"
+            className="sk-btn-primary"
+            disabled={exportBusy}
+            onClick={() => void handleExportCsv()}
+          >
+            {t("export.csvButton")}
+          </button>
+          <button
+            type="button"
+            className="sk-btn-secondary"
+            disabled={exportBusy}
+            onClick={() => void handleExportIcs()}
+          >
+            {t("export.icsButton")}
+          </button>
+        </div>
+        <p className="text-xs text-cream-600">{t("export.icsHint")}</p>
+      </section>
+
+      <section className="sk-card space-y-3">
+        <h3 className="text-base font-semibold text-cream-900">{t("settings.reminders")}</h3>
+        <p className="text-sm text-cream-700">{t("settings.remindersHint")}</p>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+          <input
+            type="checkbox"
+            className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+            checked={remindersOn}
+            onChange={(e) => void setRemindersEnabled(e.target.checked)}
+          />
+          {t("settings.remindersEnable")}
+        </label>
+      </section>
 
       <section className="sk-card space-y-4">
         <h3 className="text-base font-semibold text-cream-900">{t("settings.fxSection")}</h3>

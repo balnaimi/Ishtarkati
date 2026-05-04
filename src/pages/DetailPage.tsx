@@ -18,6 +18,7 @@ import {
 } from "../lib/schedule";
 import type { IntervalUnit } from "../types";
 import { DueProgressBar } from "../components/DueProgressBar";
+import { tagTokens } from "../lib/tags";
 
 export function DetailPage() {
   const { t } = useTranslation();
@@ -34,6 +35,7 @@ export function DetailPage() {
 
   const [renewYears, setRenewYears] = useState("1");
   const [renewNote, setRenewNote] = useState("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -50,6 +52,18 @@ export function DetailPage() {
       setLoading(false);
     }
   }, [id]);
+
+  async function copyField(text: string, key: string) {
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      window.setTimeout(() => setCopiedKey(null), 2000);
+    } catch {
+      setCopiedKey("err");
+      window.setTimeout(() => setCopiedKey(null), 2000);
+    }
+  }
 
   useEffect(() => {
     void reload();
@@ -128,7 +142,9 @@ export function DetailPage() {
         <div className="min-w-0 space-y-2">
           <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
           <p className="text-sm text-cream-700">
-            {sub.category_name ?? "—"} · {sub.next_due_date ?? "—"}
+            {sub.category_name ?? "—"}
+            {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}
+            {sub.start_date ? ` · ${t("form.startDate")}: ${sub.start_date}` : ""}
           </p>
           {sub.website_url ? (
             <a
@@ -139,6 +155,45 @@ export function DetailPage() {
             >
               {sub.website_url}
             </a>
+          ) : null}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              className="sk-btn-secondary text-xs"
+              onClick={() => void copyField(sub.title, "title")}
+            >
+              {copiedKey === "title" ? t("detail.copied") : t("detail.copyTitle")}
+            </button>
+            {sub.next_due_date ? (
+              <button
+                type="button"
+                className="sk-btn-secondary text-xs"
+                onClick={() => void copyField(sub.next_due_date!, "due")}
+              >
+                {copiedKey === "due" ? t("detail.copied") : t("detail.copyDue")}
+              </button>
+            ) : null}
+            {sub.website_url ? (
+              <button
+                type="button"
+                className="sk-btn-secondary text-xs"
+                onClick={() => void copyField(sub.website_url!, "url")}
+              >
+                {copiedKey === "url" ? t("detail.copied") : t("detail.copyUrl")}
+              </button>
+            ) : null}
+          </div>
+          {tagTokens(sub.tags).length ? (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-xs font-medium text-cream-600">{t("detail.tagsLabel")}</p>
+              <div className="flex flex-wrap gap-1">
+                {tagTokens(sub.tags).map((tag) => (
+                  <span key={tag} className="sk-chip text-[11px]">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">

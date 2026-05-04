@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     | { ok: true }
     | { ok: false; canceled?: boolean; error?: string }
   > => ipcRenderer.invoke("backup:import"),
+  showNotification: (opts: { title: string; body: string }): Promise<boolean> =>
+    ipcRenderer.invoke("notification:show", opts),
 });

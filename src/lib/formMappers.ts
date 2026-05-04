@@ -1,5 +1,14 @@
 import type { SubscriptionFormValues, Subscription, IntervalUnit, BillingModel } from "../types";
 
+function normalizeTags(raw: string): string | null {
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  return parts.join(", ");
+}
+
 export function defaultFormValues(): SubscriptionFormValues {
   return {
     title: "",
@@ -16,6 +25,7 @@ export function defaultFormValues(): SubscriptionFormValues {
     next_due_date: "",
     end_date: "",
     is_domain: false,
+    tags: "",
   };
 }
 
@@ -35,6 +45,7 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
     next_due_date: s.next_due_date?.slice(0, 10) ?? "",
     end_date: s.end_date?.slice(0, 10) ?? "",
     is_domain: Boolean(s.is_domain),
+    tags: s.tags ?? "",
   };
 }
 
@@ -61,6 +72,7 @@ export function formToRow(
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
+  tags: string | null;
 } {
   const amt = parseFloat(v.amount_original.replace(",", "."));
   const interval_unit: IntervalUnit | null =
@@ -87,5 +99,6 @@ export function formToRow(
     next_due_date: v.next_due_date.trim() || null,
     end_date: v.end_date.trim() || null,
     is_domain: v.is_domain ? 1 : 0,
+    tags: normalizeTags(v.tags),
   };
 }

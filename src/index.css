@@ -98,3 +98,46 @@ body {
     @apply inline-flex items-center rounded-md border border-cream-400 bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-800;
   }
 }
+
+/* Dark theme: inverted cream scale and adjusted accents (class on <html>) */
+.dark {
+  --color-cream-50: #1a1714;
+  --color-cream-100: #242019;
+  --color-cream-200: #302a24;
+  --color-cream-300: #423a32;
+  --color-cream-400: #574e43;
+  --color-cream-500: #6f6456;
+  --color-cream-600: #887b6a;
+  --color-cream-700: #a39582;
+  --color-cream-800: #c4b8a4;
+  --color-cream-900: #e8e0d2;
+  --color-cream-950: #f3eee4;
+
+  --color-sage-300: #5f8f6c;
+  --color-sage-400: #4f855e;
+  --color-sage-500: #447552;
+  --color-sage-600: #6fcf8f;
+  --color-sage-700: #8ed9a8;
+  --color-sage-800: #b0e8c4;
+
+  --color-walnut-500: #a08060;
+  --color-walnut-600: #c49a6e;
+}
+
+.dark body {
+  color: var(--color-cream-900);
+  background: linear-gradient(
+    165deg,
+    var(--color-cream-100) 0%,
+    var(--color-cream-200) 45%,
+    var(--color-cream-100) 100%
+  );
+}
+
+.dark .sk-alert {
+  @apply border-red-500/40 bg-red-950/35 text-red-100;
+}
+
+.dark .sk-btn-danger {
+  @apply border-red-500/45 bg-red-950/35 text-red-100 hover:bg-red-950/50;
+}

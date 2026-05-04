@@ -29,6 +29,7 @@ export interface Subscription {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
+  tags: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,4 +60,5 @@ export interface SubscriptionFormValues {
   next_due_date: string;
   end_date: string;
   is_domain: boolean;
+  tags: string;
 }

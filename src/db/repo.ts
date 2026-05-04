@@ -129,7 +129,7 @@ function buildSubscriptionQuery(filters: {
   if (filters.search?.trim()) {
     const pat = `%${filters.search.trim()}%`;
     const p1 = next(pat);
-    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1})`);
+    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.tags,'') LIKE ${p1})`);
   }
 
   const sql = `
@@ -183,6 +183,7 @@ export async function insertSubscription(row: {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
+  tags: string | null;
 }): Promise<number> {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -190,9 +191,9 @@ export async function insertSubscription(row: {
     `INSERT INTO subscriptions (
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
       auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-      start_date, next_due_date, end_date, is_domain, created_at, updated_at
+      start_date, next_due_date, end_date, is_domain, tags, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
     )`,
     [
       row.title,
@@ -212,6 +213,7 @@ export async function insertSubscription(row: {
       row.next_due_date,
       row.end_date,
       row.is_domain,
+      row.tags,
       now,
       now,
     ],
@@ -245,6 +247,7 @@ export async function updateSubscription(
     next_due_date: string | null;
     end_date: string | null;
     is_domain: number;
+    tags: string | null;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -255,8 +258,8 @@ export async function updateSubscription(
       billing_model = $5, interval_unit = $6, interval_months = $7, auto_renew = $8,
       amount_original = $9, currency_code = $10, amount_qar_snapshot = $11,
       fx_rate_used = $12, fx_quote_at = $13, start_date = $14, next_due_date = $15,
-      end_date = $16, is_domain = $17, updated_at = $18
-    WHERE id = $19`,
+      end_date = $16, is_domain = $17, tags = $18, updated_at = $19
+    WHERE id = $20`,
     [
       row.title,
       row.notes,
@@ -275,6 +278,7 @@ export async function updateSubscription(
       row.next_due_date,
       row.end_date,
       row.is_domain,
+      row.tags,
       now,
       id,
     ],

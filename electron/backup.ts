@@ -2,7 +2,7 @@ import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
 
-export const BACKUP_EXPORT_VERSION = 2;
+export const BACKUP_EXPORT_VERSION = 3;
 
 interface BackupPayload {
   exportVersion: number;
@@ -22,7 +22,7 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 function validatePayload(raw: unknown): BackupPayload {
   if (!isRecord(raw)) throw new Error("Invalid backup file");
   const exportVersion = raw.exportVersion;
-  if (exportVersion !== 1 && exportVersion !== 2) {
+  if (exportVersion !== 1 && exportVersion !== 2 && exportVersion !== 3) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
   const categories = raw.categories;
@@ -88,11 +88,15 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
       INSERT INTO subscriptions (
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-        start_date, next_due_date, end_date, is_domain, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        start_date, next_due_date, end_date, is_domain, created_at, updated_at, tags
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     for (const row of data.subscriptions) {
       if (!isRecord(row)) throw new Error("Invalid subscription row");
+      const tags =
+        "tags" in row && row.tags != null && String(row.tags).length > 0
+          ? String(row.tags)
+          : null;
       insSub.run(
         row.id,
         row.title,
@@ -114,6 +118,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         row.is_domain,
         row.created_at,
         row.updated_at,
+        tags,
       );
     }
 

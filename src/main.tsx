@@ -11,6 +11,10 @@ import "./i18n";
 import "./index.css";
 import App from "./App";
 
+if (typeof localStorage !== "undefined" && localStorage.getItem("ishtarkati_theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <App />

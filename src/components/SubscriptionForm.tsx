@@ -209,6 +209,17 @@ export function SubscriptionForm({
         />
       </div>
 
+      <div>
+        <label className="sk-label">{t("form.tags")}</label>
+        <input
+          className="sk-input"
+          value={v.tags}
+          onChange={(e) => setField("tags", e.target.value)}
+          placeholder={t("form.tagsPlaceholder")}
+        />
+        <p className="mt-1.5 text-xs text-cream-600">{t("form.tagsHint")}</p>
+      </div>
+
       <div className="space-y-3">
         <label className="sk-label">{t("form.category")}</label>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">

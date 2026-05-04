@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Notification, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -55,6 +55,10 @@ function runMigrations(database: Database.Database): void {
     `);
     database.prepare("UPDATE schema_version SET version = 2").run();
   }
+  if (version < 3) {
+    database.exec("ALTER TABLE subscriptions ADD COLUMN tags TEXT");
+    database.prepare("UPDATE schema_version SET version = 3").run();
+  }
 }
 
 function openDatabase(): void {
@@ -90,6 +94,15 @@ function registerIpc(): void {
   ipcMain.handle("shell:openExternal", (_evt, url: string) => {
     return shell.openExternal(url);
   });
+
+  ipcMain.handle(
+    "notification:show",
+    (_evt, opts: { title: string; body: string }) => {
+      if (!Notification.isSupported()) return false;
+      new Notification({ title: opts.title, body: opts.body }).show();
+      return true;
+    },
+  );
 
   registerBackupIpc(
     () => db,

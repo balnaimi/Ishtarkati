@@ -16,5 +16,6 @@ interface Window {
       | { ok: true }
       | { ok: false; canceled?: boolean; error?: string }
     >;
+    showNotification: (opts: { title: string; body: string }) => Promise<boolean>;
   };
 }

@@ -1,43 +1,111 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   loadSubscriptions,
   loadCategories,
+  loadCurrencies,
+  getSetting,
+  type AppCurrency,
   type SubscriptionListRow,
 } from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
 import { DueProgressBar } from "../components/DueProgressBar";
+import {
+  computeDueProgress,
+  dueListRowHighlightClass,
+  dueProgressTone,
+  relativeDueCaption,
+  type DueProgressInput,
+  type DueTone,
+} from "../lib/dueProgress";
+import { tagTokens } from "../lib/tags";
+
+function toneTextClass(tone: DueTone): string {
+  if (tone === "overdue" || tone === "due") return "text-red-800";
+  if (tone === "urgent") return "text-orange-900";
+  if (tone === "warn") return "text-amber-900";
+  return "text-sage-800";
+}
+
+type SortKey = "next_due" | "title" | "category" | "amount" | "qar";
+
+function progressInput(s: SubscriptionListRow): DueProgressInput {
+  return {
+    next_due_date: s.next_due_date,
+    start_date: s.start_date,
+    billing_model: s.billing_model,
+    interval_unit: s.interval_unit,
+    interval_months: s.interval_months,
+  };
+}
 
 export function HomePage() {
   const { t } = useTranslation();
+  const nav = useNavigate();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<SubscriptionListRow[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [currencyOptions, setCurrencyOptions] = useState<AppCurrency[]>([]);
   const [catFilter, setCatFilter] = useState<string>("");
   const [curFilter, setCurFilter] = useState<string>("");
   const [dueSoon, setDueSoon] = useState(false);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [sortKey, setSortKey] = useState<SortKey>("next_due");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
   const { hydrate } = useFxManager();
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, cats] = await Promise.all([
+      const q = deferredSearch.trim();
+      const [list, cats, curs] = await Promise.all([
         loadSubscriptions({
           categoryId: catFilter ? parseInt(catFilter, 10) : undefined,
           currency: curFilter || undefined,
           dueWithinDays: dueSoon ? 30 : undefined,
-          search: search.trim() || undefined,
+          search: q || undefined,
         }),
         loadCategories(),
+        loadCurrencies(),
       ]);
       setItems(list);
       setCategories(cats);
+      setCurrencyOptions(curs);
     } finally {
       setLoading(false);
     }
-  }, [catFilter, curFilter, dueSoon, search]);
+  }, [catFilter, curFilter, dueSoon, deferredSearch]);
+
+  const sortedItems = useMemo(() => {
+    const arr = [...items];
+    const mul = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      switch (sortKey) {
+        case "next_due":
+          if (!a.next_due_date && !b.next_due_date) return 0;
+          if (!a.next_due_date) return 1;
+          if (!b.next_due_date) return -1;
+          return a.next_due_date.localeCompare(b.next_due_date) * mul;
+        case "title":
+          return a.title.localeCompare(b.title, "ar") * mul;
+        case "category":
+          return (a.category_name ?? "").localeCompare(b.category_name ?? "", "ar") * mul;
+        case "amount":
+          return (a.amount_original - b.amount_original) * mul;
+        case "qar": {
+          const aq = a.amount_qar_snapshot ?? -Infinity;
+          const bq = b.amount_qar_snapshot ?? -Infinity;
+          return (aq - bq) * mul;
+        }
+        default:
+          return 0;
+      }
+    });
+    return arr;
+  }, [items, sortKey, sortDir]);
 
   useEffect(() => {
     void hydrate();
@@ -47,7 +115,41 @@ export function HomePage() {
     void reload();
   }, [reload]);
 
-  const currencies = Array.from(new Set(items.map((s) => s.currency_code))).sort();
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const on = await getSetting("reminders_enabled");
+      if (cancelled || on !== "1") return;
+      const today = new Date().toISOString().slice(0, 10);
+      const key = `due_digest_${today}`;
+      if (sessionStorage.getItem(key)) return;
+      const near = await loadSubscriptions({ dueWithinDays: 7 });
+      const n = near.filter((s) => s.next_due_date).length;
+      if (n === 0) return;
+      const ok = await window.ishtarkati.showNotification({
+        title: t("notify.digestTitle"),
+        body: t("notify.digestBody", { count: n }),
+      });
+      if (ok) sessionStorage.setItem(key, "1");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable) {
+        return;
+      }
+      e.preventDefault();
+      searchRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function billingLabel(model: string) {
     if (model === "one_time") return t("billing.one_time");
@@ -84,9 +186,9 @@ export function HomePage() {
               onChange={(e) => setCurFilter(e.target.value)}
             >
               <option value="">{t("common.all")}</option>
-              {currencies.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {currencyOptions.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code}
                 </option>
               ))}
             </select>
@@ -106,16 +208,43 @@ export function HomePage() {
           <div className="sm:col-span-2 lg:col-span-3">
             <label className="sk-label">{t("common.search")}</label>
             <input
+              ref={searchRef}
+              id="list-search"
               className="sk-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="…"
+              placeholder={t("list.searchPlaceholder")}
+              autoComplete="off"
             />
           </div>
           <div className="flex lg:col-span-1">
             <button type="button" className="sk-btn-secondary w-full lg:w-auto" onClick={() => void reload()}>
               {t("list.applyFilters")}
             </button>
+          </div>
+          <div className="lg:col-span-4">
+            <label className="sk-label">{t("list.sortBy")}</label>
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="sk-select min-w-0 flex-1 sm:max-w-[14rem]"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+              >
+                <option value="next_due">{t("list.sort.nextDue")}</option>
+                <option value="title">{t("list.sort.title")}</option>
+                <option value="category">{t("list.sort.category")}</option>
+                <option value="amount">{t("list.sort.amount")}</option>
+                <option value="qar">{t("list.sort.qar")}</option>
+              </select>
+              <select
+                className="sk-select w-full sm:w-36"
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+              >
+                <option value="asc">{t("list.sort.asc")}</option>
+                <option value="desc">{t("list.sort.desc")}</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -139,55 +268,71 @@ export function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((s) => (
-                <tr key={s.id} className="border-t border-cream-300/80 hover:bg-cream-200/40">
-                  <td className="px-3 py-3 align-top">
-                    <Link
-                      to={`/sub/${s.id}`}
-                      className="font-medium text-sage-800 underline-offset-2 hover:underline"
-                    >
-                      {s.title}
-                    </Link>
-                    {s.is_domain ? (
-                      <span className="me-2 mt-1 inline-block sk-chip">{t("list.domain")}</span>
-                    ) : null}
-                    {s.next_due_date ? (
-                      <div className="mt-2">
-                        <DueProgressBar
-                          sub={{
-                            next_due_date: s.next_due_date,
-                            start_date: s.start_date,
-                            billing_model: s.billing_model,
-                            interval_unit: s.interval_unit,
-                            interval_months: s.interval_months,
-                          }}
-                          size="sm"
-                          showCaption={false}
-                        />
-                      </div>
-                    ) : (
-                      <span className="mt-1 block text-xs text-cream-500">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
-                  <td className="px-3 py-3 text-cream-800">{billingLabel(s.billing_model)}</td>
-                  <td className="px-3 py-3 text-cream-800">{s.next_due_date ?? "—"}</td>
-                  <td className="px-3 py-3 text-cream-800">
-                    {s.amount_original} {s.currency_code}
-                  </td>
-                  <td className="px-3 py-3 font-medium text-sage-800">
-                    {s.amount_qar_snapshot != null ? s.amount_qar_snapshot.toFixed(2) : "—"}
-                  </td>
-                  <td className="px-3 py-3">
-                    <Link
-                      to={`/sub/${s.id}/edit`}
-                      className="text-walnut-600 underline-offset-2 hover:underline"
-                    >
-                      {t("common.edit")}
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {sortedItems.map((s) => {
+                const prog = computeDueProgress(progressInput(s));
+                const tone = prog ? dueProgressTone(prog) : null;
+                const rowTint = tone ? dueListRowHighlightClass(tone) : "";
+                return (
+                  <tr
+                    key={s.id}
+                    className={`cursor-pointer border-t border-cream-300/80 hover:bg-cream-200/40 ${rowTint}`}
+                    onClick={() => nav(`/sub/${s.id}`)}
+                  >
+                    <td className="px-3 py-3 align-top">
+                      <Link
+                        to={`/sub/${s.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-sage-800 underline-offset-2 hover:underline"
+                      >
+                        {s.title}
+                      </Link>
+                      {s.is_domain ? (
+                        <span className="me-2 mt-1 inline-block sk-chip">{t("list.domain")}</span>
+                      ) : null}
+                      {tagTokens(s.tags).length ? (
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          {tagTokens(s.tags).map((tag) => (
+                            <span key={`${s.id}-${tag}`} className="inline-block sk-chip text-[10px] leading-tight">
+                              {tag}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                      {s.next_due_date ? (
+                        <div className="mt-2">
+                          <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+                        </div>
+                      ) : (
+                        <span className="mt-1 block text-xs text-cream-500">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
+                    <td className="px-3 py-3 text-cream-800">{billingLabel(s.billing_model)}</td>
+                    <td className="px-3 py-3 text-cream-800">
+                      {s.next_due_date ?? "—"}
+                      {prog && tone ? (
+                        <span className={`mt-0.5 block text-xs font-medium ${toneTextClass(tone)}`}>
+                          {relativeDueCaption(t, prog)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-3 text-cream-800">
+                      {s.amount_original} {s.currency_code}
+                    </td>
+                    <td className="px-3 py-3 font-medium text-sage-800">
+                      {s.amount_qar_snapshot != null ? s.amount_qar_snapshot.toFixed(2) : "—"}
+                    </td>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Link
+                        to={`/sub/${s.id}/edit`}
+                        className="text-walnut-600 underline-offset-2 hover:underline"
+                      >
+                        {t("common.edit")}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
