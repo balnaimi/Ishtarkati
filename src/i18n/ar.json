@@ -1,0 +1,111 @@
+{
+  "app": { "title": "إشتراكاتي — Ishtarkati" },
+  "nav": {
+    "subscriptions": "الاشتراكات",
+    "add": "إضافة",
+    "categories": "التصنيفات",
+    "stats": "الإحصائيات",
+    "settings": "الإعدادات"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "back": "رجوع",
+    "search": "بحث",
+    "loading": "جارٍ التحميل…",
+    "error": "خطأ",
+    "yes": "نعم",
+    "no": "لا",
+    "actions": "إجراءات",
+    "details": "التفاصيل",
+    "none": "لا شيء",
+    "all": "الكل"
+  },
+  "list": {
+    "title": "الاشتراكات والدفعات",
+    "filterCategory": "التصنيف",
+    "filterCurrency": "العملة",
+    "dueSoon": "مستحق خلال ٣٠ يومًا",
+    "name": "الاسم",
+    "nextDue": "الاستحقاق التالي",
+    "amount": "المبلغ",
+    "qar": "بالريال (تقريبًا)",
+    "billing": "نوع الفوترة",
+    "category": "التصنيف",
+    "empty": "لا توجد اشتراكات بعد. أضف واحدًا من «إضافة».",
+    "domain": "نطاق"
+  },
+  "billing": {
+    "one_time": "دفعة لمرة واحدة",
+    "recurring": "دوري",
+    "pay_as_needed": "عند الحاجة"
+  },
+  "interval": {
+    "month": "شهري",
+    "quarter": "كل ٣ أشهر",
+    "year": "سنوي",
+    "custom_months": "فترة مخصصة (بالأشهر)"
+  },
+  "form": {
+    "newTitle": "اشتراك أو دفعة جديدة",
+    "editTitle": "تعديل",
+    "title": "العنوان",
+    "notes": "ملاحظات",
+    "website": "رابط الموقع",
+    "category": "التصنيف",
+    "billingModel": "نموذج الدفع",
+    "interval": "الفترة",
+    "intervalMonths": "عدد الأشهر (للمخصص)",
+    "autoRenew": "تجديد تلقائي",
+    "amountOriginal": "المبلغ بالعملة الأصلية",
+    "currency": "العملة",
+    "startDate": "تاريخ البداية",
+    "nextDue": "تاريخ الاستحقاق التالي",
+    "endDate": "نهاية المدة (اختياري)",
+    "isDomain": "هذا سجل نطاق (دومين)",
+    "recalcFx": "إعادة حساب الريال بالأسعار الحالية",
+    "required": "مطلوب",
+    "invalidNumber": "رقم غير صالح"
+  },
+  "detail": {
+    "payments": "سجل الدفعات",
+    "addPayment": "تسجيل دفعة",
+    "renewDomain": "تسجيل تجديد النطاق",
+    "paidAt": "تاريخ الدفع",
+    "renewalYears": "المُدد بالسنوات",
+    "paymentNote": "ملاحظة",
+    "recordPayment": "حفظ الدفعة",
+    "recordRenewal": "حفظ التجديد",
+    "advanceRecurring": "ترحيل موعد الاشتراك الدوري بعد الدفع",
+    "confirmDeleteSub": "حذف هذا السجل وجميع دفعاته؟"
+  },
+  "categories": {
+    "title": "التصنيفات",
+    "name": "الاسم",
+    "add": "إضافة تصنيف",
+    "sort": "الترتيب",
+    "confirmDelete": "حذف التصنيف؟ قد تُفرّغ الاشتراكات المرتبطة من التصنيف."
+  },
+  "stats": {
+    "title": "ملخص بالريال القطري",
+    "monthlyEstimate": "تقدير شهري (الدوريات فقط)",
+    "byCategory": "حسب التصنيف (تقدير شهري)",
+    "due30": "مستحق خلال ٣٠ يومًا (بالريال)",
+    "subscriptions": "عدد السجلات الدورية",
+    "refreshFx": "تحديث أسعار الصرف من الشبكة"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "fxOverrides": "تعديلات يدوية لسعر التحويل إلى الريال (مضاعف: مبلغ العملة × القيمة = الريال). JSON مثل:",
+    "fxOverridesHint": "{\"USD\":3.64,\"EUR\":3.95}",
+    "fxCache": "آخر جلب لأسعار الصرف",
+    "saveSettings": "حفظ الإعدادات",
+    "version": "إصدار التطبيق"
+  },
+  "fx": {
+    "fetchError": "تعذر جلب الأسعار. تحقق من الاتصال أو عيّن تعديلات يدوية.",
+    "updated": "تم تحديث الأسعار"
+  }
+}
