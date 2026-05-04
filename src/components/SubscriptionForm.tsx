@@ -3,12 +3,15 @@ import { useTranslation } from "react-i18next";
 import type { SubscriptionFormValues } from "../types";
 import { amountToQarFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
+import { addCategory, loadCategories } from "../db/repo";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
   categories: { id: number; name: string }[];
+  currencies: { code: string }[];
   fx: FxState;
   onFetchFx: () => Promise<void>;
+  onMetaUpdated: () => Promise<void>;
   onSubmit: (
     values: SubscriptionFormValues,
     qarInfo: { qar: number; fxFactor: number; fxAt: string },
@@ -20,8 +23,10 @@ interface SubscriptionFormProps {
 export function SubscriptionForm({
   initial,
   categories,
+  currencies,
   fx,
   onFetchFx,
+  onMetaUpdated,
   onSubmit,
   onCancel,
   submitLabel,
@@ -30,24 +35,48 @@ export function SubscriptionForm({
   const [v, setV] = useState<SubscriptionFormValues>(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [addCatOpen, setAddCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [addCatBusy, setAddCatBusy] = useState(false);
 
   useEffect(() => {
     setV(initial);
   }, [initial]);
 
+  const cur = (v.currency_code || "").trim().toUpperCase();
+  const isQar = cur === "QAR";
+  const showFxQarCard = cur.length > 0 && !isQar;
+  const currencyOptions = useMemo(() => {
+    const codes = currencies.map((c) => c.code);
+    if (cur && !codes.includes(cur)) {
+      return [{ code: cur, orphan: true }, ...currencies.map((c) => ({ code: c.code, orphan: false }))];
+    }
+    return currencies.map((c) => ({ code: c.code, orphan: false }));
+  }, [currencies, cur]);
+
   const qarPreview = useMemo(() => {
     const amt = parseFloat(v.amount_original.replace(",", "."));
-    if (!fx.usdRates || Number.isNaN(amt)) {
+    if (Number.isNaN(amt)) {
       return {
         qar: null as number | null,
         fxFactor: null as number | null,
         error: null as string | null,
       };
     }
+    if (isQar) {
+      return { qar: amt, fxFactor: 1, error: null as string | null };
+    }
+    if (!cur) {
+      return {
+        qar: null,
+        fxFactor: null,
+        error: null as string | null,
+      };
+    }
     try {
       const { qar, fxFactor } = amountToQarFromUsdBase(
         amt,
-        v.currency_code || "USD",
+        cur,
         fx.usdRates,
         fx.overrides,
       );
@@ -56,10 +85,10 @@ export function SubscriptionForm({
       return {
         qar: null,
         fxFactor: null,
-        error: t("fx.fetchError"),
+        error: t("fx.rateMissingHint"),
       };
     }
-  }, [v.amount_original, v.currency_code, fx.usdRates, fx.overrides, t]);
+  }, [v.amount_original, cur, isQar, fx.usdRates, fx.overrides, t]);
 
   const setField = useCallback(
     <K extends keyof SubscriptionFormValues>(key: K, val: SubscriptionFormValues[K]) => {
@@ -67,6 +96,28 @@ export function SubscriptionForm({
     },
     [],
   );
+
+  async function handleInlineAddCategory() {
+    const name = newCatName.trim();
+    if (!name) return;
+    setAddCatBusy(true);
+    setErr(null);
+    try {
+      const existing = await loadCategories();
+      const nextOrder = existing.length ? Math.max(...existing.map((c) => c.sort_order)) + 1 : 0;
+      const newId = await addCategory(name, nextOrder);
+      await onMetaUpdated();
+      setField("category_id", String(newId));
+      setNewCatName("");
+      setAddCatOpen(false);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      if (/UNIQUE|constraint/i.test(m)) setErr(t("categories.duplicate"));
+      else setErr(m);
+    } finally {
+      setAddCatBusy(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +129,10 @@ export function SubscriptionForm({
     const amt = parseFloat(v.amount_original.replace(",", "."));
     if (Number.isNaN(amt)) {
       setErr(t("form.invalidNumber"));
+      return;
+    }
+    if (!v.currency_code.trim()) {
+      setErr(t("form.currencyRequired"));
       return;
     }
     if (v.billing_model === "recurring") {
@@ -93,14 +148,27 @@ export function SubscriptionForm({
         }
       }
     }
-    if (!fx.usdRates || qarPreview.qar == null || qarPreview.fxFactor == null) {
-      setErr(t("fx.fetchError"));
-      return;
+
+    let qar: number;
+    let fxFactor: number;
+    let fxAt: string;
+    if (isQar) {
+      qar = amt;
+      fxFactor = 1;
+      fxAt = new Date().toISOString();
+    } else {
+      if (qarPreview.qar == null || qarPreview.fxFactor == null) {
+        setErr(qarPreview.error ?? t("fx.fetchError"));
+        return;
+      }
+      qar = qarPreview.qar;
+      fxFactor = qarPreview.fxFactor;
+      fxAt = fx.fetchedAt ?? new Date().toISOString();
     }
+
     setBusy(true);
     try {
-      const fxAt = fx.fetchedAt ?? new Date().toISOString();
-      await onSubmit(v, { qar: qarPreview.qar, fxFactor: qarPreview.fxFactor, fxAt });
+      await onSubmit(v, { qar, fxFactor, fxAt });
     } catch (er) {
       setErr(er instanceof Error ? er.message : String(er));
     } finally {
@@ -141,20 +209,53 @@ export function SubscriptionForm({
         />
       </div>
 
-      <div>
+      <div className="space-y-3">
         <label className="sk-label">{t("form.category")}</label>
-        <select
-          className="sk-select"
-          value={v.category_id}
-          onChange={(e) => setField("category_id", e.target.value)}
-        >
-          <option value="">{t("common.none")}</option>
-          {categories.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <select
+            className="sk-select min-w-0 flex-1"
+            value={v.category_id}
+            onChange={(e) => setField("category_id", e.target.value)}
+          >
+            <option value="">{t("common.none")}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="sk-btn-secondary shrink-0"
+            onClick={() => setAddCatOpen((o) => !o)}
+          >
+            {t("form.addCategoryHere")}
+          </button>
+        </div>
+        {categories.length === 0 ? (
+          <p className="text-sm text-cream-600">{t("form.noCategoriesHint")}</p>
+        ) : null}
+        {addCatOpen ? (
+          <div className="sk-card flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <label className="sk-label">{t("categories.name")}</label>
+              <input
+                className="sk-input"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder={t("form.newCategoryPlaceholder")}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={addCatBusy || !newCatName.trim()}
+              className="sk-btn-primary"
+              onClick={() => void handleInlineAddCategory()}
+            >
+              {t("categories.add")}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -231,7 +332,7 @@ export function SubscriptionForm({
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <label className="sk-label">{t("form.amountOriginal")}</label>
+          <label className="sk-label">{t("form.amount")}</label>
           <input
             className="sk-input"
             value={v.amount_original}
@@ -242,27 +343,41 @@ export function SubscriptionForm({
         </div>
         <div>
           <label className="sk-label">{t("form.currency")}</label>
-          <input
-            className="sk-input uppercase"
+          <select
+            className="sk-select"
+            required
             value={v.currency_code}
             onChange={(e) => setField("currency_code", e.target.value.toUpperCase())}
-            placeholder="USD"
-            maxLength={8}
-            required
-          />
+          >
+            <option value="">{t("form.selectCurrency")}</option>
+            {currencyOptions.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code}
+                {c.orphan ? ` — ${t("form.currencyNotInList")}` : ""}
+              </option>
+            ))}
+          </select>
+          {currencies.length === 0 ? (
+            <p className="mt-2 text-sm text-cream-600">{t("form.noCurrenciesHint")}</p>
+          ) : null}
         </div>
       </div>
 
-      <div className="sk-card space-y-3">
-        <p className="text-sm font-medium text-cream-700">{t("list.qar")}</p>
-        <p className="text-xl font-semibold text-sage-800">
-          {qarPreview.qar != null ? qarPreview.qar.toFixed(2) : "—"}
-        </p>
-        {qarPreview.error ? <p className="text-sm text-red-900">{qarPreview.error}</p> : null}
-        <button type="button" className="sk-btn-secondary w-full sm:w-auto" onClick={() => void onFetchFx()}>
-          {t("form.recalcFx")}
-        </button>
-      </div>
+      {showFxQarCard ? (
+        <div className="sk-card space-y-3">
+          <p className="text-sm font-medium text-cream-700">{t("list.qar")}</p>
+          <p className="text-xl font-semibold text-sage-800">
+            {qarPreview.qar != null ? qarPreview.qar.toFixed(2) : "—"}
+          </p>
+          {!fx.hasLiveFxCache ? (
+            <p className="text-xs text-cream-600">{t("fx.builtinHint")}</p>
+          ) : null}
+          {qarPreview.error ? <p className="text-sm text-red-900">{qarPreview.error}</p> : null}
+          <button type="button" className="sk-btn-secondary w-full sm:w-auto" onClick={() => void onFetchFx()}>
+            {t("form.recalcFx")}
+          </button>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div>

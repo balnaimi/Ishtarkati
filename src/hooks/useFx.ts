@@ -1,5 +1,10 @@
 import { useCallback, useState } from "react";
-import { fetchFxRates, type UsdBasedRates } from "../lib/fx";
+import {
+  fetchFxRates,
+  mergeUsdRates,
+  BUILTIN_FX_RATES,
+  type UsdBasedRates,
+} from "../lib/fx";
 import { getSetting, setSetting } from "../db/repo";
 import type { FxState } from "../lib/fxState";
 
@@ -8,25 +13,15 @@ const OVERRIDES_KEY = "fx_overrides_json";
 
 export function useFxManager() {
   const [fx, setFx] = useState<FxState>({
-    usdRates: null,
+    usdRates: { ...BUILTIN_FX_RATES },
     fetchedAt: null,
     overrides: null,
+    hasLiveFxCache: false,
   });
 
   const hydrate = useCallback(async () => {
     const cacheRaw = await getSetting(CACHE_KEY);
     const ovrRaw = await getSetting(OVERRIDES_KEY);
-    let usdRates: UsdBasedRates | null = null;
-    let fetchedAt: string | null = null;
-    if (cacheRaw) {
-      try {
-        const parsed = JSON.parse(cacheRaw) as { rates: UsdBasedRates; fetchedAt: string };
-        usdRates = parsed.rates;
-        fetchedAt = parsed.fetchedAt;
-      } catch {
-        /* ignore */
-      }
-    }
     let overrides: Record<string, number> | null = null;
     if (ovrRaw) {
       try {
@@ -35,7 +30,20 @@ export function useFxManager() {
         overrides = null;
       }
     }
-    setFx({ usdRates, fetchedAt, overrides });
+    let usdRates: UsdBasedRates = { ...BUILTIN_FX_RATES };
+    let fetchedAt: string | null = null;
+    let hasLiveFxCache = false;
+    if (cacheRaw) {
+      try {
+        const parsed = JSON.parse(cacheRaw) as { rates: UsdBasedRates; fetchedAt: string };
+        usdRates = mergeUsdRates(parsed.rates);
+        fetchedAt = parsed.fetchedAt;
+        hasLiveFxCache = true;
+      } catch {
+        /* keep built-ins only */
+      }
+    }
+    setFx({ usdRates, fetchedAt, overrides, hasLiveFxCache });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -49,14 +57,16 @@ export function useFxManager() {
         overrides = null;
       }
     }
+    const merged = mergeUsdRates(data.rates);
     await setSetting(
       CACHE_KEY,
-      JSON.stringify({ rates: data.rates, fetchedAt: data.fetchedAt }),
+      JSON.stringify({ rates: merged, fetchedAt: data.fetchedAt }),
     );
     setFx({
-      usdRates: data.rates,
+      usdRates: merged,
       fetchedAt: data.fetchedAt,
       overrides,
+      hasLiveFxCache: true,
     });
   }, []);
 

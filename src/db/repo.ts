@@ -15,12 +15,17 @@ export async function loadCategories(): Promise<Category[]> {
   );
 }
 
-export async function addCategory(name: string, sort_order: number): Promise<void> {
+export async function addCategory(name: string, sort_order: number): Promise<number> {
   const db = await getDb();
-  await db.execute(
+  const r = await db.execute(
     "INSERT INTO categories (name, sort_order) VALUES ($1, $2)",
     [name.trim(), sort_order],
   );
+  if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
+  const idRows = await db.select<{ id: number }>(
+    "SELECT last_insert_rowid() AS id",
+  );
+  return idRows[0]?.id ?? 0;
 }
 
 export async function updateCategory(
@@ -41,6 +46,51 @@ export async function deleteCategory(id: number): Promise<void> {
     id,
   ]);
   await db.execute("DELETE FROM categories WHERE id = $1", [id]);
+}
+
+export interface AppCurrency {
+  code: string;
+  sort_order: number;
+}
+
+export async function loadCurrencies(): Promise<AppCurrency[]> {
+  const db = await getDb();
+  return db.select<AppCurrency>(
+    "SELECT UPPER(TRIM(code)) AS code, sort_order FROM currencies ORDER BY sort_order ASC, code ASC",
+  );
+}
+
+export async function addCurrency(code: string, sort_order: number): Promise<void> {
+  const db = await getDb();
+  const c = code.trim().toUpperCase();
+  if (c.length < 2 || c.length > 8) {
+    throw new Error("invalid_currency_code");
+  }
+  await db.execute(
+    "INSERT INTO currencies (code, sort_order) VALUES ($1, $2)",
+    [c, sort_order],
+  );
+}
+
+export async function updateCurrencySort(code: string, sort_order: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE currencies SET sort_order = $1 WHERE UPPER(code) = UPPER($2)",
+    [sort_order, code.trim()],
+  );
+}
+
+export async function deleteCurrency(code: string): Promise<void> {
+  const db = await getDb();
+  const c = code.trim();
+  const rows = await db.select<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM subscriptions WHERE UPPER(currency_code) = UPPER($1)",
+    [c],
+  );
+  if ((rows[0]?.n ?? 0) > 0) {
+    throw new Error("currency_in_use");
+  }
+  await db.execute("DELETE FROM currencies WHERE UPPER(code) = UPPER($1)", [c]);
 }
 
 export interface SubscriptionListRow extends Subscription {

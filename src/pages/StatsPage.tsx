@@ -7,7 +7,11 @@ import {
   getSetting,
 } from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
-import { amountToQarFromUsdBase, type UsdBasedRates } from "../lib/fx";
+import {
+  amountToQarFromUsdBase,
+  mergeRatesFromCacheJson,
+  type UsdBasedRates,
+} from "../lib/fx";
 
 export function StatsPage() {
   const { t } = useTranslation();
@@ -29,25 +33,23 @@ export function StatsPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await refresh();
+      try {
+        await refresh();
+        setMsg(t("fx.updated"));
+      } catch {
+        setMsg(t("fx.offlineKeepBuiltin"));
+      }
       const cacheRaw = await getSetting("fx_rates_cache");
       const ovrRaw = await getSetting("fx_overrides_json");
-      if (!cacheRaw) {
-        setMsg(t("fx.fetchError"));
-        return;
-      }
-      let rates: UsdBasedRates;
-      let fxAt: string;
-      try {
-        const parsed = JSON.parse(cacheRaw) as {
-          rates: UsdBasedRates;
-          fetchedAt: string;
-        };
-        rates = parsed.rates;
-        fxAt = parsed.fetchedAt;
-      } catch {
-        setMsg(t("fx.fetchError"));
-        return;
+      const rates: UsdBasedRates = mergeRatesFromCacheJson(cacheRaw);
+      let fxAt = new Date().toISOString();
+      if (cacheRaw) {
+        try {
+          const p = JSON.parse(cacheRaw) as { fetchedAt?: string };
+          if (p.fetchedAt) fxAt = p.fetchedAt;
+        } catch {
+          /* ignore */
+        }
       }
       let overrides: Record<string, number> | null = null;
       if (ovrRaw) {
@@ -71,7 +73,6 @@ export function StatsPage() {
           /* skip unknown currency */
         }
       }
-      setMsg(t("fx.updated"));
       await reload();
       void hydrate();
     } finally {

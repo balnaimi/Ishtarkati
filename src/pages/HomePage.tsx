@@ -17,7 +17,7 @@ export function HomePage() {
   const [dueSoon, setDueSoon] = useState(false);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const { hydrate, fx, refresh } = useFxManager();
+  const { hydrate } = useFxManager();
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -45,14 +45,6 @@ export function HomePage() {
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  useEffect(() => {
-    if (!fx.usdRates) {
-      void refresh().catch(() => {
-        /* user may work offline */
-      });
-    }
-  }, [fx.usdRates, refresh]);
 
   const currencies = Array.from(new Set(items.map((s) => s.currency_code))).sort();
 

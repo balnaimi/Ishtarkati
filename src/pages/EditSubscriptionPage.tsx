@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SubscriptionForm } from "../components/SubscriptionForm";
 import { useFxManager } from "../hooks/useFx";
-import { getSubscription, loadCategories, updateSubscription } from "../db/repo";
+import { getSubscription, loadCategories, loadCurrencies, updateSubscription } from "../db/repo";
 import {
   defaultFormValues,
   formToRow,
@@ -17,12 +17,19 @@ export function EditSubscriptionPage() {
   const nav = useNavigate();
   const { fx, hydrate, refresh } = useFxManager();
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [currencies, setCurrencies] = useState<{ code: string }[]>([]);
   const [initial, setInitial] = useState<SubscriptionFormValues | null>(null);
+
+  const reloadMeta = useCallback(async () => {
+    const [cats, curs] = await Promise.all([loadCategories(), loadCurrencies()]);
+    setCategories(cats);
+    setCurrencies(curs);
+  }, []);
 
   useEffect(() => {
     void hydrate();
-    void loadCategories().then(setCategories);
-  }, [hydrate]);
+    void reloadMeta();
+  }, [hydrate, reloadMeta]);
 
   useEffect(() => {
     if (!id) return;
@@ -35,12 +42,6 @@ export function EditSubscriptionPage() {
       }
     })();
   }, [id]);
-
-  useEffect(() => {
-    if (!fx.usdRates) {
-      void refresh().catch(() => {});
-    }
-  }, [fx.usdRates, refresh]);
 
   async function onSubmit(values: SubscriptionFormValues, qar: { qar: number; fxFactor: number; fxAt: string }) {
     if (!id) return;
@@ -60,8 +61,10 @@ export function EditSubscriptionPage() {
         key={id}
         initial={initial}
         categories={categories}
+        currencies={currencies}
         fx={fx}
         onFetchFx={() => refresh()}
+        onMetaUpdated={reloadMeta}
         onSubmit={onSubmit}
         onCancel={() => nav(-1)}
       />

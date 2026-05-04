@@ -44,25 +44,16 @@ function runMigrations(database: Database.Database): void {
       database.exec(stmt);
     }
     database.prepare("UPDATE schema_version SET version = 1").run();
+    version = 1;
   }
-}
-
-function seedCategories(database: Database.Database): void {
-  const row = database
-    .prepare("SELECT COUNT(*) as c FROM categories")
-    .get() as { c: number };
-  if (row.c > 0) return;
-  const ins = database.prepare(
-    "INSERT INTO categories (name, sort_order) VALUES (?, ?)",
-  );
-  const seeds: [string, number][] = [
-    ["خدمات", 1],
-    ["ألعاب", 2],
-    ["نطاقات", 3],
-    ["أخرى", 4],
-  ];
-  for (const [name, order] of seeds) {
-    ins.run(name, order);
+  if (version < 2) {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS currencies (
+        code TEXT PRIMARY KEY COLLATE NOCASE,
+        sort_order INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    database.prepare("UPDATE schema_version SET version = 2").run();
   }
 }
 
@@ -73,7 +64,6 @@ function openDatabase(): void {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   runMigrations(db);
-  seedCategories(db);
 }
 
 function registerIpc(): void {

@@ -1,10 +1,19 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getSetting, setSetting } from "../db/repo";
+import {
+  getSetting,
+  setSetting,
+  loadCurrencies,
+  addCurrency,
+  updateCurrencySort,
+  deleteCurrency,
+  type AppCurrency,
+} from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 
 const OVERRIDES_KEY = "fx_overrides_json";
+const CACHE_KEY = "fx_rates_cache";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -12,27 +21,76 @@ export function SettingsPage() {
   const [fxAt, setFxAt] = useState<string | null>(null);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
-  const { hydrate } = useFxManager();
+  const [fxMsg, setFxMsg] = useState<string | null>(null);
+  const [fxBusy, setFxBusy] = useState(false);
+  const [currencies, setCurrencies] = useState<AppCurrency[]>([]);
+  const [newCurCode, setNewCurCode] = useState("");
+  const [newCurOrder, setNewCurOrder] = useState("0");
+  const { hydrate, refresh, fx } = useFxManager();
+
+  const reloadCurrencies = useCallback(async () => {
+    setCurrencies(await loadCurrencies());
+  }, []);
+
+  const syncFxAt = useCallback(async () => {
+    const cache = await getSetting(CACHE_KEY);
+    if (!cache) {
+      setFxAt(null);
+      return;
+    }
+    try {
+      const p = JSON.parse(cache) as { fetchedAt?: string };
+      setFxAt(p.fetchedAt ?? null);
+    } catch {
+      setFxAt(null);
+    }
+  }, []);
 
   useEffect(() => {
     void (async () => {
       const raw = await getSetting(OVERRIDES_KEY);
       if (raw) setOverridesText(raw);
-      const cache = await getSetting("fx_rates_cache");
-      if (cache) {
-        try {
-          const p = JSON.parse(cache) as { fetchedAt?: string };
-          setFxAt(p.fetchedAt ?? null);
-        } catch {
-          setFxAt(null);
-        }
-      }
+      await syncFxAt();
     })();
-  }, []);
+  }, [syncFxAt]);
+
+  useEffect(() => {
+    void hydrate();
+    void reloadCurrencies();
+  }, [hydrate, reloadCurrencies]);
 
   async function save() {
     await setSetting(OVERRIDES_KEY, overridesText.trim() || "{}");
     void hydrate();
+  }
+
+  async function handleRefreshFx() {
+    setFxMsg(null);
+    setFxBusy(true);
+    try {
+      await refresh();
+      await syncFxAt();
+      setFxMsg(t("fx.updated"));
+      void hydrate();
+    } catch {
+      setFxMsg(t("fx.fetchError"));
+    } finally {
+      setFxBusy(false);
+    }
+  }
+
+  async function handleAddCurrency(e: React.FormEvent) {
+    e.preventDefault();
+    const code = newCurCode.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const ord = parseInt(newCurOrder, 10) || 0;
+      await addCurrency(code, ord);
+      setNewCurCode("");
+      void reloadCurrencies();
+    } catch {
+      alert(t("settings.currencyDuplicate"));
+    }
   }
 
   async function handleExport() {
@@ -78,6 +136,75 @@ export function SettingsPage() {
       <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
 
       <section className="sk-card space-y-4">
+        <h3 className="text-base font-semibold text-cream-900">{t("settings.fxSection")}</h3>
+        <p className="text-sm leading-relaxed text-cream-700">{t("fx.builtinHint")}</p>
+        <p className="text-sm text-cream-700">
+          {t("settings.fxCache")}: <span className="font-mono text-cream-900">{fxAt ?? "—"}</span>
+        </p>
+        {!fx.hasLiveFxCache ? (
+          <p className="text-xs text-walnut-600">{t("fx.noLiveCacheYet")}</p>
+        ) : null}
+        <button
+          type="button"
+          className="sk-btn-primary"
+          disabled={fxBusy}
+          onClick={() => void handleRefreshFx()}
+        >
+          {t("settings.refreshFxButton")}
+        </button>
+        {fxMsg ? <p className="text-sm text-sage-800">{fxMsg}</p> : null}
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="text-base font-semibold text-cream-900">{t("settings.currenciesTitle")}</h3>
+        <p className="text-sm text-cream-700">{t("settings.currenciesHint")}</p>
+
+        <form
+          onSubmit={handleAddCurrency}
+          className="sk-card flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+        >
+          <div className="min-w-0 flex-1">
+            <label className="sk-label">{t("settings.currencyCode")}</label>
+            <input
+              className="sk-input font-mono uppercase"
+              value={newCurCode}
+              maxLength={8}
+              onChange={(e) => setNewCurCode(e.target.value.toUpperCase())}
+              placeholder="QAR"
+            />
+          </div>
+          <div className="w-full sm:w-24">
+            <label className="sk-label">{t("categories.sort")}</label>
+            <input
+              type="number"
+              className="sk-input"
+              value={newCurOrder}
+              onChange={(e) => setNewCurOrder(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="sk-btn-primary w-full sm:w-auto">
+            {t("settings.addCurrency")}
+          </button>
+        </form>
+
+        <ul className="space-y-3">
+          {currencies.length === 0 ? (
+            <li className="text-sm text-cream-600">{t("settings.currenciesEmpty")}</li>
+          ) : (
+            currencies.map((c) => (
+              <CurrencyRow
+                key={c.code}
+                c={c}
+                onSaved={reloadCurrencies}
+                onDelete={() => void reloadCurrencies()}
+                t={t}
+              />
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section className="sk-card space-y-4">
         <h3 className="text-base font-semibold text-cream-900">{t("backup.title")}</h3>
         <p className="text-sm leading-relaxed text-cream-700">{t("backup.hint")}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -106,20 +233,13 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-4">
-        <p className="text-sm text-cream-700">
-          {t("settings.fxCache")}: <span className="font-mono text-cream-900">{fxAt ?? "—"}</span>
-        </p>
-
-        <div>
-          <label className="sk-label">{t("settings.fxOverrides")}</label>
-          <p className="mb-2 text-xs text-cream-600">{t("settings.fxOverridesHint")}</p>
-          <textarea
-            className="sk-textarea font-mono text-sm leading-relaxed"
-            value={overridesText}
-            onChange={(e) => setOverridesText(e.target.value)}
-          />
-        </div>
-
+        <h3 className="text-base font-semibold text-cream-900">{t("settings.fxOverrides")}</h3>
+        <p className="mb-2 text-xs text-cream-600">{t("settings.fxOverridesHint")}</p>
+        <textarea
+          className="sk-textarea font-mono text-sm leading-relaxed"
+          value={overridesText}
+          onChange={(e) => setOverridesText(e.target.value)}
+        />
         <button type="button" className="sk-btn-primary" onClick={() => void save()}>
           {t("settings.saveSettings")}
         </button>
@@ -129,5 +249,58 @@ export function SettingsPage() {
         {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
       </p>
     </div>
+  );
+}
+
+function CurrencyRow({
+  c,
+  onSaved,
+  onDelete,
+  t,
+}: {
+  c: AppCurrency;
+  onSaved: () => void;
+  onDelete: () => void;
+  t: (k: string) => string;
+}) {
+  const [sort, setSort] = useState(String(c.sort_order));
+
+  useEffect(() => {
+    setSort(String(c.sort_order));
+  }, [c.code, c.sort_order]);
+
+  async function saveSort() {
+    await updateCurrencySort(c.code, parseInt(sort, 10) || 0);
+    onSaved();
+  }
+
+  async function del() {
+    if (!confirm(t("settings.confirmDeleteCurrency"))) return;
+    try {
+      await deleteCurrency(c.code);
+      onDelete();
+    } catch {
+      alert(t("settings.currencyInUse"));
+    }
+  }
+
+  return (
+    <li className="flex flex-col gap-3 rounded-xl border border-cream-400 bg-cream-50/95 p-4 shadow-sm sm:flex-row sm:items-center">
+      <span className="min-w-[4rem] font-mono font-semibold text-cream-900">{c.code}</span>
+      <input
+        type="number"
+        className="sk-input w-full sm:w-24"
+        value={sort}
+        onChange={(e) => setSort(e.target.value)}
+      />
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="sk-btn-secondary text-sm" onClick={() => void saveSort()}>
+          {t("common.save")}
+        </button>
+        <button type="button" className="sk-btn-danger text-sm" onClick={() => void del()}>
+          {t("common.delete")}
+        </button>
+      </div>
+    </li>
   );
 }

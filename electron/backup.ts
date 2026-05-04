@@ -2,7 +2,7 @@ import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
 
-export const BACKUP_EXPORT_VERSION = 1;
+export const BACKUP_EXPORT_VERSION = 2;
 
 interface BackupPayload {
   exportVersion: number;
@@ -12,6 +12,7 @@ interface BackupPayload {
   subscriptions: unknown[];
   payment_events: unknown[];
   settings: unknown[];
+  currencies: unknown[];
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -21,13 +22,14 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 function validatePayload(raw: unknown): BackupPayload {
   if (!isRecord(raw)) throw new Error("Invalid backup file");
   const exportVersion = raw.exportVersion;
-  if (exportVersion !== BACKUP_EXPORT_VERSION) {
+  if (exportVersion !== 1 && exportVersion !== 2) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
   const categories = raw.categories;
   const subscriptions = raw.subscriptions;
   const payment_events = raw.payment_events;
   const settings = raw.settings;
+  const currencies = Array.isArray(raw.currencies) ? raw.currencies : [];
   if (!Array.isArray(categories)) throw new Error("Invalid backup: categories");
   if (!Array.isArray(subscriptions)) throw new Error("Invalid backup: subscriptions");
   if (!Array.isArray(payment_events)) throw new Error("Invalid backup: payment_events");
@@ -40,6 +42,7 @@ function validatePayload(raw: unknown): BackupPayload {
     subscriptions,
     payment_events,
     settings,
+    currencies,
   };
 }
 
@@ -62,7 +65,16 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
     database.prepare("DELETE FROM payment_events").run();
     database.prepare("DELETE FROM subscriptions").run();
     database.prepare("DELETE FROM categories").run();
+    database.prepare("DELETE FROM currencies").run();
     database.prepare("DELETE FROM settings").run();
+
+    const insCur = database.prepare(
+      "INSERT INTO currencies (code, sort_order) VALUES (?, ?)",
+    );
+    for (const row of data.currencies) {
+      if (!isRecord(row)) throw new Error("Invalid currency row");
+      insCur.run(String(row.code).trim().toUpperCase(), Number(row.sort_order) || 0);
+    }
 
     const insCat = database.prepare(
       "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
@@ -165,6 +177,7 @@ export function registerBackupIpc(
       .prepare("SELECT * FROM payment_events ORDER BY id")
       .all();
     const settings = database.prepare("SELECT * FROM settings ORDER BY key").all();
+    const currencies = database.prepare("SELECT * FROM currencies ORDER BY sort_order, code").all();
 
     const payload: BackupPayload = {
       exportVersion: BACKUP_EXPORT_VERSION,
@@ -174,6 +187,7 @@ export function registerBackupIpc(
       subscriptions,
       payment_events,
       settings,
+      currencies,
     };
 
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
