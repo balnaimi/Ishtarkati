@@ -80,50 +80,50 @@ export function StatsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">{t("stats.title")}</h2>
+    <div className="space-y-8">
+      <h2 className="text-xl font-semibold text-cream-900">{t("stats.title")}</h2>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={busy}
-          className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700 disabled:opacity-50"
+          className="sk-btn-secondary"
           onClick={() => void recalcAll()}
         >
           {t("stats.refreshFx")}
         </button>
-        {msg ? <span className="text-sm text-emerald-400">{msg}</span> : null}
+        {msg ? <span className="text-sm font-medium text-sage-800">{msg}</span> : null}
       </div>
 
       {!summary ? (
-        <p className="text-slate-400">{t("common.loading")}</p>
+        <p className="text-cream-700">{t("common.loading")}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-            <p className="text-sm text-slate-400">{t("stats.monthlyEstimate")}</p>
-            <p className="text-2xl font-semibold text-emerald-300">
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="sk-card">
+            <p className="text-sm font-medium text-cream-700">{t("stats.monthlyEstimate")}</p>
+            <p className="mt-2 text-2xl font-semibold text-sage-800">
               {summary.monthlyEstimate.toFixed(2)} QAR
             </p>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-3 text-sm text-cream-600">
               {t("stats.subscriptions")}: {summary.recurringCount}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-            <p className="text-sm text-slate-400">{t("stats.due30")}</p>
-            <p className="text-2xl font-semibold text-amber-300">
+          <div className="sk-card">
+            <p className="text-sm font-medium text-cream-700">{t("stats.due30")}</p>
+            <p className="mt-2 text-2xl font-semibold text-walnut-600">
               {summary.due30Total.toFixed(2)} QAR
             </p>
           </div>
-          <div className="md:col-span-2 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-            <p className="mb-2 text-sm text-slate-400">{t("stats.byCategory")}</p>
-            <ul className="space-y-1">
+          <div className="md:col-span-2 sk-card">
+            <p className="mb-3 text-sm font-medium text-cream-700">{t("stats.byCategory")}</p>
+            <ul className="space-y-2">
               {summary.byCategory.length === 0 ? (
-                <li className="text-slate-500">{t("common.none")}</li>
+                <li className="text-cream-600">{t("common.none")}</li>
               ) : (
                 summary.byCategory.map((row) => (
-                  <li key={row.name} className="flex justify-between text-sm text-slate-300">
+                  <li key={row.name} className="flex flex-wrap justify-between gap-2 text-sm text-cream-800">
                     <span>{row.name}</span>
-                    <span className="text-emerald-300">{row.monthlyQar.toFixed(2)} QAR / شهريًا</span>
+                    <span className="font-medium text-sage-800">{row.monthlyQar.toFixed(2)} QAR / شهريًا</span>
                   </li>
                 ))
               )}

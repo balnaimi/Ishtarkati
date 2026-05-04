@@ -8,13 +8,5 @@ interface Window {
       params: unknown[],
     ) => Promise<{ changes: number; lastInsertRowid: number }>;
     openExternal: (url: string) => Promise<void>;
-    backupExport: () => Promise<
-      | { ok: true; path: string }
-      | { ok: false; canceled?: boolean; error?: string }
-    >;
-    backupImport: () => Promise<
-      | { ok: true }
-      | { ok: false; canceled?: boolean; error?: string }
-    >;
   };
 }

@@ -1,39 +1,26 @@
-import Database from "@tauri-apps/plugin-sql";
-import { runMigrations } from "./migrations";
+/** Renderer-side DB access via Electron preload IPC (better-sqlite3 runs in main). */
 
-const DB_URL = "sqlite:ishtarkati.db";
-
-let ready: Promise<Database> | null = null;
-
-async function init(): Promise<Database> {
-  const db = await Database.load(DB_URL);
-  await runMigrations(db);
-  await seedCategoriesIfEmpty(db);
-  return db;
+export interface DbApi {
+  select: <T>(sql: string, params?: unknown[]) => Promise<T[]>;
+  execute: (
+    sql: string,
+    params?: unknown[],
+  ) => Promise<{ rowsAffected: number; lastInsertId?: number }>;
 }
 
-export function getDb(): Promise<Database> {
-  if (!ready) {
-    ready = init();
-  }
-  return ready;
-}
+const api: DbApi = {
+  select: async <T>(sql: string, params: unknown[] = []) => {
+    return (await window.ishtarkati.dbSelect(sql, params)) as T[];
+  },
+  execute: async (sql: string, params: unknown[] = []) => {
+    const r = await window.ishtarkati.dbExecute(sql, params);
+    return {
+      rowsAffected: r.changes,
+      lastInsertId: r.lastInsertRowid,
+    };
+  },
+};
 
-async function seedCategoriesIfEmpty(db: Database): Promise<void> {
-  const rows = await db.select<{ c: number }[]>(
-    "SELECT COUNT(*) as c FROM categories",
-  );
-  if ((rows[0]?.c ?? 0) > 0) return;
-  const seeds: [string, number][] = [
-    ["خدمات", 1],
-    ["ألعاب", 2],
-    ["نطاقات", 3],
-    ["أخرى", 4],
-  ];
-  for (const [name, order] of seeds) {
-    await db.execute(
-      "INSERT INTO categories (name, sort_order) VALUES ($1, $2)",
-      [name, order],
-    );
-  }
+export async function getDb(): Promise<DbApi> {
+  return api;
 }

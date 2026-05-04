@@ -37,33 +37,32 @@ export function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">{t("categories.title")}</h2>
+    <div className="space-y-8">
+      <h2 className="text-xl font-semibold text-cream-900">{t("categories.title")}</h2>
 
-      <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2">
-        <div className="grid gap-1">
-          <label className="text-xs text-slate-400">{t("categories.name")}</label>
-          <input
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+      <form
+        onSubmit={handleAdd}
+        className="sk-card flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
+      >
+        <div className="min-w-0 flex-1 sm:max-w-md">
+          <label className="sk-label">{t("categories.name")}</label>
+          <input className="sk-input" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="grid w-24 gap-1">
-          <label className="text-xs text-slate-400">{t("categories.sort")}</label>
+        <div className="w-full sm:w-28">
+          <label className="sk-label">{t("categories.sort")}</label>
           <input
             type="number"
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
+            className="sk-input"
             value={order}
             onChange={(e) => setOrder(e.target.value)}
           />
         </div>
-        <button type="submit" className="rounded-lg bg-emerald-800 px-3 py-1.5 text-sm text-white hover:bg-emerald-700">
+        <button type="submit" className="sk-btn-primary w-full sm:w-auto">
           {t("categories.add")}
         </button>
       </form>
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {items.map((c) => (
           <CategoryRow key={c.id} c={c} onSaved={reload} onDelete={() => void handleDelete(c)} />
         ))}
@@ -96,24 +95,26 @@ function CategoryRow({
   }
 
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2">
+    <li className="flex flex-col gap-3 rounded-xl border border-cream-400 bg-cream-50/95 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
       <input
-        className="flex-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-sm"
+        className="sk-input min-w-0 flex-1 sm:min-w-[12rem]"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
       <input
         type="number"
-        className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-sm"
+        className="sk-input w-full sm:w-24"
         value={sort}
         onChange={(e) => setSort(e.target.value)}
       />
-      <button type="button" className="text-sm text-emerald-400 hover:underline" onClick={() => void save()}>
-        {t("common.save")}
-      </button>
-      <button type="button" className="text-sm text-red-400 hover:underline" onClick={onDelete}>
-        {t("common.delete")}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="sk-btn-secondary text-sm" onClick={() => void save()}>
+          {t("common.save")}
+        </button>
+        <button type="button" className="sk-btn-danger text-sm" onClick={onDelete}>
+          {t("common.delete")}
+        </button>
+      </div>
     </li>
   );
 }

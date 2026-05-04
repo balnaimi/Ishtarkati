@@ -115,18 +115,18 @@ export function DetailPage() {
   }
 
   if (loading) {
-    return <p className="text-slate-400">{t("common.loading")}</p>;
+    return <p className="text-cream-700">{t("common.loading")}</p>;
   }
   if (!sub) {
-    return <p className="text-slate-400">{t("common.error")}</p>;
+    return <p className="text-cream-700">{t("common.error")}</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-white">{sub.title}</h2>
-          <p className="text-sm text-slate-400">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-2">
+          <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
+          <p className="text-sm text-cream-700">
             {sub.category_name ?? "—"} · {sub.next_due_date ?? "—"}
           </p>
           {sub.website_url ? (
@@ -134,137 +134,121 @@ export function DetailPage() {
               href={sub.website_url}
               target="_blank"
               rel="noreferrer"
-              className="text-sm text-sky-400 hover:underline"
+              className="break-all text-sm text-sage-800 underline-offset-2 hover:underline"
             >
               {sub.website_url}
             </a>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <Link
-            to={`/sub/${sub.id}/edit`}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm hover:bg-slate-700"
-          >
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/sub/${sub.id}/edit`} className="sk-btn-secondary text-sm">
             {t("common.edit")}
           </Link>
-          <button
-            type="button"
-            className="rounded-lg border border-red-900 bg-red-950/50 px-3 py-1.5 text-sm text-red-200 hover:bg-red-950"
-            onClick={() => void handleDelete()}
-          >
+          <button type="button" className="sk-btn-danger text-sm" onClick={() => void handleDelete()}>
             {t("common.delete")}
           </button>
         </div>
       </div>
 
       {sub.notes ? (
-        <p className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-slate-300">{sub.notes}</p>
+        <p className="sk-card text-cream-800 leading-relaxed">{sub.notes}</p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-          <h3 className="font-medium text-white">{t("detail.addPayment")}</h3>
-          <div className="mt-3 space-y-2">
-            <label className="block text-xs text-slate-400">{t("detail.paidAt")}</label>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="sk-card space-y-4">
+          <h3 className="font-semibold text-cream-900">{t("detail.addPayment")}</h3>
+          <div>
+            <label className="sk-label">{t("detail.paidAt")}</label>
             <input
               type="date"
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
+              className="sk-input"
               value={payDate}
               onChange={(e) => setPayDate(e.target.value)}
             />
-            <label className="block text-xs text-slate-400">{t("list.amount")}</label>
+          </div>
+          <div>
+            <label className="sk-label">{t("list.amount")}</label>
             <input
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
+              className="sk-input"
               value={payAmount}
               onChange={(e) => setPayAmount(e.target.value)}
             />
-            <label className="block text-xs text-slate-400">{t("detail.paymentNote")}</label>
-            <input
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
-              value={payNote}
-              onChange={(e) => setPayNote(e.target.value)}
-            />
-            {sub.billing_model === "recurring" ? (
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={advanceRecurring}
-                  onChange={(e) => setAdvanceRecurring(e.target.checked)}
-                />
-                {t("detail.advanceRecurring")}
-              </label>
-            ) : null}
-            <button
-              type="button"
-              className="mt-2 rounded-lg bg-emerald-800 px-3 py-1.5 text-sm text-white hover:bg-emerald-700"
-              onClick={() => void handleRecordPayment()}
-            >
-              {t("detail.recordPayment")}
-            </button>
           </div>
+          <div>
+            <label className="sk-label">{t("detail.paymentNote")}</label>
+            <input className="sk-input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
+          </div>
+          {sub.billing_model === "recurring" ? (
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={advanceRecurring}
+                onChange={(e) => setAdvanceRecurring(e.target.checked)}
+              />
+              {t("detail.advanceRecurring")}
+            </label>
+          ) : null}
+          <button type="button" className="sk-btn-primary w-full sm:w-auto" onClick={() => void handleRecordPayment()}>
+            {t("detail.recordPayment")}
+          </button>
         </div>
 
         {sub.is_domain ? (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-            <h3 className="font-medium text-white">{t("detail.renewDomain")}</h3>
-            <div className="mt-3 space-y-2">
-              <label className="block text-xs text-slate-400">{t("detail.renewalYears")}</label>
+          <div className="sk-card space-y-4">
+            <h3 className="font-semibold text-cream-900">{t("detail.renewDomain")}</h3>
+            <div>
+              <label className="sk-label">{t("detail.renewalYears")}</label>
               <input
                 type="number"
                 min={1}
-                className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
+                className="sk-input max-w-xs"
                 value={renewYears}
                 onChange={(e) => setRenewYears(e.target.value)}
               />
-              <label className="block text-xs text-slate-400">{t("detail.paymentNote")}</label>
-              <input
-                className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
-                value={renewNote}
-                onChange={(e) => setRenewNote(e.target.value)}
-              />
-              <button
-                type="button"
-                className="mt-2 rounded-lg bg-amber-800 px-3 py-1.5 text-sm text-white hover:bg-amber-700"
-                onClick={() => void handleDomainRenewal()}
-              >
-                {t("detail.recordRenewal")}
-              </button>
             </div>
+            <div>
+              <label className="sk-label">{t("detail.paymentNote")}</label>
+              <input className="sk-input" value={renewNote} onChange={(e) => setRenewNote(e.target.value)} />
+            </div>
+            <button type="button" className="sk-btn-warm w-full sm:w-auto" onClick={() => void handleDomainRenewal()}>
+              {t("detail.recordRenewal")}
+            </button>
           </div>
         ) : null}
       </div>
 
       <div>
-        <h3 className="mb-2 font-medium text-white">{t("detail.payments")}</h3>
-        <ul className="space-y-2">
+        <h3 className="mb-3 font-semibold text-cream-900">{t("detail.payments")}</h3>
+        <ul className="space-y-3">
           {payments.length === 0 ? (
-            <li className="text-slate-500">{t("common.none")}</li>
+            <li className="text-cream-600">{t("common.none")}</li>
           ) : (
             payments.map((p) => (
               <li
                 key={p.id}
-                className="rounded-lg border border-slate-800 bg-slate-900/30 px-3 py-2 text-sm text-slate-300"
+                className="sk-card py-3 text-sm text-cream-800"
               >
-                <span className="font-medium text-slate-100">{p.paid_at}</span>
+                <span className="font-semibold text-cream-900">{p.paid_at}</span>
                 {p.amount_original != null ? (
-                  <span className="ms-2">
+                  <span className="me-2 ms-2">
                     {p.amount_original} {p.currency ?? ""}
                   </span>
                 ) : null}
                 {p.amount_qar != null ? (
-                  <span className="ms-2 text-emerald-300">≈ {p.amount_qar.toFixed(2)} QAR</span>
+                  <span className="font-medium text-sage-800">≈ {p.amount_qar.toFixed(2)} QAR</span>
                 ) : null}
                 {p.renewal_years != null ? (
-                  <span className="ms-2 text-amber-200">+{p.renewal_years} y</span>
+                  <span className="me-2 text-walnut-600">+{p.renewal_years} y</span>
                 ) : null}
-                {p.note ? <p className="mt-1 text-xs text-slate-500">{p.note}</p> : null}
+                {p.note ? <p className="mt-2 text-xs text-cream-600">{p.note}</p> : null}
               </li>
             ))
           )}
         </ul>
       </div>
 
-      <Link to="/" className="inline-block text-sm text-sky-400 hover:underline">
+      <Link to="/" className="inline-flex text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
         ← {t("common.back")}
       </Link>
     </div>

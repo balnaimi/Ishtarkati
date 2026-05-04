@@ -2,10 +2,10 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const linkCls = (active: boolean) =>
-  `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+  `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
     active
-      ? "bg-slate-700 text-white"
-      : "text-slate-200 hover:bg-slate-800"
+      ? "bg-cream-800 text-cream-50 shadow-sm"
+      : "text-cream-800 hover:bg-cream-300/70"
   }`;
 
 export function Layout() {
@@ -21,11 +21,11 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-950 font-sans text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <h1 className="text-lg font-semibold text-white">{t("app.title")}</h1>
-          <nav className="flex flex-wrap gap-1">
+    <div className="flex min-h-full flex-col font-sans">
+      <header className="border-b border-cream-400 bg-cream-100/85 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+          <h1 className="text-lg font-semibold text-cream-900">{t("app.title")}</h1>
+          <nav className="flex flex-wrap gap-2">
             {nav.map(({ to, label }) => {
               const homeMatch = to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
               const active =
@@ -39,7 +39,7 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-8">
         <Outlet />
       </main>
     </div>

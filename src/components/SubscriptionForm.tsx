@@ -109,46 +109,42 @@ export function SubscriptionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-4">
-      {err ? (
-        <p className="rounded-lg border border-red-800 bg-red-950/80 px-3 py-2 text-sm text-red-100">
-          {err}
-        </p>
-      ) : null}
+    <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 md:space-y-6">
+      {err ? <p className="sk-alert">{err}</p> : null}
 
-      <div className="grid gap-2">
-        <label className="text-sm text-slate-400">{t("form.title")}</label>
+      <div>
+        <label className="sk-label">{t("form.title")}</label>
         <input
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+          className="sk-input"
           value={v.title}
           onChange={(e) => setField("title", e.target.value)}
           required
         />
       </div>
 
-      <div className="grid gap-2">
-        <label className="text-sm text-slate-400">{t("form.notes")}</label>
+      <div>
+        <label className="sk-label">{t("form.notes")}</label>
         <textarea
-          className="min-h-[80px] rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+          className="sk-textarea"
           value={v.notes}
           onChange={(e) => setField("notes", e.target.value)}
         />
       </div>
 
-      <div className="grid gap-2">
-        <label className="text-sm text-slate-400">{t("form.website")}</label>
+      <div>
+        <label className="sk-label">{t("form.website")}</label>
         <input
           type="url"
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+          className="sk-input"
           value={v.website_url}
           onChange={(e) => setField("website_url", e.target.value)}
         />
       </div>
 
-      <div className="grid gap-2">
-        <label className="text-sm text-slate-400">{t("form.category")}</label>
+      <div>
+        <label className="sk-label">{t("form.category")}</label>
         <select
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+          className="sk-select"
           value={v.category_id}
           onChange={(e) => setField("category_id", e.target.value)}
         >
@@ -161,10 +157,11 @@ export function SubscriptionForm({
         </select>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-3 pt-1">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
           <input
             type="checkbox"
+            className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
             checked={v.is_domain}
             onChange={(e) => setField("is_domain", e.target.checked)}
           />
@@ -172,10 +169,10 @@ export function SubscriptionForm({
         </label>
       </div>
 
-      <div className="grid gap-2">
-        <label className="text-sm text-slate-400">{t("form.billingModel")}</label>
+      <div>
+        <label className="sk-label">{t("form.billingModel")}</label>
         <select
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+          className="sk-select"
           value={v.billing_model}
           onChange={(e) =>
             setField("billing_model", e.target.value as SubscriptionFormValues["billing_model"])
@@ -188,11 +185,11 @@ export function SubscriptionForm({
       </div>
 
       {v.billing_model === "recurring" ? (
-        <>
-          <div className="grid gap-2">
-            <label className="text-sm text-slate-400">{t("form.interval")}</label>
+        <div className="space-y-5 border-t border-cream-400/80 pt-5">
+          <div>
+            <label className="sk-label">{t("form.interval")}</label>
             <select
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+              className="sk-select"
               value={v.interval_unit}
               onChange={(e) =>
                 setField("interval_unit", e.target.value as SubscriptionFormValues["interval_unit"])
@@ -206,24 +203,25 @@ export function SubscriptionForm({
             </select>
           </div>
           {v.interval_unit === "custom_months" ? (
-            <div className="grid gap-2">
-              <label className="text-sm text-slate-400">{t("form.intervalMonths")}</label>
+            <div>
+              <label className="sk-label">{t("form.intervalMonths")}</label>
               <input
                 type="number"
                 min={1}
-                className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+                className="sk-input max-w-xs"
                 value={v.interval_months}
                 onChange={(e) => setField("interval_months", e.target.value)}
               />
             </div>
           ) : null}
-        </>
+        </div>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
           <input
             type="checkbox"
+            className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
             checked={v.auto_renew}
             onChange={(e) => setField("auto_renew", e.target.checked)}
           />
@@ -231,87 +229,76 @@ export function SubscriptionForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-2">
-          <label className="text-sm text-slate-400">{t("form.amountOriginal")}</label>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div>
+          <label className="sk-label">{t("form.amountOriginal")}</label>
           <input
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+            className="sk-input"
             value={v.amount_original}
             onChange={(e) => setField("amount_original", e.target.value)}
             inputMode="decimal"
             required
           />
         </div>
-        <div className="grid gap-2">
-          <label className="text-sm text-slate-400">{t("form.currency")}</label>
+        <div>
+          <label className="sk-label">{t("form.currency")}</label>
           <input
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+            className="sk-input uppercase"
             value={v.currency_code}
             onChange={(e) => setField("currency_code", e.target.value.toUpperCase())}
             placeholder="USD"
+            maxLength={8}
             required
           />
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 text-sm">
-        <p className="text-slate-400">{t("list.qar")}</p>
-        <p className="text-lg font-semibold text-emerald-300">
+      <div className="sk-card space-y-3">
+        <p className="text-sm font-medium text-cream-700">{t("list.qar")}</p>
+        <p className="text-xl font-semibold text-sage-800">
           {qarPreview.qar != null ? qarPreview.qar.toFixed(2) : "—"}
         </p>
-        {qarPreview.error ? <p className="text-red-300">{qarPreview.error}</p> : null}
-        <button
-          type="button"
-          className="mt-2 rounded-md bg-slate-700 px-3 py-1.5 text-xs text-white hover:bg-slate-600"
-          onClick={() => void onFetchFx()}
-        >
+        {qarPreview.error ? <p className="text-sm text-red-900">{qarPreview.error}</p> : null}
+        <button type="button" className="sk-btn-secondary w-full sm:w-auto" onClick={() => void onFetchFx()}>
           {t("form.recalcFx")}
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="grid gap-2">
-          <label className="text-sm text-slate-400">{t("form.startDate")}</label>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+          <label className="sk-label">{t("form.startDate")}</label>
           <input
             type="date"
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+            className="sk-input"
             value={v.start_date}
             onChange={(e) => setField("start_date", e.target.value)}
           />
         </div>
-        <div className="grid gap-2">
-          <label className="text-sm text-slate-400">{t("form.nextDue")}</label>
+        <div>
+          <label className="sk-label">{t("form.nextDue")}</label>
           <input
             type="date"
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+            className="sk-input"
             value={v.next_due_date}
             onChange={(e) => setField("next_due_date", e.target.value)}
           />
         </div>
-        <div className="grid gap-2">
-          <label className="text-sm text-slate-400">{t("form.endDate")}</label>
+        <div className="sm:col-span-2 lg:col-span-1">
+          <label className="sk-label">{t("form.endDate")}</label>
           <input
             type="date"
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-slate-500"
+            className="sk-input"
             value={v.end_date}
             onChange={(e) => setField("end_date", e.target.value)}
           />
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
-        >
+      <div className="flex flex-col gap-3 border-t border-cream-400/80 pt-6 sm:flex-row sm:flex-wrap">
+        <button type="submit" disabled={busy} className="sk-btn-primary sm:min-w-[8rem]">
           {submitLabel ?? t("common.save")}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200 hover:bg-slate-800"
-        >
+        <button type="button" onClick={onCancel} className="sk-btn-secondary">
           {t("common.cancel")}
         </button>
       </div>

@@ -50,12 +50,12 @@ export function EditSubscriptionPage() {
   }
 
   if (!initial) {
-    return <p className="text-slate-400">{t("common.loading")}</p>;
+    return <p className="text-cream-700">{t("common.loading")}</p>;
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-white">{t("form.editTitle")}</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-cream-900">{t("form.editTitle")}</h2>
       <SubscriptionForm
         key={id}
         initial={initial}

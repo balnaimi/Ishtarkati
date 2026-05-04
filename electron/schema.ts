@@ -1,6 +1,4 @@
-import type Database from "@tauri-apps/plugin-sql";
-
-const SCHEMA_V1_STATEMENTS = [
+export const SCHEMA_V1_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -45,29 +43,3 @@ const SCHEMA_V1_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_subs_category ON subscriptions(category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_subs_next_due ON subscriptions(next_due_date)`,
 ];
-
-export async function runMigrations(db: Database): Promise<void> {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS schema_version (
-      version INTEGER NOT NULL
-    );
-  `);
-
-  const rows = await db.select<{ version: number }[]>(
-    "SELECT version FROM schema_version LIMIT 1",
-  );
-
-  let version = rows[0]?.version;
-
-  if (version == null) {
-    await db.execute("INSERT INTO schema_version (version) VALUES (0)");
-    version = 0;
-  }
-
-  if (version < 1) {
-    for (const sql of SCHEMA_V1_STATEMENTS) {
-      await db.execute(sql);
-    }
-    await db.execute("UPDATE schema_version SET version = 1");
-  }
-}

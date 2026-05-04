@@ -31,8 +31,8 @@ export function NewSubscriptionPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-white">{t("form.newTitle")}</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-cream-900">{t("form.newTitle")}</h2>
       <SubscriptionForm
         initial={defaultFormValues()}
         categories={categories}

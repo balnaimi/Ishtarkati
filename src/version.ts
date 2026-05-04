@@ -1,2 +1,2 @@
-/** App version — keep in sync with package.json (see scripts/bump-version.mjs). */
-export const APP_VERSION = "0.1.7";
+/** App version — synced from package.json (see scripts/bump-patch-for-build.mjs / bump-version.mjs). */
+export const APP_VERSION = "1.0.2";

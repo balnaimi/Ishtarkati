@@ -1,5 +1,5 @@
 /**
- * Bump semver in package.json, src/version.ts, and sync tauri.conf.json.
+ * Bump semver in package.json and src/version.ts.
  * Usage: npm run version:bump -- patch|minor|major
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -38,20 +38,7 @@ writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 const versionTsPath = join(root, "src", "version.ts");
 writeFileSync(
   versionTsPath,
-  `/** App version — keep in sync with package.json (see scripts/bump-version.mjs). */\nexport const APP_VERSION = "${next}";\n`,
+  `/** App version — synced from package.json (see scripts/bump-version.mjs; each \`npm run build\` also bumps patch via bump-patch-for-build.mjs). */\nexport const APP_VERSION = "${next}";\n`,
 );
-
-const tauriPath = join(root, "src-tauri", "tauri.conf.json");
-const tauri = JSON.parse(readFileSync(tauriPath, "utf8"));
-tauri.version = next;
-writeFileSync(tauriPath, JSON.stringify(tauri, null, 2) + "\n");
-
-const cargoPath = join(root, "src-tauri", "Cargo.toml");
-let cargoToml = readFileSync(cargoPath, "utf8");
-cargoToml = cargoToml.replace(
-  /^version = "[^"]+"/m,
-  `version = "${next}"`,
-);
-writeFileSync(cargoPath, cargoToml);
 
 console.log(`Bumped to ${next}`);

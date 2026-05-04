@@ -10,7 +10,7 @@ import type {
 
 export async function loadCategories(): Promise<Category[]> {
   const db = await getDb();
-  return db.select<Category[]>(
+  return db.select<Category>(
     "SELECT id, name, sort_order FROM categories ORDER BY sort_order ASC, id ASC",
   );
 }
@@ -100,12 +100,12 @@ export async function loadSubscriptions(filters: {
 }): Promise<SubscriptionListRow[]> {
   const db = await getDb();
   const { sql, args } = buildSubscriptionQuery(filters);
-  return db.select<SubscriptionListRow[]>(sql, args);
+  return db.select<SubscriptionListRow>(sql, args);
 }
 
 export async function getSubscription(id: number): Promise<SubscriptionListRow | null> {
   const db = await getDb();
-  const rows = await db.select<SubscriptionListRow[]>(
+  const rows = await db.select<SubscriptionListRow>(
     `SELECT s.*, c.name AS category_name
      FROM subscriptions s
      LEFT JOIN categories c ON c.id = s.category_id
@@ -169,7 +169,7 @@ export async function insertSubscription(row: {
   if (r.lastInsertId != null && r.lastInsertId > 0) {
     return r.lastInsertId;
   }
-  const idRows = await db.select<{ id: number }[]>(
+  const idRows = await db.select<{ id: number }>(
     "SELECT last_insert_rowid() AS id",
   );
   return idRows[0]?.id ?? 0;
@@ -264,7 +264,7 @@ export async function setSubscriptionNextDue(
 
 export async function listPayments(subId: number): Promise<PaymentEvent[]> {
   const db = await getDb();
-  return db.select<PaymentEvent[]>(
+  return db.select<PaymentEvent>(
     "SELECT * FROM payment_events WHERE subscription_id = $1 ORDER BY paid_at DESC, id DESC",
     [subId],
   );
@@ -289,7 +289,7 @@ export async function insertPaymentEvent(
 
 export async function getSetting(key: string): Promise<string | null> {
   const db = await getDb();
-  const rows = await db.select<{ value: string }[]>(
+  const rows = await db.select<{ value: string }>(
     "SELECT value FROM settings WHERE key = $1",
     [key],
   );

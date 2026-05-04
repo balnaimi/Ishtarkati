@@ -1,31 +1,31 @@
 import { defineConfig } from "vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import electron from "vite-plugin-electron/simple";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// https://vite.dev/config/
-export default defineConfig(async ({ command }) => ({
-  // Production (tauri build): relative URLs so scripts/styles load in the Tauri webview.
-  base: command === "build" ? "./" : "/",
-
-  plugins: [react(), tailwindcss()],
-
-  clearScreen: false,
-  server: {
-    port: 1420,
-    strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-      : undefined,
-    watch: {
-      ignored: ["**/src-tauri/**"],
-    },
-  },
-}));
+export default defineConfig({
+  base: "./",
+  plugins: [
+    tailwindcss(),
+    react(),
+    electron({
+      main: {
+        entry: "electron/main.ts",
+        vite: {
+          build: {
+            rollupOptions: {
+              // better-sqlite3 pulls in `bindings`, which uses __filename — breaks when bundled as ESM
+              external: ["better-sqlite3"],
+            },
+          },
+        },
+      },
+      preload: { input: path.join(_dirname, "electron/preload.ts") },
+      renderer: process.env.NODE_ENV === "test" ? undefined : {},
+    }),
+  ],
+});
