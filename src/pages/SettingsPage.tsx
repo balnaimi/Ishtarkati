@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   getSetting,
@@ -20,6 +21,7 @@ type TabId = "app" | "categories" | "payments" | "export";
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<TabId>("app");
   const [overridesText, setOverridesText] = useState("{}");
   const [fxAt, setFxAt] = useState<string | null>(null);
@@ -69,6 +71,24 @@ export function SettingsPage() {
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "categories" || raw === "payments" || raw === "export") {
+      setTab(raw);
+    } else {
+      setTab("app");
+    }
+  }, [searchParams]);
+
+  function selectTab(id: TabId) {
+    setTab(id);
+    if (id === "app") {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: id }, { replace: true });
+    }
+  }
 
   async function saveOverrides() {
     await setSetting(OVERRIDES_KEY, overridesText.trim() || "{}");
@@ -220,7 +240,7 @@ export function SettingsPage() {
             className={`rounded-lg px-3 py-2 text-sm font-medium ${
               tab === x.id ? "bg-cream-800 text-cream-50" : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
             }`}
-            onClick={() => setTab(x.id)}
+            onClick={() => selectTab(x.id)}
           >
             {x.label}
           </button>

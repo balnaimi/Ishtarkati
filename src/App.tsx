@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { OnboardingGate } from "./components/OnboardingGate";
 import { PinGate } from "./components/PinGate";
 import { HomePage } from "./pages/HomePage";
 import { SubscriptionsListPage } from "./pages/SubscriptionsListPage";
@@ -11,19 +12,21 @@ import { SettingsPage } from "./pages/SettingsPage";
 export default function App() {
   return (
     <BrowserRouter>
-      <PinGate>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<HomePage />} />
-            <Route path="list" element={<SubscriptionsListPage />} />
-            <Route path="new" element={<NewSubscriptionPage />} />
-            <Route path="sub/:id" element={<DetailPage />} />
-            <Route path="sub/:id/edit" element={<EditSubscriptionPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </PinGate>
+      <OnboardingGate>
+        <PinGate>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route index element={<HomePage />} />
+              <Route path="list" element={<SubscriptionsListPage />} />
+              <Route path="new" element={<NewSubscriptionPage />} />
+              <Route path="sub/:id" element={<DetailPage />} />
+              <Route path="sub/:id/edit" element={<EditSubscriptionPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </PinGate>
+      </OnboardingGate>
     </BrowserRouter>
   );
 }

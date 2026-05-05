@@ -230,6 +230,20 @@ function runMigrations(database: Database.Database): void {
     migrate();
     database.exec("PRAGMA foreign_keys = ON");
   }
+  if (version < 5) {
+    const subN =
+      (database.prepare("SELECT COUNT(*) AS n FROM subscriptions").get() as { n: number }).n ?? 0;
+    const wallN =
+      (database.prepare("SELECT COUNT(*) AS n FROM wallet_methods").get() as { n: number }).n ?? 0;
+    const primRow = database
+      .prepare("SELECT value FROM settings WHERE key = 'primary_currency' LIMIT 1")
+      .get() as { value: string } | undefined;
+    const hasPrim = (primRow?.value?.trim().length ?? 0) >= 3;
+    if (subN > 0 || wallN > 0 || hasPrim) {
+      dbSetSetting(database, "onboarding_complete", "1");
+    }
+    database.prepare("UPDATE schema_version SET version = 5").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

@@ -487,6 +487,9 @@ export async function insertPaymentEvent(
   );
 }
 
+/** When `'1'`, first-run onboarding has finished. */
+export const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 export async function getSetting(key: string): Promise<string | null> {
   const db = await getDb();
   const rows = await db.select<{ value: string }>(
