@@ -10,6 +10,7 @@ import "@fontsource/tajawal/700.css";
 import "./i18n";
 import "./index.css";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 if (typeof localStorage !== "undefined" && localStorage.getItem("ishtarkati_theme") === "dark") {
   document.documentElement.classList.add("dark");
@@ -17,6 +18,8 @@ if (typeof localStorage !== "undefined" && localStorage.getItem("ishtarkati_them
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 );

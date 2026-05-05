@@ -284,11 +284,22 @@ function verifyPinScrypt(pin: string, saltHex: string, hashHex: string): boolean
   }
 }
 
+function closeDatabase(): void {
+  if (!db) return;
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  db = null;
+}
+
 function openDatabase(): void {
   const dir = app.getPath("userData");
   const fp = path.join(dir, "ishtarkati.db");
   db = new Database(fp);
   db.pragma("journal_mode = WAL");
+  db.pragma("busy_timeout = 5000");
   db.pragma("foreign_keys = ON");
   runMigrations(db);
 }
@@ -416,23 +427,39 @@ function createWindow(): void {
   }
 }
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    db?.close();
-    db = null;
-    app.quit();
-    win = null;
-  }
-});
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+
+  app.on("before-quit", () => {
+    closeDatabase();
+  });
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      closeDatabase();
+      app.quit();
+      win = null;
+    }
+  });
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+
+  app.whenReady().then(() => {
+    openDatabase();
+    registerIpc();
     createWindow();
-  }
-});
-
-app.whenReady().then(() => {
-  openDatabase();
-  registerIpc();
-  createWindow();
-});
+  });
+}
