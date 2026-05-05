@@ -1,13 +1,33 @@
 /** Domain types and enums — code in English per project convention. */
 
-export type BillingModel = "one_time" | "recurring" | "pay_as_needed";
+export type BillingModel = "one_time" | "recurring";
 
-export type IntervalUnit = "month" | "quarter" | "year" | "custom_months";
+/** Billing step for recurring subscriptions. */
+export type IntervalUnit = "day" | "week" | "month" | "year";
 
 export interface Category {
   id: number;
   name: string;
   sort_order: number;
+}
+
+export interface CreditCard {
+  id: number;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalletMethod {
+  id: number;
+  service_code: string;
+  account_text: string;
+  linked_card_id: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Subscription {
@@ -19,6 +39,7 @@ export interface Subscription {
   billing_model: BillingModel;
   interval_unit: IntervalUnit | null;
   interval_months: number | null;
+  interval_count: number;
   auto_renew: number;
   amount_original: number;
   currency_code: string;
@@ -30,6 +51,8 @@ export interface Subscription {
   end_date: string | null;
   is_domain: number;
   tags: string | null;
+  credit_card_id: number | null;
+  wallet_method_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,13 +75,14 @@ export interface SubscriptionFormValues {
   category_id: string;
   billing_model: BillingModel;
   interval_unit: IntervalUnit | "";
-  interval_months: string;
+  interval_count: string;
   auto_renew: boolean;
   amount_original: string;
   currency_code: string;
   start_date: string;
   next_due_date: string;
   end_date: string;
-  is_domain: boolean;
   tags: string;
+  credit_card_id: string;
+  wallet_method_id: string;
 }

@@ -78,6 +78,35 @@ export function amountToQarFromUsdBase(
   return { qar: amount * qarPerUnit, fxFactor: qarPerUnit };
 }
 
+/**
+ * Convert amount from `currencyCode` to user's primary display currency.
+ * Same convention as amountToQarFromUsdBase: rates are "currency per 1 USD".
+ */
+export function amountToPrimaryFromUsdBase(
+  amount: number,
+  currencyCode: string,
+  primaryCode: string,
+  rates: UsdBasedRates,
+  overrides: Record<string, number> | null,
+): { primary: number; fxFactor: number } {
+  const c = currencyCode.trim().toUpperCase();
+  const p = primaryCode.trim().toUpperCase();
+  if (c === p) {
+    return { primary: amount, fxFactor: 1 };
+  }
+  if (overrides && overrides[c] != null) {
+    const mult = overrides[c]!;
+    return { primary: amount * mult, fxFactor: mult };
+  }
+  const primaryPerUsd = rates[p];
+  const curPerUsd = rates[c];
+  if (primaryPerUsd == null || curPerUsd == null || curPerUsd === 0) {
+    throw new Error(`Missing FX rate for ${c}`);
+  }
+  const primaryPerUnit = primaryPerUsd / curPerUsd;
+  return { primary: amount * primaryPerUnit, fxFactor: primaryPerUnit };
+}
+
 export async function fetchFxRates(): Promise<FxFetchResult> {
   const res = await fetch(FX_ENDPOINT);
   if (!res.ok) {

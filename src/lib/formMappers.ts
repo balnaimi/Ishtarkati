@@ -1,4 +1,5 @@
 import type { SubscriptionFormValues, Subscription, IntervalUnit, BillingModel } from "../types";
+import { addBillingSteps, formatDateInput, parseDateInput } from "./schedule";
 
 function normalizeTags(raw: string): string | null {
   const parts = raw
@@ -17,15 +18,16 @@ export function defaultFormValues(): SubscriptionFormValues {
     category_id: "",
     billing_model: "recurring",
     interval_unit: "month",
-    interval_months: "3",
+    interval_count: "1",
     auto_renew: true,
     amount_original: "",
     currency_code: "",
     start_date: "",
     next_due_date: "",
     end_date: "",
-    is_domain: false,
     tags: "",
+    credit_card_id: "",
+    wallet_method_id: "",
   };
 }
 
@@ -37,23 +39,35 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
     category_id: s.category_id != null ? String(s.category_id) : "",
     billing_model: s.billing_model as BillingModel,
     interval_unit: (s.interval_unit as IntervalUnit) ?? "",
-    interval_months: s.interval_months != null ? String(s.interval_months) : "3",
+    interval_count: String(Math.max(1, s.interval_count ?? 1)),
     auto_renew: Boolean(s.auto_renew),
     amount_original: String(s.amount_original),
     currency_code: s.currency_code,
     start_date: s.start_date?.slice(0, 10) ?? "",
     next_due_date: s.next_due_date?.slice(0, 10) ?? "",
     end_date: s.end_date?.slice(0, 10) ?? "",
-    is_domain: Boolean(s.is_domain),
     tags: s.tags ?? "",
+    credit_card_id: s.credit_card_id != null ? String(s.credit_card_id) : "",
+    wallet_method_id: s.wallet_method_id != null ? String(s.wallet_method_id) : "",
   };
+}
+
+/** First next due for new recurring row from start date and interval. */
+export function computeNextDueForNewRecurring(v: SubscriptionFormValues): string | null {
+  if (v.billing_model !== "recurring" || !v.interval_unit) return null;
+  const start = parseDateInput(v.start_date);
+  if (!start) return null;
+  const cnt = parseInt(v.interval_count, 10) || 1;
+  const next = addBillingSteps(start, v.interval_unit as IntervalUnit, cnt);
+  return formatDateInput(next);
 }
 
 export function formToRow(
   v: SubscriptionFormValues,
-  qar: number,
+  primaryAmount: number,
   fxFactor: number,
   fxAt: string,
+  existing?: Subscription | null,
 ): {
   title: string;
   notes: string | null;
@@ -62,6 +76,7 @@ export function formToRow(
   billing_model: BillingModel;
   interval_unit: IntervalUnit | null;
   interval_months: number | null;
+  interval_count: number;
   auto_renew: number;
   amount_original: number;
   currency_code: string;
@@ -73,14 +88,38 @@ export function formToRow(
   end_date: string | null;
   is_domain: number;
   tags: string | null;
+  credit_card_id: number | null;
+  wallet_method_id: number | null;
 } {
   const amt = parseFloat(v.amount_original.replace(",", "."));
   const interval_unit: IntervalUnit | null =
     v.billing_model === "recurring" && v.interval_unit ? v.interval_unit : null;
-  let interval_months: number | null = null;
-  if (interval_unit === "custom_months") {
-    interval_months = parseInt(v.interval_months, 10) || null;
+  const interval_count =
+    v.billing_model === "recurring"
+      ? Math.max(1, parseInt(v.interval_count, 10) || 1)
+      : 1;
+
+  let next_due: string | null = null;
+  if (v.billing_model === "recurring") {
+    const fromForm = computeNextDueForNewRecurring(v);
+    if (existing?.billing_model === "recurring") {
+      const startChanged =
+        (v.start_date || null) !== (existing.start_date?.slice(0, 10) ?? null);
+      const unitChanged =
+        interval_unit !== existing.interval_unit ||
+        interval_count !== Math.max(1, existing.interval_count ?? 1);
+      if (startChanged || unitChanged) {
+        next_due = fromForm;
+      } else {
+        next_due = existing.next_due_date;
+      }
+    } else {
+      next_due = fromForm;
+    }
+  } else {
+    next_due = v.next_due_date.trim() || null;
   }
+
   return {
     title: v.title.trim(),
     notes: v.notes.trim() || null,
@@ -88,17 +127,20 @@ export function formToRow(
     category_id: v.category_id ? parseInt(v.category_id, 10) : null,
     billing_model: v.billing_model,
     interval_unit,
-    interval_months,
+    interval_months: null,
+    interval_count,
     auto_renew: v.auto_renew ? 1 : 0,
     amount_original: amt,
     currency_code: v.currency_code.trim().toUpperCase(),
-    amount_qar_snapshot: qar,
+    amount_qar_snapshot: primaryAmount,
     fx_rate_used: fxFactor,
     fx_quote_at: fxAt,
     start_date: v.start_date.trim() || null,
-    next_due_date: v.next_due_date.trim() || null,
+    next_due_date: next_due,
     end_date: v.end_date.trim() || null,
-    is_domain: v.is_domain ? 1 : 0,
+    is_domain: 0,
     tags: normalizeTags(v.tags),
+    credit_card_id: v.credit_card_id ? parseInt(v.credit_card_id, 10) : null,
+    wallet_method_id: v.wallet_method_id ? parseInt(v.wallet_method_id, 10) : null,
   };
 }

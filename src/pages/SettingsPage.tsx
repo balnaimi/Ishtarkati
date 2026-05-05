@@ -4,37 +4,39 @@ import {
   getSetting,
   setSetting,
   loadSubscriptions,
-  loadCurrencies,
-  addCurrency,
-  updateCurrencySort,
-  deleteCurrency,
-  type AppCurrency,
+  getPrimaryCurrencyCode,
 } from "../db/repo";
 import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/tableExport";
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
+import { CategoriesPage } from "./CategoriesPage";
+import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
+import { listCurrenciesSorted } from "../lib/currenciesData";
 
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
+type TabId = "app" | "categories" | "payments" | "export";
+
 export function SettingsPage() {
   const { t } = useTranslation();
+  const [tab, setTab] = useState<TabId>("app");
   const [overridesText, setOverridesText] = useState("{}");
   const [fxAt, setFxAt] = useState<string | null>(null);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [fxMsg, setFxMsg] = useState<string | null>(null);
+  const [fxErrDetail, setFxErrDetail] = useState<string | null>(null);
   const [fxBusy, setFxBusy] = useState(false);
-  const [currencies, setCurrencies] = useState<AppCurrency[]>([]);
-  const [newCurCode, setNewCurCode] = useState("");
-  const [newCurOrder, setNewCurOrder] = useState("0");
   const [remindersOn, setRemindersOn] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [primaryCurrency, setPrimaryCurrency] = useState("QAR");
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [pin1, setPin1] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
+  const [pinFeedback, setPinFeedback] = useState<string | null>(null);
   const { hydrate, refresh, fx } = useFxManager();
-
-  const reloadCurrencies = useCallback(async () => {
-    setCurrencies(await loadCurrencies());
-  }, []);
 
   const syncFxAt = useCallback(async () => {
     const cache = await getSetting(CACHE_KEY);
@@ -57,45 +59,56 @@ export function SettingsPage() {
       await syncFxAt();
       const rem = await getSetting("reminders_enabled");
       setRemindersOn(rem === "1");
+      const prim = await getPrimaryCurrencyCode();
+      setPrimaryCurrency(prim);
+      const pe = await getSetting("pin_enabled");
+      setPinEnabled(pe === "1");
     })();
   }, [syncFxAt]);
 
   useEffect(() => {
     void hydrate();
-    void reloadCurrencies();
-  }, [hydrate, reloadCurrencies]);
+  }, [hydrate]);
 
-  async function save() {
+  async function saveOverrides() {
     await setSetting(OVERRIDES_KEY, overridesText.trim() || "{}");
     void hydrate();
   }
 
   async function handleRefreshFx() {
     setFxMsg(null);
+    setFxErrDetail(null);
     setFxBusy(true);
     try {
       await refresh();
       await syncFxAt();
       setFxMsg(t("fx.updated"));
-      void hydrate();
-    } catch {
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      setFxErrDetail(detail);
       setFxMsg(t("fx.fetchError"));
     } finally {
       setFxBusy(false);
     }
   }
 
-  async function handleAddCurrency(e: React.FormEvent) {
-    e.preventDefault();
-    const code = newCurCode.trim().toUpperCase();
-    if (!code) return;
+  async function handleExportCsv() {
+    setExportBusy(true);
     try {
-      const ord = parseInt(newCurOrder, 10) || 0;
-      await addCurrency(code, ord);
-      setNewCurCode("");
-      void reloadCurrencies();
-    } catch {
-      alert(t("settings.currencyDuplicate"));
+      const rows = await loadSubscriptions({});
+      downloadSubscriptionsCsv(rows, t);
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function handleExportIcs() {
+    setExportBusy(true);
+    try {
+      const rows = await loadSubscriptions({});
+      downloadSubscriptionsIcs(rows, t);
+    } finally {
+      setExportBusy(false);
     }
   }
 
@@ -137,239 +150,277 @@ export function SettingsPage() {
     }
   }
 
-  async function handleExportCsv() {
-    setExportBusy(true);
-    try {
-      const rows = await loadSubscriptions({});
-      downloadSubscriptionsCsv(rows, t);
-    } finally {
-      setExportBusy(false);
-    }
-  }
-
-  async function handleExportIcs() {
-    setExportBusy(true);
-    try {
-      const rows = await loadSubscriptions({});
-      downloadSubscriptionsIcs(rows, t);
-    } finally {
-      setExportBusy(false);
-    }
-  }
-
   async function setRemindersEnabled(on: boolean) {
     await setSetting("reminders_enabled", on ? "1" : "0");
     setRemindersOn(on);
   }
 
-  return (
-    <div className="mx-auto max-w-xl space-y-8">
-      <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
-
-      <section className="sk-card space-y-4">
-        <h3 className="text-base font-semibold text-cream-900">{t("export.csvTitle")}</h3>
-        <p className="text-sm text-cream-700">{t("export.csvHint")}</p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button
-            type="button"
-            className="sk-btn-primary"
-            disabled={exportBusy}
-            onClick={() => void handleExportCsv()}
-          >
-            {t("export.csvButton")}
-          </button>
-          <button
-            type="button"
-            className="sk-btn-secondary"
-            disabled={exportBusy}
-            onClick={() => void handleExportIcs()}
-          >
-            {t("export.icsButton")}
-          </button>
-        </div>
-        <p className="text-xs text-cream-600">{t("export.icsHint")}</p>
-      </section>
-
-      <section className="sk-card space-y-3">
-        <h3 className="text-base font-semibold text-cream-900">{t("settings.reminders")}</h3>
-        <p className="text-sm text-cream-700">{t("settings.remindersHint")}</p>
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-            checked={remindersOn}
-            onChange={(e) => void setRemindersEnabled(e.target.checked)}
-          />
-          {t("settings.remindersEnable")}
-        </label>
-      </section>
-
-      <section className="sk-card space-y-4">
-        <h3 className="text-base font-semibold text-cream-900">{t("settings.fxSection")}</h3>
-        <p className="text-sm leading-relaxed text-cream-700">{t("fx.builtinHint")}</p>
-        <p className="text-sm text-cream-700">
-          {t("settings.fxCache")}: <span className="font-mono text-cream-900">{fxAt ?? "—"}</span>
-        </p>
-        {!fx.hasLiveFxCache ? (
-          <p className="text-xs text-walnut-600">{t("fx.noLiveCacheYet")}</p>
-        ) : null}
-        <button
-          type="button"
-          className="sk-btn-primary"
-          disabled={fxBusy}
-          onClick={() => void handleRefreshFx()}
-        >
-          {t("settings.refreshFxButton")}
-        </button>
-        {fxMsg ? <p className="text-sm text-sage-800">{fxMsg}</p> : null}
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-base font-semibold text-cream-900">{t("settings.currenciesTitle")}</h3>
-        <p className="text-sm text-cream-700">{t("settings.currenciesHint")}</p>
-
-        <form
-          onSubmit={handleAddCurrency}
-          className="sk-card flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
-        >
-          <div className="min-w-0 flex-1">
-            <label className="sk-label">{t("settings.currencyCode")}</label>
-            <input
-              className="sk-input font-mono uppercase"
-              value={newCurCode}
-              maxLength={8}
-              onChange={(e) => setNewCurCode(e.target.value.toUpperCase())}
-              placeholder="QAR"
-            />
-          </div>
-          <div className="w-full sm:w-24">
-            <label className="sk-label">{t("categories.sort")}</label>
-            <input
-              type="number"
-              className="sk-input"
-              value={newCurOrder}
-              onChange={(e) => setNewCurOrder(e.target.value)}
-            />
-          </div>
-          <button type="submit" className="sk-btn-primary w-full sm:w-auto">
-            {t("settings.addCurrency")}
-          </button>
-        </form>
-
-        <ul className="space-y-3">
-          {currencies.length === 0 ? (
-            <li className="text-sm text-cream-600">{t("settings.currenciesEmpty")}</li>
-          ) : (
-            currencies.map((c) => (
-              <CurrencyRow
-                key={c.code}
-                c={c}
-                onSaved={reloadCurrencies}
-                onDelete={() => void reloadCurrencies()}
-                t={t}
-              />
-            ))
-          )}
-        </ul>
-      </section>
-
-      <section className="sk-card space-y-4">
-        <h3 className="text-base font-semibold text-cream-900">{t("backup.title")}</h3>
-        <p className="text-sm leading-relaxed text-cream-700">{t("backup.hint")}</p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            className="sk-btn-primary flex-1"
-            disabled={backupBusy}
-            onClick={() => void handleExport()}
-          >
-            {t("backup.export")}
-          </button>
-          <button
-            type="button"
-            className="sk-btn-secondary flex-1"
-            disabled={backupBusy}
-            onClick={() => void handleImport()}
-          >
-            {t("backup.import")}
-          </button>
-        </div>
-        {backupMsg ? (
-          <p className="rounded-lg border border-cream-400 bg-cream-200/60 px-3 py-2 text-sm text-cream-900">
-            {backupMsg}
-          </p>
-        ) : null}
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-base font-semibold text-cream-900">{t("settings.fxOverrides")}</h3>
-        <p className="mb-2 text-xs text-cream-600">{t("settings.fxOverridesHint")}</p>
-        <textarea
-          className="sk-textarea font-mono text-sm leading-relaxed"
-          value={overridesText}
-          onChange={(e) => setOverridesText(e.target.value)}
-        />
-        <button type="button" className="sk-btn-primary" onClick={() => void save()}>
-          {t("settings.saveSettings")}
-        </button>
-      </section>
-
-      <p className="text-sm text-cream-600">
-        {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
-      </p>
-    </div>
-  );
-}
-
-function CurrencyRow({
-  c,
-  onSaved,
-  onDelete,
-  t,
-}: {
-  c: AppCurrency;
-  onSaved: () => void;
-  onDelete: () => void;
-  t: (k: string) => string;
-}) {
-  const [sort, setSort] = useState(String(c.sort_order));
-
-  useEffect(() => {
-    setSort(String(c.sort_order));
-  }, [c.code, c.sort_order]);
-
-  async function saveSort() {
-    await updateCurrencySort(c.code, parseInt(sort, 10) || 0);
-    onSaved();
+  async function savePrimary(code: string) {
+    await setSetting("primary_currency", code.trim().toUpperCase());
+    setPrimaryCurrency(code.trim().toUpperCase());
   }
 
-  async function del() {
-    if (!confirm(t("settings.confirmDeleteCurrency"))) return;
+  async function testNotify() {
+    await window.ishtarkati.showNotification({
+      title: t("notify.digestTitle"),
+      body: t("settings.testNotifyBody"),
+    });
+  }
+
+  async function applyPinSettings() {
+    setPinFeedback(null);
+    setPinBusy(true);
     try {
-      await deleteCurrency(c.code);
-      onDelete();
-    } catch {
-      alert(t("settings.currencyInUse"));
+      if (!pinEnabled) {
+        await window.ishtarkati.clearPin();
+        await setSetting("pin_enabled", "0");
+        setPinFeedback(t("pin.disabledOk"));
+        setPin1("");
+        setPin2("");
+        return;
+      }
+      if (pin1.length < 4) {
+        setPinFeedback(t("pin.tooShort"));
+        return;
+      }
+      if (pin1 !== pin2) {
+        setPinFeedback(t("pin.mismatch"));
+        return;
+      }
+      const r = await window.ishtarkati.setPin(pin1);
+      if (!r.ok) {
+        setPinFeedback(t("pin.setFailed"));
+        return;
+      }
+      await setSetting("pin_enabled", "1");
+      setPinFeedback(t("pin.enabledOk"));
+      setPin1("");
+      setPin2("");
+    } finally {
+      setPinBusy(false);
     }
   }
 
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "app", label: t("settings.tabApp") },
+    { id: "categories", label: t("settings.tabCategories") },
+    { id: "payments", label: t("settings.tabPayments") },
+    { id: "export", label: t("settings.tabExport") },
+  ];
+
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-cream-400 bg-cream-50/95 p-4 shadow-sm sm:flex-row sm:items-center">
-      <span className="min-w-[4rem] font-mono font-semibold text-cream-900">{c.code}</span>
-      <input
-        type="number"
-        className="sk-input w-full sm:w-24"
-        value={sort}
-        onChange={(e) => setSort(e.target.value)}
-      />
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="sk-btn-secondary text-sm" onClick={() => void saveSort()}>
-          {t("common.save")}
-        </button>
-        <button type="button" className="sk-btn-danger text-sm" onClick={() => void del()}>
-          {t("common.delete")}
-        </button>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
+
+      <div className="flex flex-wrap gap-2 border-b border-cream-400 pb-3">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              tab === x.id ? "bg-cream-800 text-cream-50" : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+            }`}
+            onClick={() => setTab(x.id)}
+          >
+            {x.label}
+          </button>
+        ))}
       </div>
-    </li>
+
+      {tab === "app" ? (
+        <div className="space-y-8">
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.primaryCurrencyTitle")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.primaryCurrencyHint")}</p>
+            <select
+              className="sk-select"
+              value={primaryCurrency}
+              onChange={(e) => void savePrimary(e.target.value)}
+            >
+              {listCurrenciesSorted().map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {c.code} — {c.nameAr}
+                </option>
+              ))}
+            </select>
+          </section>
+
+          <section className="sk-card space-y-3">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.reminders")}</h3>
+            <p className="text-sm text-cream-700">{t("settings.remindersHint")}</p>
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={remindersOn}
+                onChange={(e) => void setRemindersEnabled(e.target.checked)}
+              />
+              {t("settings.remindersEnable")}
+            </label>
+            <button type="button" className="sk-btn-secondary" onClick={() => void testNotify()}>
+              {t("settings.testNotify")}
+            </button>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.pinSection")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.pinHint")}</p>
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={pinEnabled}
+                onChange={(e) => setPinEnabled(e.target.checked)}
+              />
+              {t("settings.pinEnable")}
+            </label>
+            {pinEnabled ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="sk-label">{t("settings.pinOnce")}</label>
+                  <input
+                    type="password"
+                    className="sk-input"
+                    inputMode="numeric"
+                    value={pin1}
+                    onChange={(e) => setPin1(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                  />
+                </div>
+                <div>
+                  <label className="sk-label">{t("settings.pinTwice")}</label>
+                  <input
+                    type="password"
+                    className="sk-input"
+                    inputMode="numeric"
+                    value={pin2}
+                    onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                  />
+                </div>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="sk-btn-primary"
+              disabled={pinBusy}
+              onClick={() => void applyPinSettings()}
+            >
+              {t("settings.pinSave")}
+            </button>
+            {pinFeedback ? <p className="text-sm text-sage-800">{pinFeedback}</p> : null}
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.fxSection")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.fxExplain")}</p>
+            <ul className="list-inside list-disc space-y-1 text-sm text-cream-700">
+              <li>{t("settings.fxStepLive")}</li>
+              <li>{t("settings.fxStepBuiltin")}</li>
+              <li>{t("settings.fxStepOverrides")}</li>
+            </ul>
+            <p className="text-sm text-cream-700">
+              {t("settings.fxCache")}: <span className="font-mono text-cream-900">{fxAt ?? "—"}</span>
+            </p>
+            {!fx.hasLiveFxCache ? (
+              <p className="text-xs text-walnut-600">{t("fx.noLiveCacheYet")}</p>
+            ) : null}
+            <button
+              type="button"
+              className="sk-btn-primary"
+              disabled={fxBusy}
+              onClick={() => void handleRefreshFx()}
+            >
+              {t("settings.refreshFxButton")}
+            </button>
+            {fxMsg ? <p className="text-sm text-sage-800">{fxMsg}</p> : null}
+            {fxErrDetail ? (
+              <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-950">
+                {t("settings.fxErrorDetail")}: {fxErrDetail}
+              </p>
+            ) : null}
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.fxOverrides")}</h3>
+            <p className="mb-2 text-xs text-cream-600">{t("settings.fxOverridesHint")}</p>
+            <textarea
+              className="sk-textarea font-mono text-sm leading-relaxed"
+              value={overridesText}
+              onChange={(e) => setOverridesText(e.target.value)}
+            />
+            <button type="button" className="sk-btn-primary" onClick={() => void saveOverrides()}>
+              {t("settings.saveSettings")}
+            </button>
+          </section>
+
+          <p className="text-sm text-cream-600">
+            {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
+          </p>
+        </div>
+      ) : null}
+
+      {tab === "categories" ? <CategoriesPage omitTitle /> : null}
+      {tab === "payments" ? <PaymentMethodsPanel /> : null}
+
+      {tab === "export" ? (
+        <div className="space-y-6">
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("export.groupTitle")}</h3>
+            <p className="text-sm text-cream-700">{t("export.groupHint")}</p>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("export.csvTitle")}</h3>
+            <p className="text-sm text-cream-700">{t("export.csvHint")}</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                className="sk-btn-primary"
+                disabled={exportBusy}
+                onClick={() => void handleExportCsv()}
+              >
+                {t("export.csvButton")}
+              </button>
+              <button
+                type="button"
+                className="sk-btn-secondary"
+                disabled={exportBusy}
+                onClick={() => void handleExportIcs()}
+              >
+                {t("export.icsButton")}
+              </button>
+            </div>
+            <p className="text-xs text-cream-600">{t("export.icsHint")}</p>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("backup.title")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("backup.hint")}</p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                className="sk-btn-primary flex-1"
+                disabled={backupBusy}
+                onClick={() => void handleExport()}
+              >
+                {t("backup.export")}
+              </button>
+              <button
+                type="button"
+                className="sk-btn-secondary flex-1"
+                disabled={backupBusy}
+                onClick={() => void handleImport()}
+              >
+                {t("backup.import")}
+              </button>
+            </div>
+            {backupMsg ? (
+              <p className="rounded-lg border border-cream-400 bg-cream-200/60 px-3 py-2 text-sm text-cream-900">
+                {backupMsg}
+              </p>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+    </div>
   );
 }

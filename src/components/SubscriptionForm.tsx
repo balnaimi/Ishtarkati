@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { SubscriptionFormValues } from "../types";
-import { amountToQarFromUsdBase } from "../lib/fx";
+import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
+import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
-import { addCategory, loadCategories } from "../db/repo";
+import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
+import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
+import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
   categories: { id: number; name: string }[];
-  currencies: { code: string }[];
+  primaryCurrencyCode: string;
   fx: FxState;
   onFetchFx: () => Promise<void>;
   onMetaUpdated: () => Promise<void>;
   onSubmit: (
     values: SubscriptionFormValues,
-    qarInfo: { qar: number; fxFactor: number; fxAt: string },
+    primaryInfo: { primary: number; fxFactor: number; fxAt: string },
   ) => Promise<void>;
   onCancel: () => void;
   submitLabel?: string;
@@ -23,7 +25,7 @@ interface SubscriptionFormProps {
 export function SubscriptionForm({
   initial,
   categories,
-  currencies,
+  primaryCurrencyCode,
   fx,
   onFetchFx,
   onMetaUpdated,
@@ -38,57 +40,63 @@ export function SubscriptionForm({
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [addCatBusy, setAddCatBusy] = useState(false);
+  const [cards, setCards] = useState<CreditCard[]>([]);
+  const [wallets, setWallets] = useState<WalletMethod[]>([]);
 
   useEffect(() => {
     setV(initial);
   }, [initial]);
 
-  const cur = (v.currency_code || "").trim().toUpperCase();
-  const isQar = cur === "QAR";
-  const showFxQarCard = cur.length > 0 && !isQar;
-  const currencyOptions = useMemo(() => {
-    const codes = currencies.map((c) => c.code);
-    if (cur && !codes.includes(cur)) {
-      return [{ code: cur, orphan: true }, ...currencies.map((c) => ({ code: c.code, orphan: false }))];
-    }
-    return currencies.map((c) => ({ code: c.code, orphan: false }));
-  }, [currencies, cur]);
+  useEffect(() => {
+    void (async () => {
+      const [c, w] = await Promise.all([loadCreditCards(), loadWalletMethods()]);
+      setCards(c);
+      setWallets(w);
+    })();
+  }, []);
 
-  const qarPreview = useMemo(() => {
+  const cur = (v.currency_code || "").trim().toUpperCase();
+  const primary = primaryCurrencyCode.trim().toUpperCase();
+  const isPrimary = cur === primary;
+  const showFxPrimaryCard = cur.length > 0 && !isPrimary;
+  const currencyOptions = useMemo(() => listCurrenciesSorted(), []);
+
+  const primaryPreview = useMemo(() => {
     const amt = parseFloat(v.amount_original.replace(",", "."));
     if (Number.isNaN(amt)) {
       return {
-        qar: null as number | null,
+        primary: null as number | null,
         fxFactor: null as number | null,
         error: null as string | null,
       };
     }
-    if (isQar) {
-      return { qar: amt, fxFactor: 1, error: null as string | null };
+    if (isPrimary) {
+      return { primary: amt, fxFactor: 1, error: null as string | null };
     }
     if (!cur) {
       return {
-        qar: null,
+        primary: null,
         fxFactor: null,
         error: null as string | null,
       };
     }
     try {
-      const { qar, fxFactor } = amountToQarFromUsdBase(
+      const { primary: pr, fxFactor } = amountToPrimaryFromUsdBase(
         amt,
         cur,
+        primary,
         fx.usdRates,
         fx.overrides,
       );
-      return { qar, fxFactor, error: null as string | null };
+      return { primary: pr, fxFactor, error: null as string | null };
     } catch {
       return {
-        qar: null,
+        primary: null,
         fxFactor: null,
         error: t("fx.rateMissingHint"),
       };
     }
-  }, [v.amount_original, cur, isQar, fx.usdRates, fx.overrides, t]);
+  }, [v.amount_original, cur, isPrimary, primary, fx.usdRates, fx.overrides, t]);
 
   const setField = useCallback(
     <K extends keyof SubscriptionFormValues>(key: K, val: SubscriptionFormValues[K]) => {
@@ -103,9 +111,7 @@ export function SubscriptionForm({
     setAddCatBusy(true);
     setErr(null);
     try {
-      const existing = await loadCategories();
-      const nextOrder = existing.length ? Math.max(...existing.map((c) => c.sort_order)) + 1 : 0;
-      const newId = await addCategory(name, nextOrder);
+      const newId = await addCategory(name);
       await onMetaUpdated();
       setField("category_id", String(newId));
       setNewCatName("");
@@ -140,41 +146,49 @@ export function SubscriptionForm({
         setErr(t("form.required"));
         return;
       }
-      if (v.interval_unit === "custom_months") {
-        const m = parseInt(v.interval_months, 10);
-        if (Number.isNaN(m) || m < 1) {
-          setErr(t("form.invalidNumber"));
-          return;
-        }
+      const cnt = parseInt(v.interval_count, 10);
+      if (Number.isNaN(cnt) || cnt < 1) {
+        setErr(t("form.invalidNumber"));
+        return;
+      }
+      if (!v.start_date.trim()) {
+        setErr(t("form.recurringStartRequired"));
+        return;
       }
     }
+    if (v.billing_model === "one_time" && !v.start_date.trim()) {
+      setErr(t("form.oneTimePaidDateRequired"));
+      return;
+    }
 
-    let qar: number;
+    let pr: number;
     let fxFactor: number;
     let fxAt: string;
-    if (isQar) {
-      qar = amt;
+    if (isPrimary) {
+      pr = amt;
       fxFactor = 1;
       fxAt = new Date().toISOString();
     } else {
-      if (qarPreview.qar == null || qarPreview.fxFactor == null) {
-        setErr(qarPreview.error ?? t("fx.fetchError"));
+      if (primaryPreview.primary == null || primaryPreview.fxFactor == null) {
+        setErr(primaryPreview.error ?? t("fx.fetchError"));
         return;
       }
-      qar = qarPreview.qar;
-      fxFactor = qarPreview.fxFactor;
+      pr = primaryPreview.primary;
+      fxFactor = primaryPreview.fxFactor;
       fxAt = fx.fetchedAt ?? new Date().toISOString();
     }
 
     setBusy(true);
     try {
-      await onSubmit(v, { qar, fxFactor, fxAt });
+      await onSubmit(v, { primary: pr, fxFactor, fxAt });
     } catch (er) {
       setErr(er instanceof Error ? er.message : String(er));
     } finally {
       setBusy(false);
     }
   }
+
+  const primaryMeta = getCurrencyInfo(primary);
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 md:space-y-6">
@@ -269,16 +283,40 @@ export function SubscriptionForm({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 pt-1">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-            checked={v.is_domain}
-            onChange={(e) => setField("is_domain", e.target.checked)}
-          />
-          {t("form.isDomain")}
-        </label>
+      <div>
+        <label className="sk-label">{t("form.paymentMethodWallet")}</label>
+        <select
+          className="sk-select"
+          value={v.wallet_method_id}
+          onChange={(e) => setField("wallet_method_id", e.target.value)}
+        >
+          <option value="">{t("common.none")}</option>
+          {wallets.map((w) => (
+            <option key={w.id} value={String(w.id)}>
+              {PAYMENT_SERVICES.find((s) => s.code === w.service_code)?.nameAr ?? w.service_code}{" "}
+              · {w.account_text.slice(0, 24)}
+              {w.account_text.length > 24 ? "…" : ""}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodWalletHint")}</p>
+      </div>
+
+      <div>
+        <label className="sk-label">{t("form.paymentMethodCard")}</label>
+        <select
+          className="sk-select"
+          value={v.credit_card_id}
+          onChange={(e) => setField("credit_card_id", e.target.value)}
+        >
+          <option value="">{t("common.none")}</option>
+          {cards.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {c.brand} ·••• {c.last4} ({c.exp_month}/{c.exp_year})
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodCardHint")}</p>
       </div>
 
       <div>
@@ -292,7 +330,6 @@ export function SubscriptionForm({
         >
           <option value="one_time">{t("billing.one_time")}</option>
           <option value="recurring">{t("billing.recurring")}</option>
-          <option value="pay_as_needed">{t("billing.pay_as_needed")}</option>
         </select>
       </div>
 
@@ -300,32 +337,32 @@ export function SubscriptionForm({
         <div className="space-y-5 border-t border-cream-400/80 pt-5">
           <div>
             <label className="sk-label">{t("form.interval")}</label>
-            <select
-              className="sk-select"
-              value={v.interval_unit}
-              onChange={(e) =>
-                setField("interval_unit", e.target.value as SubscriptionFormValues["interval_unit"])
-              }
-            >
-              <option value="">—</option>
-              <option value="month">{t("interval.month")}</option>
-              <option value="quarter">{t("interval.quarter")}</option>
-              <option value="year">{t("interval.year")}</option>
-              <option value="custom_months">{t("interval.custom_months")}</option>
-            </select>
-          </div>
-          {v.interval_unit === "custom_months" ? (
-            <div>
-              <label className="sk-label">{t("form.intervalMonths")}</label>
-              <input
-                type="number"
-                min={1}
-                className="sk-input max-w-xs"
-                value={v.interval_months}
-                onChange={(e) => setField("interval_months", e.target.value)}
-              />
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+              <select
+                className="sk-select min-w-[8rem] flex-1"
+                value={v.interval_unit}
+                onChange={(e) =>
+                  setField("interval_unit", e.target.value as SubscriptionFormValues["interval_unit"])
+                }
+              >
+                <option value="">—</option>
+                <option value="day">{t("interval.day")}</option>
+                <option value="week">{t("interval.week")}</option>
+                <option value="month">{t("interval.month")}</option>
+                <option value="year">{t("interval.year")}</option>
+              </select>
+              <div className="min-w-0 flex-1">
+                <label className="sk-label">{t("form.intervalCount")}</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="sk-input max-w-xs"
+                  value={v.interval_count}
+                  onChange={(e) => setField("interval_count", e.target.value)}
+                />
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -363,36 +400,38 @@ export function SubscriptionForm({
             <option value="">{t("form.selectCurrency")}</option>
             {currencyOptions.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.code}
-                {c.orphan ? ` — ${t("form.currencyNotInList")}` : ""}
+                {c.flag} {c.code} — {c.nameAr}
               </option>
             ))}
           </select>
-          {currencies.length === 0 ? (
-            <p className="mt-2 text-sm text-cream-600">{t("form.noCurrenciesHint")}</p>
-          ) : null}
         </div>
       </div>
 
-      {showFxQarCard ? (
+      {showFxPrimaryCard ? (
         <div className="sk-card space-y-3">
-          <p className="text-sm font-medium text-cream-700">{t("list.qar")}</p>
+          <p className="text-sm font-medium text-cream-700">
+            {t("form.approxPrimary", { code: primary, label: primaryMeta.nameAr })}
+          </p>
           <p className="text-xl font-semibold text-sage-800">
-            {qarPreview.qar != null ? qarPreview.qar.toFixed(2) : "—"}
+            {primaryPreview.primary != null ? primaryPreview.primary.toFixed(2) : "—"}
           </p>
           {!fx.hasLiveFxCache ? (
             <p className="text-xs text-cream-600">{t("fx.builtinHint")}</p>
           ) : null}
-          {qarPreview.error ? <p className="text-sm text-red-900">{qarPreview.error}</p> : null}
+          {primaryPreview.error ? (
+            <p className="text-sm text-red-900">{primaryPreview.error}</p>
+          ) : null}
           <button type="button" className="sk-btn-secondary w-full sm:w-auto" onClick={() => void onFetchFx()}>
             {t("form.recalcFx")}
           </button>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
-          <label className="sk-label">{t("form.startDate")}</label>
+          <label className="sk-label">
+            {v.billing_model === "one_time" ? t("form.paidDate") : t("form.startDate")}
+          </label>
           <input
             type="date"
             className="sk-input"
@@ -400,16 +439,18 @@ export function SubscriptionForm({
             onChange={(e) => setField("start_date", e.target.value)}
           />
         </div>
-        <div>
-          <label className="sk-label">{t("form.nextDue")}</label>
-          <input
-            type="date"
-            className="sk-input"
-            value={v.next_due_date}
-            onChange={(e) => setField("next_due_date", e.target.value)}
-          />
-        </div>
-        <div className="sm:col-span-2 lg:col-span-1">
+        {v.billing_model === "one_time" ? (
+          <div>
+            <label className="sk-label">{t("form.nextDueOptional")}</label>
+            <input
+              type="date"
+              className="sk-input"
+              value={v.next_due_date}
+              onChange={(e) => setField("next_due_date", e.target.value)}
+            />
+          </div>
+        ) : null}
+        <div className="sm:col-span-2">
           <label className="sk-label">{t("form.endDate")}</label>
           <input
             type="date"

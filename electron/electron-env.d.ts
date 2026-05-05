@@ -8,5 +8,18 @@ interface Window {
       params: unknown[],
     ) => Promise<{ changes: number; lastInsertRowid: number }>;
     openExternal: (url: string) => Promise<void>;
+    backupExport: () => Promise<
+      | { ok: true; path: string }
+      | { ok: false; canceled?: boolean; error?: string }
+    >;
+    backupImport: () => Promise<
+      | { ok: true }
+      | { ok: false; canceled?: boolean; error?: string }
+    >;
+    showNotification: (opts: { title: string; body: string }) => Promise<boolean>;
+    pinStatus: () => Promise<{ enabled: boolean; hasPin: boolean }>;
+    setPin: (pin: string) => Promise<{ ok: boolean; error?: string }>;
+    clearPin: () => Promise<{ ok: boolean }>;
+    verifyPin: (pin: string) => Promise<boolean>;
   };
 }

@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { APP_VERSION } from "../version";
 
 const linkCls = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -22,10 +23,9 @@ export function Layout() {
   }
 
   const nav = [
-    { to: "/", label: t("nav.subscriptions") },
+    { to: "/", label: t("nav.home") },
+    { to: "/list", label: t("nav.subscriptions") },
     { to: "/new", label: t("nav.add") },
-    { to: "/categories", label: t("nav.categories") },
-    { to: "/stats", label: t("nav.stats") },
     { to: "/settings", label: t("nav.settings") },
   ];
 
@@ -34,7 +34,12 @@ export function Layout() {
       <header className="border-b border-cream-400 bg-cream-100/85 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-lg font-semibold text-cream-900">{t("app.title")}</h1>
+            <div>
+              <h1 className="text-lg font-semibold text-cream-900">{t("app.title")}</h1>
+              <p className="text-xs text-cream-600">
+                {t("settings.version")} {APP_VERSION}
+              </p>
+            </div>
             <button
               type="button"
               className="sk-btn-muted text-sm"
@@ -47,9 +52,14 @@ export function Layout() {
           </div>
           <nav className="flex flex-wrap gap-2">
             {nav.map(({ to, label }) => {
-              const homeMatch = to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
+              const homeMatch =
+                to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
+              const listMatch = to === "/list" && loc.pathname === "/list";
               const active =
-                loc.pathname === to || (to !== "/" && loc.pathname.startsWith(to)) || homeMatch;
+                listMatch ||
+                loc.pathname === to ||
+                (to !== "/" && to !== "/list" && loc.pathname.startsWith(to)) ||
+                homeMatch;
               return (
                 <Link key={to} to={to} className={linkCls(active)}>
                   {label}

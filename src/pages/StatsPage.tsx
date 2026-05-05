@@ -5,10 +5,11 @@ import {
   loadSubscriptions,
   updateSubscriptionQarSnapshot,
   getSetting,
+  getPrimaryCurrencyCode,
 } from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
 import {
-  amountToQarFromUsdBase,
+  amountToPrimaryFromUsdBase,
   mergeRatesFromCacheJson,
   type UsdBasedRates,
 } from "../lib/fx";
@@ -59,16 +60,18 @@ export function StatsPage() {
           overrides = null;
         }
       }
+      const prim = await getPrimaryCurrencyCode();
       const subs = await loadSubscriptions({});
       for (const s of subs) {
         try {
-          const { qar, fxFactor } = amountToQarFromUsdBase(
+          const { primary, fxFactor } = amountToPrimaryFromUsdBase(
             s.amount_original,
             s.currency_code,
+            prim,
             rates,
             overrides,
           );
-          await updateSubscriptionQarSnapshot(s.id, qar, fxFactor, fxAt);
+          await updateSubscriptionQarSnapshot(s.id, primary, fxFactor, fxAt);
         } catch {
           /* skip unknown currency */
         }
@@ -103,7 +106,7 @@ export function StatsPage() {
           <div className="sk-card">
             <p className="text-sm font-medium text-cream-700">{t("stats.monthlyEstimate")}</p>
             <p className="mt-2 text-2xl font-semibold text-sage-800">
-              {summary.monthlyEstimate.toFixed(2)} QAR
+              {summary.monthlyEstimate.toFixed(2)} {summary.primaryCode}
             </p>
             <p className="mt-3 text-sm text-cream-600">
               {t("stats.subscriptions")}: {summary.recurringCount}
@@ -112,7 +115,7 @@ export function StatsPage() {
           <div className="sk-card">
             <p className="text-sm font-medium text-cream-700">{t("stats.due30")}</p>
             <p className="mt-2 text-2xl font-semibold text-walnut-600">
-              {summary.due30Total.toFixed(2)} QAR
+              {summary.due30Total.toFixed(2)} {summary.primaryCode}
             </p>
           </div>
           <div className="md:col-span-2 sk-card">
@@ -124,7 +127,9 @@ export function StatsPage() {
                 summary.byCategory.map((row) => (
                   <li key={row.name} className="flex flex-wrap justify-between gap-2 text-sm text-cream-800">
                     <span>{row.name}</span>
-                    <span className="font-medium text-sage-800">{row.monthlyQar.toFixed(2)} QAR / شهريًا</span>
+                    <span className="font-medium text-sage-800">
+                      {row.monthlyPrimary.toFixed(2)} {summary.primaryCode} / شهريًا
+                    </span>
                   </li>
                 ))
               )}

@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SubscriptionForm } from "../components/SubscriptionForm";
 import { useFxManager } from "../hooks/useFx";
-import { getSubscription, loadCategories, loadCurrencies, updateSubscription } from "../db/repo";
+import {
+  getPrimaryCurrencyCode,
+  getSubscription,
+  loadCategories,
+  updateSubscription,
+} from "../db/repo";
 import {
   defaultFormValues,
   formToRow,
@@ -17,36 +22,44 @@ export function EditSubscriptionPage() {
   const nav = useNavigate();
   const { fx, hydrate, refresh } = useFxManager();
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-  const [currencies, setCurrencies] = useState<{ code: string }[]>([]);
+  const [primaryCode, setPrimaryCode] = useState("QAR");
   const [initial, setInitial] = useState<SubscriptionFormValues | null>(null);
+  const [existingId, setExistingId] = useState<number | null>(null);
 
   const reloadMeta = useCallback(async () => {
-    const [cats, curs] = await Promise.all([loadCategories(), loadCurrencies()]);
+    const cats = await loadCategories();
     setCategories(cats);
-    setCurrencies(curs);
   }, []);
 
   useEffect(() => {
     void hydrate();
     void reloadMeta();
+    void getPrimaryCurrencyCode().then(setPrimaryCode);
   }, [hydrate, reloadMeta]);
 
   useEffect(() => {
     if (!id) return;
     void (async () => {
-      const sub = await getSubscription(parseInt(id, 10));
+      const sid = parseInt(id, 10);
+      const sub = await getSubscription(sid);
       if (sub) {
         setInitial(subscriptionToForm(sub));
+        setExistingId(sub.id);
       } else {
         setInitial(defaultFormValues());
+        setExistingId(null);
       }
     })();
   }, [id]);
 
-  async function onSubmit(values: SubscriptionFormValues, qar: { qar: number; fxFactor: number; fxAt: string }) {
-    if (!id) return;
-    const row = formToRow(values, qar.qar, qar.fxFactor, qar.fxAt);
-    await updateSubscription(parseInt(id, 10), row);
+  async function onSubmit(
+    values: SubscriptionFormValues,
+    info: { primary: number; fxFactor: number; fxAt: string },
+  ) {
+    if (!id || existingId == null) return;
+    const sub = await getSubscription(parseInt(id, 10));
+    const row = formToRow(values, info.primary, info.fxFactor, info.fxAt, sub);
+    await updateSubscription(existingId, row);
     nav(`/sub/${id}`);
   }
 
@@ -61,7 +74,7 @@ export function EditSubscriptionPage() {
         key={id}
         initial={initial}
         categories={categories}
-        currencies={currencies}
+        primaryCurrencyCode={primaryCode}
         fx={fx}
         onFetchFx={() => refresh()}
         onMetaUpdated={reloadMeta}

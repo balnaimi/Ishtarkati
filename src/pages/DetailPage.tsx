@@ -2,17 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  confirmSubscriptionPaid,
   deleteSubscription,
+  getPrimaryCurrencyCode,
   getSubscription,
   insertPaymentEvent,
   listPayments,
   setSubscriptionNextDue,
+  subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
 import type { PaymentEvent } from "../types";
 import {
-  addBillingInterval,
-  advanceNextDueAfterRenewal,
+  addBillingSteps,
   formatDateInput,
   parseDateInput,
 } from "../lib/schedule";
@@ -27,14 +29,12 @@ export function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [sub, setSub] = useState<SubscriptionListRow | null>(null);
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
+  const [primaryCode, setPrimaryCode] = useState("QAR");
 
   const [payDate, setPayDate] = useState(() => formatDateInput(new Date()));
   const [payAmount, setPayAmount] = useState("");
   const [payNote, setPayNote] = useState("");
   const [advanceRecurring, setAdvanceRecurring] = useState(true);
-
-  const [renewYears, setRenewYears] = useState("1");
-  const [renewNote, setRenewNote] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -42,9 +42,14 @@ export function DetailPage() {
     setLoading(true);
     const sid = parseInt(id, 10);
     try {
-      const [s, p] = await Promise.all([getSubscription(sid), listPayments(sid)]);
+      const [s, p, prim] = await Promise.all([
+        getSubscription(sid),
+        listPayments(sid),
+        getPrimaryCurrencyCode(),
+      ]);
       setSub(s);
       setPayments(p);
+      setPrimaryCode(prim);
       if (s) {
         setPayAmount(String(s.amount_original));
       }
@@ -82,50 +87,30 @@ export function DetailPage() {
     const paidAt = payDate;
     const amt = parseFloat(payAmount.replace(",", "."));
     const amountOriginal = Number.isNaN(amt) ? null : amt;
-    const amountQar = sub.amount_qar_snapshot;
+    const amountPrimary = sub.amount_qar_snapshot;
     await insertPaymentEvent(
       sid,
       paidAt,
       amountOriginal,
       sub.currency_code,
-      amountQar,
+      amountPrimary,
       null,
       payNote.trim() || null,
     );
     if (sub.billing_model === "recurring" && advanceRecurring) {
       const base =
         parseDateInput(sub.next_due_date) ?? parseDateInput(paidAt) ?? new Date();
-      const next = addBillingInterval(
-        base,
-        sub.interval_unit as IntervalUnit | null,
-        sub.interval_months,
-      );
+      const cnt = Math.max(1, sub.interval_count ?? 1);
+      const next = addBillingSteps(base, sub.interval_unit as IntervalUnit | null, cnt);
       await setSubscriptionNextDue(sid, formatDateInput(next));
     }
     setPayNote("");
     void reload();
   }
 
-  async function handleDomainRenewal() {
-    if (!id || !sub) return;
-    const sid = parseInt(id, 10);
-    const yrs = parseInt(renewYears, 10);
-    if (Number.isNaN(yrs) || yrs < 1) return;
-    const paidAt = payDate;
-    const paidDate = parseDateInput(paidAt) ?? new Date();
-    const next = advanceNextDueAfterRenewal(sub.next_due_date, yrs, paidDate);
-    const amt = parseFloat(payAmount.replace(",", "."));
-    await insertPaymentEvent(
-      sid,
-      paidAt,
-      Number.isNaN(amt) ? sub.amount_original : amt,
-      sub.currency_code,
-      sub.amount_qar_snapshot,
-      yrs,
-      renewNote.trim() || null,
-    );
-    await setSubscriptionNextDue(sid, next);
-    setRenewNote("");
+  async function handleMarkPaid() {
+    if (!id) return;
+    await confirmSubscriptionPaid(parseInt(id, 10));
     void reload();
   }
 
@@ -136,6 +121,17 @@ export function DetailPage() {
     return <p className="text-cream-700">{t("common.error")}</p>;
   }
 
+  const progSub = {
+    next_due_date: sub.next_due_date,
+    start_date: sub.start_date,
+    billing_model: sub.billing_model,
+    interval_unit: sub.interval_unit,
+    interval_months: sub.interval_months,
+    interval_count: Math.max(1, sub.interval_count ?? 1),
+  };
+
+  const needsPaid = subscriptionNeedsPaidAttention(sub);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -145,6 +141,12 @@ export function DetailPage() {
             {sub.category_name ?? "—"}
             {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}
             {sub.start_date ? ` · ${t("form.startDate")}: ${sub.start_date}` : ""}
+          </p>
+          <p className="text-sm text-cream-800">
+            {sub.amount_original} {sub.currency_code}
+            {sub.amount_qar_snapshot != null
+              ? ` · ≈ ${sub.amount_qar_snapshot.toFixed(2)} ${primaryCode}`
+              : ""}
           </p>
           {sub.website_url ? (
             <a
@@ -182,7 +184,17 @@ export function DetailPage() {
                 {copiedKey === "url" ? t("detail.copied") : t("detail.copyUrl")}
               </button>
             ) : null}
+            {needsPaid ? (
+              <button type="button" className="sk-btn-primary text-xs" onClick={() => void handleMarkPaid()}>
+                {t("home.markPaid")}
+              </button>
+            ) : null}
           </div>
+          {needsPaid ? (
+            <p className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              {t("detail.needsPaidHint")}
+            </p>
+          ) : null}
           {tagTokens(sub.tags).length ? (
             <div className="space-y-1.5 pt-1">
               <p className="text-xs font-medium text-cream-600">{t("detail.tagsLabel")}</p>
@@ -209,16 +221,7 @@ export function DetailPage() {
       {sub.next_due_date ? (
         <div className="sk-card space-y-3">
           <h3 className="font-semibold text-cream-900">{t("detail.dueProgressTitle")}</h3>
-          <DueProgressBar
-            sub={{
-              next_due_date: sub.next_due_date,
-              start_date: sub.start_date,
-              billing_model: sub.billing_model,
-              interval_unit: sub.interval_unit,
-              interval_months: sub.interval_months,
-            }}
-            size="md"
-          />
+          <DueProgressBar sub={progSub} size="md" />
         </div>
       ) : null}
 
@@ -226,68 +229,43 @@ export function DetailPage() {
         <p className="sk-card text-cream-800 leading-relaxed">{sub.notes}</p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="sk-card space-y-4">
-          <h3 className="font-semibold text-cream-900">{t("detail.addPayment")}</h3>
-          <div>
-            <label className="sk-label">{t("detail.paidAt")}</label>
-            <input
-              type="date"
-              className="sk-input"
-              value={payDate}
-              onChange={(e) => setPayDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="sk-label">{t("list.amount")}</label>
-            <input
-              className="sk-input"
-              value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="sk-label">{t("detail.paymentNote")}</label>
-            <input className="sk-input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
-          </div>
-          {sub.billing_model === "recurring" ? (
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-                checked={advanceRecurring}
-                onChange={(e) => setAdvanceRecurring(e.target.checked)}
-              />
-              {t("detail.advanceRecurring")}
-            </label>
-          ) : null}
-          <button type="button" className="sk-btn-primary w-full sm:w-auto" onClick={() => void handleRecordPayment()}>
-            {t("detail.recordPayment")}
-          </button>
+      <div className="sk-card space-y-4">
+        <h3 className="font-semibold text-cream-900">{t("detail.addPayment")}</h3>
+        <div>
+          <label className="sk-label">{t("detail.paidAt")}</label>
+          <input
+            type="date"
+            className="sk-input"
+            value={payDate}
+            onChange={(e) => setPayDate(e.target.value)}
+          />
         </div>
-
-        {sub.is_domain ? (
-          <div className="sk-card space-y-4">
-            <h3 className="font-semibold text-cream-900">{t("detail.renewDomain")}</h3>
-            <div>
-              <label className="sk-label">{t("detail.renewalYears")}</label>
-              <input
-                type="number"
-                min={1}
-                className="sk-input max-w-xs"
-                value={renewYears}
-                onChange={(e) => setRenewYears(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="sk-label">{t("detail.paymentNote")}</label>
-              <input className="sk-input" value={renewNote} onChange={(e) => setRenewNote(e.target.value)} />
-            </div>
-            <button type="button" className="sk-btn-warm w-full sm:w-auto" onClick={() => void handleDomainRenewal()}>
-              {t("detail.recordRenewal")}
-            </button>
-          </div>
+        <div>
+          <label className="sk-label">{t("list.amount")}</label>
+          <input
+            className="sk-input"
+            value={payAmount}
+            onChange={(e) => setPayAmount(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="sk-label">{t("detail.paymentNote")}</label>
+          <input className="sk-input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
+        </div>
+        {sub.billing_model === "recurring" ? (
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+              checked={advanceRecurring}
+              onChange={(e) => setAdvanceRecurring(e.target.checked)}
+            />
+            {t("detail.advanceRecurring")}
+          </label>
         ) : null}
+        <button type="button" className="sk-btn-primary w-full sm:w-auto" onClick={() => void handleRecordPayment()}>
+          {t("detail.recordPayment")}
+        </button>
       </div>
 
       <div>
@@ -308,7 +286,9 @@ export function DetailPage() {
                   </span>
                 ) : null}
                 {p.amount_qar != null ? (
-                  <span className="font-medium text-sage-800">≈ {p.amount_qar.toFixed(2)} QAR</span>
+                  <span className="font-medium text-sage-800">
+                    ≈ {p.amount_qar.toFixed(2)} {primaryCode}
+                  </span>
                 ) : null}
                 {p.renewal_years != null ? (
                   <span className="me-2 text-walnut-600">+{p.renewal_years} y</span>

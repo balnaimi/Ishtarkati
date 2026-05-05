@@ -1,34 +1,73 @@
-import { addMonths, addYears, formatISO, parseISO, isValid } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  addYears,
+  formatISO,
+  parseISO,
+  isValid,
+  subDays,
+  subMonths,
+  subWeeks,
+  subYears,
+} from "date-fns";
 import type { IntervalUnit } from "../types";
 
-/** Resolve billing interval to a number of months. */
-export function intervalToMonths(
-  unit: IntervalUnit | null | undefined,
-  customMonths: number | null | undefined,
-): number {
-  if (!unit) return 0;
+/** Advance by one billing period (count × unit). */
+export function addBillingSteps(
+  from: Date,
+  unit: IntervalUnit | null,
+  count: number,
+): Date {
+  const n = Math.max(1, count || 1);
+  if (!unit) return from;
   switch (unit) {
+    case "day":
+      return addDays(from, n);
+    case "week":
+      return addWeeks(from, n);
     case "month":
-      return 1;
-    case "quarter":
-      return 3;
+      return addMonths(from, n);
     case "year":
-      return 12;
-    case "custom_months":
-      return Math.max(1, customMonths ?? 1);
+      return addYears(from, n);
     default:
-      return 0;
+      return from;
   }
 }
 
-export function addBillingInterval(
-  from: Date,
-  unit: IntervalUnit | null,
-  customMonths: number | null,
-): Date {
-  const m = intervalToMonths(unit, customMonths);
-  if (m <= 0) return from;
-  return addMonths(from, m);
+/** Step backward from next due to estimate period start. */
+export function subtractBillingSteps(end: Date, unit: IntervalUnit, count: number): Date {
+  const n = Math.max(1, count || 1);
+  switch (unit) {
+    case "day":
+      return subDays(end, n);
+    case "week":
+      return subWeeks(end, n);
+    case "month":
+      return subMonths(end, n);
+    case "year":
+      return subYears(end, n);
+    default:
+      return end;
+  }
+}
+
+/** Approximate length of one period in months (for monthly-equivalent stats). */
+export function intervalToApproxMonths(unit: IntervalUnit | null, count: number): number {
+  const c = Math.max(1, count || 1);
+  if (!unit) return 0;
+  switch (unit) {
+    case "day":
+      return c / 30;
+    case "week":
+      return (c * 7) / 30;
+    case "month":
+      return c;
+    case "year":
+      return c * 12;
+    default:
+      return 0;
+  }
 }
 
 export function formatDateInput(d: Date): string {
@@ -46,9 +85,7 @@ export function advanceNextDueAfterRenewal(
   renewalYears: number,
   paidAt: Date,
 ): string {
-  const base = previousNext
-    ? parseDateInput(previousNext)
-    : null;
+  const base = previousNext ? parseDateInput(previousNext) : null;
   const start = base ?? paidAt;
   const next = addYears(start, Math.max(1, renewalYears));
   return formatDateInput(next);

@@ -17,5 +17,9 @@ interface Window {
       | { ok: false; canceled?: boolean; error?: string }
     >;
     showNotification: (opts: { title: string; body: string }) => Promise<boolean>;
+    pinStatus: () => Promise<{ enabled: boolean; hasPin: boolean }>;
+    setPin: (pin: string) => Promise<{ ok: boolean; error?: string }>;
+    clearPin: () => Promise<{ ok: boolean }>;
+    verifyPin: (pin: string) => Promise<boolean>;
   };
 }

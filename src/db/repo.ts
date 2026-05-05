@@ -1,12 +1,11 @@
 import { getDb } from "./database";
-import { intervalToMonths } from "../lib/schedule";
-import type {
-  BillingModel,
-  Category,
-  IntervalUnit,
-  PaymentEvent,
-  Subscription,
-} from "../types";
+import {
+  addBillingSteps,
+  formatDateInput,
+  intervalToApproxMonths,
+  parseDateInput,
+} from "../lib/schedule";
+import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
 
 export async function loadCategories(): Promise<Category[]> {
   const db = await getDb();
@@ -15,11 +14,15 @@ export async function loadCategories(): Promise<Category[]> {
   );
 }
 
-export async function addCategory(name: string, sort_order: number): Promise<number> {
+export async function addCategory(name: string): Promise<number> {
   const db = await getDb();
+  const rows = await db.select<{ m: number | null }>(
+    "SELECT MAX(sort_order) AS m FROM categories",
+  );
+  const nextOrder = (rows[0]?.m ?? -1) + 1;
   const r = await db.execute(
     "INSERT INTO categories (name, sort_order) VALUES ($1, $2)",
-    [name.trim(), sort_order],
+    [name.trim(), nextOrder],
   );
   if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
   const idRows = await db.select<{ id: number }>(
@@ -28,15 +31,11 @@ export async function addCategory(name: string, sort_order: number): Promise<num
   return idRows[0]?.id ?? 0;
 }
 
-export async function updateCategory(
-  id: number,
-  name: string,
-  sort_order: number,
-): Promise<void> {
+export async function updateCategory(id: number, name: string): Promise<void> {
   const db = await getDb();
   await db.execute(
-    "UPDATE categories SET name = $1, sort_order = $2 WHERE id = $3",
-    [name.trim(), sort_order, id],
+    "UPDATE categories SET name = $1 WHERE id = $2",
+    [name.trim(), id],
   );
 }
 
@@ -48,6 +47,7 @@ export async function deleteCategory(id: number): Promise<void> {
   await db.execute("DELETE FROM categories WHERE id = $1", [id]);
 }
 
+/** @deprecated Legacy table; UI uses built-in ISO list. */
 export interface AppCurrency {
   code: string;
   sort_order: number;
@@ -91,6 +91,96 @@ export async function deleteCurrency(code: string): Promise<void> {
     throw new Error("currency_in_use");
   }
   await db.execute("DELETE FROM currencies WHERE UPPER(code) = UPPER($1)", [c]);
+}
+
+export async function loadCreditCards(): Promise<CreditCard[]> {
+  const db = await getDb();
+  return db.select<CreditCard>(
+    "SELECT id, brand, last4, exp_month, exp_year, created_at, updated_at FROM credit_cards ORDER BY exp_year ASC, exp_month ASC, id ASC",
+  );
+}
+
+export async function insertCreditCard(row: {
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+}): Promise<number> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const r = await db.execute(
+    `INSERT INTO credit_cards (brand, last4, exp_month, exp_year, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, now, now],
+  );
+  if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
+  const idRows = await db.select<{ id: number }>("SELECT last_insert_rowid() AS id");
+  return idRows[0]?.id ?? 0;
+}
+
+export async function updateCreditCard(
+  id: number,
+  row: { brand: string; last4: string; exp_month: number; exp_year: number },
+): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.execute(
+    `UPDATE credit_cards SET brand = $1, last4 = $2, exp_month = $3, exp_year = $4, updated_at = $5 WHERE id = $6`,
+    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, now, id],
+  );
+}
+
+export async function deleteCreditCard(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE wallet_methods SET linked_card_id = NULL WHERE linked_card_id = $1", [
+    id,
+  ]);
+  await db.execute("UPDATE subscriptions SET credit_card_id = NULL WHERE credit_card_id = $1", [id]);
+  await db.execute("DELETE FROM credit_cards WHERE id = $1", [id]);
+}
+
+export async function loadWalletMethods(): Promise<WalletMethod[]> {
+  const db = await getDb();
+  return db.select<WalletMethod>(
+    "SELECT id, service_code, account_text, linked_card_id, created_at, updated_at FROM wallet_methods ORDER BY id ASC",
+  );
+}
+
+export async function insertWalletMethod(row: {
+  service_code: string;
+  account_text: string;
+  linked_card_id: number | null;
+}): Promise<number> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const r = await db.execute(
+    `INSERT INTO wallet_methods (service_code, account_text, linked_card_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [row.service_code.trim().toUpperCase(), row.account_text.trim(), row.linked_card_id, now, now],
+  );
+  if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
+  const idRows = await db.select<{ id: number }>("SELECT last_insert_rowid() AS id");
+  return idRows[0]?.id ?? 0;
+}
+
+export async function updateWalletMethod(
+  id: number,
+  row: { service_code: string; account_text: string; linked_card_id: number | null },
+): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.execute(
+    `UPDATE wallet_methods SET service_code = $1, account_text = $2, linked_card_id = $3, updated_at = $4 WHERE id = $5`,
+    [row.service_code.trim().toUpperCase(), row.account_text.trim(), row.linked_card_id, now, id],
+  );
+}
+
+export async function deleteWalletMethod(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE subscriptions SET wallet_method_id = NULL WHERE wallet_method_id = $1", [
+    id,
+  ]);
+  await db.execute("DELETE FROM wallet_methods WHERE id = $1", [id]);
 }
 
 export interface SubscriptionListRow extends Subscription {
@@ -153,6 +243,31 @@ export async function loadSubscriptions(filters: {
   return db.select<SubscriptionListRow>(sql, args);
 }
 
+export async function loadSubscriptionsRecent(limit: number): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const lim = Math.max(1, Math.min(50, limit));
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     ORDER BY s.created_at DESC, s.id DESC
+     LIMIT ${lim}`,
+  );
+}
+
+export async function loadSubscriptionsDueSoon(limit: number): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const lim = Math.max(1, Math.min(50, limit));
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.next_due_date IS NOT NULL
+     ORDER BY s.next_due_date ASC, s.title ASC
+     LIMIT ${lim}`,
+  );
+}
+
 export async function getSubscription(id: number): Promise<SubscriptionListRow | null> {
   const db = await getDb();
   const rows = await db.select<SubscriptionListRow>(
@@ -173,6 +288,7 @@ export async function insertSubscription(row: {
   billing_model: BillingModel;
   interval_unit: IntervalUnit | null;
   interval_months: number | null;
+  interval_count: number;
   auto_renew: number;
   amount_original: number;
   currency_code: string;
@@ -184,16 +300,18 @@ export async function insertSubscription(row: {
   end_date: string | null;
   is_domain: number;
   tags: string | null;
+  credit_card_id: number | null;
+  wallet_method_id: number | null;
 }): Promise<number> {
   const db = await getDb();
   const now = new Date().toISOString();
   const r = await db.execute(
     `INSERT INTO subscriptions (
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
-      auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-      start_date, next_due_date, end_date, is_domain, tags, created_at, updated_at
+      interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
+      start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23
     )`,
     [
       row.title,
@@ -203,6 +321,7 @@ export async function insertSubscription(row: {
       row.billing_model,
       row.interval_unit,
       row.interval_months,
+      row.interval_count,
       row.auto_renew,
       row.amount_original,
       row.currency_code,
@@ -214,6 +333,8 @@ export async function insertSubscription(row: {
       row.end_date,
       row.is_domain,
       row.tags,
+      row.credit_card_id,
+      row.wallet_method_id,
       now,
       now,
     ],
@@ -237,6 +358,7 @@ export async function updateSubscription(
     billing_model: BillingModel;
     interval_unit: IntervalUnit | null;
     interval_months: number | null;
+    interval_count: number;
     auto_renew: number;
     amount_original: number;
     currency_code: string;
@@ -248,6 +370,8 @@ export async function updateSubscription(
     end_date: string | null;
     is_domain: number;
     tags: string | null;
+    credit_card_id: number | null;
+    wallet_method_id: number | null;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -255,11 +379,11 @@ export async function updateSubscription(
   await db.execute(
     `UPDATE subscriptions SET
       title = $1, notes = $2, website_url = $3, category_id = $4,
-      billing_model = $5, interval_unit = $6, interval_months = $7, auto_renew = $8,
-      amount_original = $9, currency_code = $10, amount_qar_snapshot = $11,
-      fx_rate_used = $12, fx_quote_at = $13, start_date = $14, next_due_date = $15,
-      end_date = $16, is_domain = $17, tags = $18, updated_at = $19
-    WHERE id = $20`,
+      billing_model = $5, interval_unit = $6, interval_months = $7, interval_count = $8, auto_renew = $9,
+      amount_original = $10, currency_code = $11, amount_qar_snapshot = $12,
+      fx_rate_used = $13, fx_quote_at = $14, start_date = $15, next_due_date = $16,
+      end_date = $17, is_domain = $18, tags = $19, credit_card_id = $20, wallet_method_id = $21, updated_at = $22
+    WHERE id = $23`,
     [
       row.title,
       row.notes,
@@ -268,6 +392,7 @@ export async function updateSubscription(
       row.billing_model,
       row.interval_unit,
       row.interval_months,
+      row.interval_count,
       row.auto_renew,
       row.amount_original,
       row.currency_code,
@@ -279,6 +404,8 @@ export async function updateSubscription(
       row.end_date,
       row.is_domain,
       row.tags,
+      row.credit_card_id,
+      row.wallet_method_id,
       now,
       id,
     ],
@@ -314,6 +441,25 @@ export async function setSubscriptionNextDue(
     "UPDATE subscriptions SET next_due_date = $1, updated_at = $2 WHERE id = $3",
     [nextIsoDate, now, id],
   );
+}
+
+export async function confirmSubscriptionPaid(id: number): Promise<void> {
+  const sub = await getSubscription(id);
+  if (!sub || !sub.next_due_date) return;
+  if (sub.billing_model === "recurring" && sub.interval_unit) {
+    const base = parseDateInput(sub.next_due_date) ?? new Date();
+    const cnt = Math.max(1, sub.interval_count ?? 1);
+    const next = addBillingSteps(base, sub.interval_unit, cnt);
+    await setSubscriptionNextDue(id, formatDateInput(next));
+    return;
+  }
+  await setSubscriptionNextDue(id, null);
+}
+
+export function subscriptionNeedsPaidAttention(sub: Subscription): boolean {
+  if (!sub.next_due_date) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return sub.next_due_date <= today;
 }
 
 export async function listPayments(subId: number): Promise<PaymentEvent[]> {
@@ -358,14 +504,20 @@ export async function setSetting(key: string, value: string): Promise<void> {
   );
 }
 
-/** Monthly-equivalent QAR for recurring rows (rough estimate). */
-export function monthlyEquivalentQar(s: Subscription): number | null {
+export async function getPrimaryCurrencyCode(): Promise<string> {
+  const v = await getSetting("primary_currency");
+  const c = v?.trim().toUpperCase();
+  return c && c.length >= 3 ? c : "QAR";
+}
+
+/** Monthly-equivalent in stored primary snapshot for recurring rows. */
+export function monthlyEquivalentPrimary(s: Subscription): number | null {
   if (s.billing_model !== "recurring" || s.amount_qar_snapshot == null) {
     return null;
   }
-  const months = intervalToMonths(
+  const months = intervalToApproxMonths(
     s.interval_unit as IntervalUnit | null,
-    s.interval_months,
+    s.interval_count ?? 1,
   );
   if (months <= 0) return null;
   return s.amount_qar_snapshot / months;
@@ -373,11 +525,13 @@ export function monthlyEquivalentQar(s: Subscription): number | null {
 
 export async function statsSummary(): Promise<{
   monthlyEstimate: number;
-  byCategory: { name: string; monthlyQar: number }[];
+  byCategory: { name: string; monthlyPrimary: number }[];
   due30Total: number;
   recurringCount: number;
+  primaryCode: string;
 }> {
   const rows = await loadSubscriptions({});
+  const primaryCode = await getPrimaryCurrencyCode();
   let monthlyEstimate = 0;
   let due30Total = 0;
   let recurringCount = 0;
@@ -390,7 +544,7 @@ export async function statsSummary(): Promise<{
   for (const s of rows) {
     if (s.billing_model === "recurring" && s.amount_qar_snapshot != null) {
       recurringCount++;
-      const m = monthlyEquivalentQar(s);
+      const m = monthlyEquivalentPrimary(s);
       if (m != null) {
         monthlyEstimate += m;
         const cname = s.category_name ?? "—";
@@ -407,8 +561,8 @@ export async function statsSummary(): Promise<{
   }
 
   const byCategory = [...catMap.entries()]
-    .map(([name, monthlyQar]) => ({ name, monthlyQar }))
-    .sort((a, b) => b.monthlyQar - a.monthlyQar);
+    .map(([name, monthlyPrimary]) => ({ name, monthlyPrimary }))
+    .sort((a, b) => b.monthlyPrimary - a.monthlyPrimary);
 
-  return { monthlyEstimate, byCategory, due30Total, recurringCount };
+  return { monthlyEstimate, byCategory, due30Total, recurringCount, primaryCode };
 }

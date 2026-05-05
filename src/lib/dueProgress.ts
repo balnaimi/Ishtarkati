@@ -2,11 +2,10 @@ import {
   addDays,
   differenceInCalendarDays,
   startOfDay,
-  subMonths,
 } from "date-fns";
 import type { TFunction } from "i18next";
 import type { IntervalUnit } from "../types";
-import { intervalToMonths, parseDateInput } from "./schedule";
+import { parseDateInput, subtractBillingSteps } from "./schedule";
 
 /** Subscription-like shape for progress (list or detail rows). */
 export interface DueProgressInput {
@@ -15,6 +14,7 @@ export interface DueProgressInput {
   billing_model: string;
   interval_unit: IntervalUnit | null;
   interval_months: number | null;
+  interval_count: number;
 }
 
 export interface DueProgressResult {
@@ -34,14 +34,12 @@ export function estimatePeriodStart(input: DueProgressInput): Date | null {
   const end = startOfDay(next);
 
   if (input.billing_model === "recurring" && input.interval_unit) {
-    const months = intervalToMonths(input.interval_unit, input.interval_months);
-    if (months > 0) {
-      const start = subMonths(end, months);
-      if (differenceInCalendarDays(end, start) < 1) {
-        return addDays(end, -1);
-      }
-      return startOfDay(start);
+    const cnt = Math.max(1, input.interval_count || 1);
+    const start = subtractBillingSteps(end, input.interval_unit, cnt);
+    if (differenceInCalendarDays(end, start) < 1) {
+      return addDays(end, -1);
     }
+    return startOfDay(start);
   }
 
   const userStart = parseDateInput(input.start_date);
@@ -147,4 +145,22 @@ export function dueListRowHighlightClass(tone: DueTone): string {
   if (tone === "urgent") return "bg-orange-50/45";
   if (tone === "due") return "bg-red-50/55";
   return "bg-red-100/50";
+}
+
+/** Card expiry: months remaining until end of exp year/month (rough bar). */
+export function cardExpiryProgress(
+  expMonth: number,
+  expYear: number,
+  now: Date = new Date(),
+): { ratio: number; monthsLeft: number; urgent: boolean } {
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const totalMonthsLeft = (expYear - y) * 12 + (expMonth - m);
+  const maxSpan = 36;
+  const ratio = Math.min(1, Math.max(0, 1 - totalMonthsLeft / maxSpan));
+  return {
+    ratio,
+    monthsLeft: totalMonthsLeft,
+    urgent: totalMonthsLeft <= 3,
+  };
 }

@@ -22,4 +22,10 @@ contextBridge.exposeInMainWorld("ishtarkati", {
   > => ipcRenderer.invoke("backup:import"),
   showNotification: (opts: { title: string; body: string }): Promise<boolean> =>
     ipcRenderer.invoke("notification:show", opts),
+  pinStatus: (): Promise<{ enabled: boolean; hasPin: boolean }> =>
+    ipcRenderer.invoke("security:pinStatus"),
+  setPin: (pin: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke("security:setPin", pin),
+  clearPin: (): Promise<{ ok: boolean }> => ipcRenderer.invoke("security:clearPin"),
+  verifyPin: (pin: string): Promise<boolean> => ipcRenderer.invoke("security:verifyPin", pin),
 });

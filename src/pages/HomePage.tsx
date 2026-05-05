@@ -1,15 +1,15 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  confirmSubscriptionPaid,
   loadSubscriptions,
-  loadCategories,
-  loadCurrencies,
-  getSetting,
-  type AppCurrency,
+  loadSubscriptionsDueSoon,
+  loadSubscriptionsRecent,
+  statsSummary,
+  subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
-import { useFxManager } from "../hooks/useFx";
 import { DueProgressBar } from "../components/DueProgressBar";
 import {
   computeDueProgress,
@@ -19,7 +19,6 @@ import {
   type DueProgressInput,
   type DueTone,
 } from "../lib/dueProgress";
-import { tagTokens } from "../lib/tags";
 
 function toneTextClass(tone: DueTone): string {
   if (tone === "overdue" || tone === "due") return "text-red-800";
@@ -28,8 +27,6 @@ function toneTextClass(tone: DueTone): string {
   return "text-sage-800";
 }
 
-type SortKey = "next_due" | "title" | "category" | "amount" | "qar";
-
 function progressInput(s: SubscriptionListRow): DueProgressInput {
   return {
     next_due_date: s.next_due_date,
@@ -37,306 +34,224 @@ function progressInput(s: SubscriptionListRow): DueProgressInput {
     billing_model: s.billing_model,
     interval_unit: s.interval_unit,
     interval_months: s.interval_months,
+    interval_count: Math.max(1, s.interval_count ?? 1),
   };
 }
 
 export function HomePage() {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const searchRef = useRef<HTMLInputElement>(null);
-  const [items, setItems] = useState<SubscriptionListRow[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
-  const [currencyOptions, setCurrencyOptions] = useState<AppCurrency[]>([]);
-  const [catFilter, setCatFilter] = useState<string>("");
-  const [curFilter, setCurFilter] = useState<string>("");
-  const [dueSoon, setDueSoon] = useState(false);
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search);
-  const [sortKey, setSortKey] = useState<SortKey>("next_due");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof statsSummary>> | null>(null);
+  const [dueSoon, setDueSoon] = useState<SubscriptionListRow[]>([]);
+  const [recent, setRecent] = useState<SubscriptionListRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { hydrate } = useFxManager();
+
+  const [attentionAll, setAttentionAll] = useState<SubscriptionListRow[]>([]);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const q = deferredSearch.trim();
-      const [list, cats, curs] = await Promise.all([
-        loadSubscriptions({
-          categoryId: catFilter ? parseInt(catFilter, 10) : undefined,
-          currency: curFilter || undefined,
-          dueWithinDays: dueSoon ? 30 : undefined,
-          search: q || undefined,
-        }),
-        loadCategories(),
-        loadCurrencies(),
+      const [sum, d, r, all] = await Promise.all([
+        statsSummary(),
+        loadSubscriptionsDueSoon(5),
+        loadSubscriptionsRecent(5),
+        loadSubscriptions({}),
       ]);
-      setItems(list);
-      setCategories(cats);
-      setCurrencyOptions(curs);
+      setSummary(sum);
+      setDueSoon(d);
+      setRecent(r);
+      setAttentionAll(all.filter(subscriptionNeedsPaidAttention));
     } finally {
       setLoading(false);
     }
-  }, [catFilter, curFilter, dueSoon, deferredSearch]);
-
-  const sortedItems = useMemo(() => {
-    const arr = [...items];
-    const mul = sortDir === "asc" ? 1 : -1;
-    arr.sort((a, b) => {
-      switch (sortKey) {
-        case "next_due":
-          if (!a.next_due_date && !b.next_due_date) return 0;
-          if (!a.next_due_date) return 1;
-          if (!b.next_due_date) return -1;
-          return a.next_due_date.localeCompare(b.next_due_date) * mul;
-        case "title":
-          return a.title.localeCompare(b.title, "ar") * mul;
-        case "category":
-          return (a.category_name ?? "").localeCompare(b.category_name ?? "", "ar") * mul;
-        case "amount":
-          return (a.amount_original - b.amount_original) * mul;
-        case "qar": {
-          const aq = a.amount_qar_snapshot ?? -Infinity;
-          const bq = b.amount_qar_snapshot ?? -Infinity;
-          return (aq - bq) * mul;
-        }
-        default:
-          return 0;
-      }
-    });
-    return arr;
-  }, [items, sortKey, sortDir]);
-
-  useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+  }, []);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const on = await getSetting("reminders_enabled");
-      if (cancelled || on !== "1") return;
-      const today = new Date().toISOString().slice(0, 10);
-      const key = `due_digest_${today}`;
-      if (sessionStorage.getItem(key)) return;
-      const near = await loadSubscriptions({ dueWithinDays: 7 });
-      const n = near.filter((s) => s.next_due_date).length;
-      if (n === 0) return;
-      const ok = await window.ishtarkati.showNotification({
-        title: t("notify.digestTitle"),
-        body: t("notify.digestBody", { count: n }),
-      });
-      if (ok) sessionStorage.setItem(key, "1");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
+  const attentionList = attentionAll;
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
-      const el = e.target as HTMLElement;
-      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable) {
-        return;
-      }
-      e.preventDefault();
-      searchRef.current?.focus();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  async function onConfirmPaid(e: React.MouseEvent, id: number) {
+    e.stopPropagation();
+    await confirmSubscriptionPaid(id);
+    void reload();
+  }
 
   function billingLabel(model: string) {
     if (model === "one_time") return t("billing.one_time");
-    if (model === "recurring") return t("billing.recurring");
-    return t("billing.pay_as_needed");
+    return t("billing.recurring");
   }
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-cream-900">{t("list.title")}</h2>
+  const primary = summary?.primaryCode ?? "QAR";
 
-      <div className="sk-card">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-3">
-            <label className="sk-label">{t("list.filterCategory")}</label>
-            <select
-              className="sk-select"
-              value={catFilter}
-              onChange={(e) => setCatFilter(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="lg:col-span-2">
-            <label className="sk-label">{t("list.filterCurrency")}</label>
-            <select
-              className="sk-select"
-              value={curFilter}
-              onChange={(e) => setCurFilter(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {currencyOptions.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2.5 lg:col-span-3">
-            <input
-              type="checkbox"
-              id="due-soon"
-              className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-              checked={dueSoon}
-              onChange={(e) => setDueSoon(e.target.checked)}
-            />
-            <label htmlFor="due-soon" className="cursor-pointer text-sm text-cream-800">
-              {t("list.dueSoon")}
-            </label>
-          </div>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <label className="sk-label">{t("common.search")}</label>
-            <input
-              ref={searchRef}
-              id="list-search"
-              className="sk-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("list.searchPlaceholder")}
-              autoComplete="off"
-            />
-          </div>
-          <div className="flex lg:col-span-1">
-            <button type="button" className="sk-btn-secondary w-full lg:w-auto" onClick={() => void reload()}>
-              {t("list.applyFilters")}
-            </button>
-          </div>
-          <div className="lg:col-span-4">
-            <label className="sk-label">{t("list.sortBy")}</label>
-            <div className="flex flex-wrap gap-2">
-              <select
-                className="sk-select min-w-0 flex-1 sm:max-w-[14rem]"
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-              >
-                <option value="next_due">{t("list.sort.nextDue")}</option>
-                <option value="title">{t("list.sort.title")}</option>
-                <option value="category">{t("list.sort.category")}</option>
-                <option value="amount">{t("list.sort.amount")}</option>
-                <option value="qar">{t("list.sort.qar")}</option>
-              </select>
-              <select
-                className="sk-select w-full sm:w-36"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-              >
-                <option value="asc">{t("list.sort.asc")}</option>
-                <option value="desc">{t("list.sort.desc")}</option>
-              </select>
-            </div>
-          </div>
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-cream-900">{t("home.dashboardTitle")}</h2>
+          <p className="text-sm text-cream-600">{t("home.dashboardSubtitle")}</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link to="/new" className="sk-btn-warm px-5 py-2.5 text-center font-semibold shadow-sm">
+            {t("home.addSubscriptionCta")}
+          </Link>
+          <Link to="/list" className="sk-btn-secondary px-4 py-2.5 text-center">
+            {t("home.allSubscriptions")}
+          </Link>
         </div>
       </div>
 
-      {loading ? (
+      {attentionList.length > 0 ? (
+        <div
+          className="rounded-xl border border-amber-400/90 bg-amber-50/90 px-4 py-3 text-amber-950 shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold">{t("home.attentionBannerTitle")}</p>
+          <ul className="mt-2 list-inside list-disc text-sm">
+            {attentionList.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="font-medium text-walnut-700 underline-offset-2 hover:underline"
+                  onClick={() => nav(`/sub/${s.id}`)}
+                >
+                  {s.title}
+                </button>
+                {" — "}
+                {t("home.attentionLine", { date: s.next_due_date ?? "" })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {loading || !summary ? (
         <p className="text-cream-700">{t("common.loading")}</p>
-      ) : items.length === 0 ? (
-        <p className="text-cream-700">{t("list.empty")}</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-cream-400 bg-cream-50/95 shadow-sm">
-          <table className="w-full min-w-[640px] text-right text-sm">
-            <thead className="border-b border-cream-400 bg-cream-200/80 text-cream-800">
-              <tr>
-                <th className="px-3 py-3 font-semibold">{t("list.name")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.category")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.billing")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.nextDue")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.amount")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.qar")}</th>
-                <th className="px-3 py-3 font-semibold">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedItems.map((s) => {
-                const prog = computeDueProgress(progressInput(s));
-                const tone = prog ? dueProgressTone(prog) : null;
-                const rowTint = tone ? dueListRowHighlightClass(tone) : "";
-                return (
-                  <tr
-                    key={s.id}
-                    className={`cursor-pointer border-t border-cream-300/80 hover:bg-cream-200/40 ${rowTint}`}
-                    onClick={() => nav(`/sub/${s.id}`)}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="sk-card">
+            <p className="text-sm font-medium text-cream-700">{t("stats.monthlyEstimate")}</p>
+            <p className="mt-2 text-2xl font-semibold text-sage-800">
+              {summary.monthlyEstimate.toFixed(2)} {primary}
+            </p>
+            <p className="mt-3 text-sm text-cream-600">
+              {t("stats.subscriptions")}: {summary.recurringCount}
+            </p>
+          </div>
+          <div className="sk-card">
+            <p className="text-sm font-medium text-cream-700">{t("stats.due30")}</p>
+            <p className="mt-2 text-2xl font-semibold text-walnut-600">
+              {summary.due30Total.toFixed(2)} {primary}
+            </p>
+          </div>
+          <div className="md:col-span-2 sk-card">
+            <p className="mb-3 text-sm font-medium text-cream-700">{t("stats.byCategory")}</p>
+            <ul className="space-y-2">
+              {summary.byCategory.length === 0 ? (
+                <li className="text-cream-600">{t("common.none")}</li>
+              ) : (
+                summary.byCategory.map((row) => (
+                  <li
+                    key={row.name}
+                    className="flex flex-wrap justify-between gap-2 text-sm text-cream-800"
                   >
-                    <td className="px-3 py-3 align-top">
-                      <Link
-                        to={`/sub/${s.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-medium text-sage-800 underline-offset-2 hover:underline"
-                      >
-                        {s.title}
-                      </Link>
-                      {s.is_domain ? (
-                        <span className="me-2 mt-1 inline-block sk-chip">{t("list.domain")}</span>
-                      ) : null}
-                      {tagTokens(s.tags).length ? (
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {tagTokens(s.tags).map((tag) => (
-                            <span key={`${s.id}-${tag}`} className="inline-block sk-chip text-[10px] leading-tight">
-                              {tag}
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
-                      {s.next_due_date ? (
-                        <div className="mt-2">
-                          <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
-                        </div>
-                      ) : (
-                        <span className="mt-1 block text-xs text-cream-500">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
-                    <td className="px-3 py-3 text-cream-800">{billingLabel(s.billing_model)}</td>
-                    <td className="px-3 py-3 text-cream-800">
-                      {s.next_due_date ?? "—"}
-                      {prog && tone ? (
-                        <span className={`mt-0.5 block text-xs font-medium ${toneTextClass(tone)}`}>
-                          {relativeDueCaption(t, prog)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3 text-cream-800">
-                      {s.amount_original} {s.currency_code}
-                    </td>
-                    <td className="px-3 py-3 font-medium text-sage-800">
-                      {s.amount_qar_snapshot != null ? s.amount_qar_snapshot.toFixed(2) : "—"}
-                    </td>
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        to={`/sub/${s.id}/edit`}
-                        className="text-walnut-600 underline-offset-2 hover:underline"
-                      >
-                        {t("common.edit")}
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    <span>{row.name}</span>
+                    <span className="font-medium text-sage-800">
+                      {row.monthlyPrimary.toFixed(2)} {primary} / {t("stats.perMonth")}
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
         </div>
       )}
+
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold text-cream-900">{t("home.nearestDue")}</h3>
+        <ul className="space-y-3">
+          {dueSoon.length === 0 ? (
+            <li className="text-cream-600">{t("home.noDueSoon")}</li>
+          ) : (
+            dueSoon.map((s) => {
+              const prog = s.next_due_date ? computeDueProgress(progressInput(s)) : null;
+              const tone = prog ? dueProgressTone(prog) : null;
+              const needsPaid = subscriptionNeedsPaidAttention(s);
+              return (
+                <li
+                  key={s.id}
+                  className={`sk-card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
+                    needsPaid ? "ring-2 ring-amber-500/80" : ""
+                  } ${tone ? dueListRowHighlightClass(tone) : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-right"
+                    onClick={() => nav(`/sub/${s.id}`)}
+                  >
+                    <span className="font-semibold text-sage-900">{s.title}</span>
+                    <span className="mt-1 block text-sm text-cream-700">
+                      {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
+                    </span>
+                    {prog && tone ? (
+                      <span className={`mt-1 block text-xs font-medium ${toneTextClass(tone)}`}>
+                        {relativeDueCaption(t, prog)}
+                      </span>
+                    ) : null}
+                    {s.next_due_date ? (
+                      <div className="mt-2 max-w-md">
+                        <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+                      </div>
+                    ) : null}
+                  </button>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    {needsPaid ? (
+                      <button
+                        type="button"
+                        className="sk-btn-primary text-sm"
+                        onClick={(e) => void onConfirmPaid(e, s.id)}
+                      >
+                        {t("home.markPaid")}
+                      </button>
+                    ) : null}
+                    <Link to={`/sub/${s.id}/edit`} className="sk-btn-secondary text-sm">
+                      {t("common.edit")}
+                    </Link>
+                  </div>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-lg font-semibold text-cream-900">{t("home.recentAdded")}</h3>
+        <ul className="space-y-2">
+          {recent.length === 0 ? (
+            <li className="text-cream-600">{t("common.none")}</li>
+          ) : (
+            recent.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-cream-400 bg-cream-50/95 px-4 py-3 text-right shadow-sm hover:bg-cream-200/50"
+                  onClick={() => nav(`/sub/${s.id}`)}
+                >
+                  <span className="font-medium text-sage-900">{s.title}</span>
+                  <span className="mt-0.5 block text-xs text-cream-600">
+                    {s.amount_original} {s.currency_code}
+                    {s.amount_qar_snapshot != null
+                      ? ` · ≈ ${s.amount_qar_snapshot.toFixed(2)} ${primary}`
+                      : ""}
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
     </div>
   );
 }
