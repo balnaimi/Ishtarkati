@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
+import type { SubscriptionFormValues, WalletMethod } from "../types";
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
-import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
+import { addCategory, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 
@@ -40,7 +40,6 @@ export function SubscriptionForm({
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [addCatBusy, setAddCatBusy] = useState(false);
-  const [cards, setCards] = useState<CreditCard[]>([]);
   const [wallets, setWallets] = useState<WalletMethod[]>([]);
 
   useEffect(() => {
@@ -48,11 +47,7 @@ export function SubscriptionForm({
   }, [initial]);
 
   useEffect(() => {
-    void (async () => {
-      const [c, w] = await Promise.all([loadCreditCards(), loadWalletMethods()]);
-      setCards(c);
-      setWallets(w);
-    })();
+    void loadWalletMethods().then(setWallets);
   }, []);
 
   const cur = (v.currency_code || "").trim().toUpperCase();
@@ -284,7 +279,7 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className="sk-label">{t("form.paymentMethodWallet")}</label>
+        <label className="sk-label">{t("form.paymentMethod")}</label>
         <select
           className="sk-select"
           value={v.wallet_method_id}
@@ -299,24 +294,7 @@ export function SubscriptionForm({
             </option>
           ))}
         </select>
-        <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodWalletHint")}</p>
-      </div>
-
-      <div>
-        <label className="sk-label">{t("form.paymentMethodCard")}</label>
-        <select
-          className="sk-select"
-          value={v.credit_card_id}
-          onChange={(e) => setField("credit_card_id", e.target.value)}
-        >
-          <option value="">{t("common.none")}</option>
-          {cards.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.brand} ·••• {c.last4} ({c.exp_month}/{c.exp_year})
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodCardHint")}</p>
+        <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodHint")}</p>
       </div>
 
       <div>

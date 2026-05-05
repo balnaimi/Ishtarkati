@@ -83,6 +83,5 @@ export interface SubscriptionFormValues {
   next_due_date: string;
   end_date: string;
   tags: string;
-  credit_card_id: string;
   wallet_method_id: string;
 }

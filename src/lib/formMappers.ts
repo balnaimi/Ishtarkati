@@ -26,7 +26,6 @@ export function defaultFormValues(): SubscriptionFormValues {
     next_due_date: "",
     end_date: "",
     tags: "",
-    credit_card_id: "",
     wallet_method_id: "",
   };
 }
@@ -47,7 +46,6 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
     next_due_date: s.next_due_date?.slice(0, 10) ?? "",
     end_date: s.end_date?.slice(0, 10) ?? "",
     tags: s.tags ?? "",
-    credit_card_id: s.credit_card_id != null ? String(s.credit_card_id) : "",
     wallet_method_id: s.wallet_method_id != null ? String(s.wallet_method_id) : "",
   };
 }
@@ -140,7 +138,7 @@ export function formToRow(
     end_date: v.end_date.trim() || null,
     is_domain: 0,
     tags: normalizeTags(v.tags),
-    credit_card_id: v.credit_card_id ? parseInt(v.credit_card_id, 10) : null,
+    credit_card_id: null,
     wallet_method_id: v.wallet_method_id ? parseInt(v.wallet_method_id, 10) : null,
   };
 }
