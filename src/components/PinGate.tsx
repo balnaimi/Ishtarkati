@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getSetting } from "../db/repo";
-import { SKIP_NEXT_PIN_LOCK_KEY } from "../lib/pinSession";
+import { getSetting, PIN_ENABLED_KEY } from "../db/repo";
+import { consumeSkipNextPinLock } from "../lib/pinSession";
+import { LoadingScreen } from "./LoadingScreen";
 
 export function PinGate({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -12,20 +13,15 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const enabled = await getSetting("pin_enabled");
+      const enabled = await getSetting(PIN_ENABLED_KEY);
       if (cancelled) return;
       if (enabled !== "1") {
         setPhase("open");
         return;
       }
-      try {
-        if (sessionStorage.getItem(SKIP_NEXT_PIN_LOCK_KEY) === "1") {
-          sessionStorage.removeItem(SKIP_NEXT_PIN_LOCK_KEY);
-          setPhase("open");
-          return;
-        }
-      } catch {
-        /* private mode */
+      if (consumeSkipNextPinLock()) {
+        setPhase("open");
+        return;
       }
       const st = await window.ishtarkati.pinStatus();
       if (cancelled) return;
@@ -52,11 +48,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   }
 
   if (phase === "check") {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-cream-700">
-        {t("common.loading")}
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (phase === "open") {

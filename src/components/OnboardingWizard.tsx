@@ -1,22 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   insertWalletMethod,
   ONBOARDING_COMPLETE_KEY,
+  PIN_ENABLED_KEY,
+  PRIMARY_CURRENCY_KEY,
   setSetting,
 } from "../db/repo";
-import { SKIP_NEXT_PIN_LOCK_KEY } from "../lib/pinSession";
+import { markSkipNextPinLock } from "../lib/pinSession";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 
 type Step = "welcome" | "currency" | "pin" | "payment";
 
+const ONBOARDING_STEPS: readonly Step[] = ["welcome", "currency", "pin", "payment"];
+
 export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>("welcome");
-  const currencies = listCurrenciesSorted();
-  const defaultCode = currencies[0]?.code ?? "QAR";
-  const [currencyCode, setCurrencyCode] = useState(defaultCode);
+  const currencies = useMemo(() => listCurrenciesSorted(), []);
+  const [currencyCode, setCurrencyCode] = useState(() => currencies[0]?.code ?? "QAR");
 
   const [wantPin, setWantPin] = useState(false);
   const [pin1, setPin1] = useState("");
@@ -27,6 +30,11 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const [payService, setPayService] = useState(PAYMENT_SERVICES[0]?.code ?? "OTHER");
   const [payAccount, setPayAccount] = useState("");
   const [payErr, setPayErr] = useState<string | null>(null);
+
+  async function savePrimaryAndContinue() {
+    await setSetting(PRIMARY_CURRENCY_KEY, currencyCode.trim().toUpperCase());
+    setStep("pin");
+  }
 
   async function finishOnboarding() {
     setBusy(true);
@@ -40,10 +48,6 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
   async function goFromPin() {
     setPinErr(null);
-    if (!wantPin) {
-      setStep("payment");
-      return;
-    }
     if (pin1.length < 4) {
       setPinErr(t("pin.tooShort"));
       return;
@@ -59,12 +63,8 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
         setPinErr(t("pin.setFailed"));
         return;
       }
-      await setSetting("pin_enabled", "1");
-      try {
-        sessionStorage.setItem(SKIP_NEXT_PIN_LOCK_KEY, "1");
-      } catch {
-        /* private mode */
-      }
+      await setSetting(PIN_ENABLED_KEY, "1");
+      markSkipNextPinLock();
       setPin1("");
       setPin2("");
       setStep("payment");
@@ -93,8 +93,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     }
   }
 
-  const steps: Step[] = ["welcome", "currency", "pin", "payment"];
-  const stepIndex = Math.max(0, steps.indexOf(step));
+  const stepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
 
   return (
     <div
@@ -103,7 +102,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     >
       <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-5 py-10">
         <div className="mb-6 flex justify-center gap-2">
-          {steps.map((s, i) => (
+          {ONBOARDING_STEPS.map((s, i) => (
             <span
               key={s}
               className={`h-2 w-8 rounded-full ${
@@ -146,7 +145,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                 <button
                   type="button"
                   className="sk-btn-primary flex-1"
-                  onClick={() => void setSetting("primary_currency", currencyCode.trim().toUpperCase()).then(() => setStep("pin"))}
+                  onClick={() => void savePrimaryAndContinue()}
                 >
                   {t("onboarding.continue")}
                 </button>

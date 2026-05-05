@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { getSetting, ONBOARDING_COMPLETE_KEY } from "../db/repo";
+import { LoadingScreen } from "./LoadingScreen";
 import { OnboardingWizard } from "./OnboardingWizard";
 
 export function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation();
   const [ready, setReady] = useState<"check" | "done" | "pending">("check");
 
   const recheck = useCallback(async () => {
@@ -17,11 +16,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   }, [recheck]);
 
   if (ready === "check") {
-    return (
-      <div className="flex min-h-full items-center justify-center p-8 text-cream-700">
-        {t("common.loading")}
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (ready === "pending") {

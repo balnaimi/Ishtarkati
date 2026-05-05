@@ -490,6 +490,11 @@ export async function insertPaymentEvent(
 /** When `'1'`, first-run onboarding has finished. */
 export const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
+export const PRIMARY_CURRENCY_KEY = "primary_currency";
+
+/** When `'1'`, PIN lock is active (see Electron `setPin` / `clearPin`). */
+export const PIN_ENABLED_KEY = "pin_enabled";
+
 export async function getSetting(key: string): Promise<string | null> {
   const db = await getDb();
   const rows = await db.select<{ value: string }>(
@@ -508,7 +513,7 @@ export async function setSetting(key: string, value: string): Promise<void> {
 }
 
 export async function getPrimaryCurrencyCode(): Promise<string> {
-  const v = await getSetting("primary_currency");
+  const v = await getSetting(PRIMARY_CURRENCY_KEY);
   const c = v?.trim().toUpperCase();
   return c && c.length >= 3 ? c : "QAR";
 }

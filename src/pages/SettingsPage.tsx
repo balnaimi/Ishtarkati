@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  getSetting,
-  setSetting,
-  loadSubscriptions,
   getPrimaryCurrencyCode,
+  getSetting,
+  loadSubscriptions,
+  PIN_ENABLED_KEY,
+  PRIMARY_CURRENCY_KEY,
+  setSetting,
 } from "../db/repo";
 import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/tableExport";
 import { useFxManager } from "../hooks/useFx";
@@ -63,7 +65,7 @@ export function SettingsPage() {
       setRemindersOn(rem === "1");
       const prim = await getPrimaryCurrencyCode();
       setPrimaryCurrency(prim);
-      const pe = await getSetting("pin_enabled");
+      const pe = await getSetting(PIN_ENABLED_KEY);
       setPinEnabled(pe === "1");
     })();
   }, [syncFxAt]);
@@ -176,7 +178,7 @@ export function SettingsPage() {
   }
 
   async function savePrimary(code: string) {
-    await setSetting("primary_currency", code.trim().toUpperCase());
+    await setSetting(PRIMARY_CURRENCY_KEY, code.trim().toUpperCase());
     setPrimaryCurrency(code.trim().toUpperCase());
   }
 
@@ -193,7 +195,7 @@ export function SettingsPage() {
     try {
       if (!pinEnabled) {
         await window.ishtarkati.clearPin();
-        await setSetting("pin_enabled", "0");
+        await setSetting(PIN_ENABLED_KEY, "0");
         setPinFeedback(t("pin.disabledOk"));
         setPin1("");
         setPin2("");
@@ -212,7 +214,7 @@ export function SettingsPage() {
         setPinFeedback(t("pin.setFailed"));
         return;
       }
-      await setSetting("pin_enabled", "1");
+      await setSetting(PIN_ENABLED_KEY, "1");
       setPinFeedback(t("pin.enabledOk"));
       setPin1("");
       setPin2("");

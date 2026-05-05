@@ -12,6 +12,8 @@ import {
 import { defaultFormValues, formToRow } from "../lib/formMappers";
 import type { SubscriptionFormValues } from "../types";
 
+const SETTINGS_PAYMENTS_HREF = "/settings?tab=payments";
+
 export function NewSubscriptionPage() {
   const { t } = useTranslation();
   const nav = useNavigate();
@@ -65,7 +67,7 @@ export function NewSubscriptionPage() {
           <button
             type="button"
             className="sk-btn-primary"
-            onClick={() => nav("/settings?tab=payments")}
+            onClick={() => nav(SETTINGS_PAYMENTS_HREF)}
           >
             {t("form.goAddPaymentMethod")}
           </button>
