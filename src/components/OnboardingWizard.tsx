@@ -5,6 +5,7 @@ import {
   ONBOARDING_COMPLETE_KEY,
   setSetting,
 } from "../db/repo";
+import { SKIP_NEXT_PIN_LOCK_KEY } from "../lib/pinSession";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 
@@ -59,6 +60,11 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
         return;
       }
       await setSetting("pin_enabled", "1");
+      try {
+        sessionStorage.setItem(SKIP_NEXT_PIN_LOCK_KEY, "1");
+      } catch {
+        /* private mode */
+      }
       setPin1("");
       setPin2("");
       setStep("payment");

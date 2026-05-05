@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getSetting } from "../db/repo";
+import { SKIP_NEXT_PIN_LOCK_KEY } from "../lib/pinSession";
 
 export function PinGate({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -16,6 +17,15 @@ export function PinGate({ children }: { children: React.ReactNode }) {
       if (enabled !== "1") {
         setPhase("open");
         return;
+      }
+      try {
+        if (sessionStorage.getItem(SKIP_NEXT_PIN_LOCK_KEY) === "1") {
+          sessionStorage.removeItem(SKIP_NEXT_PIN_LOCK_KEY);
+          setPhase("open");
+          return;
+        }
+      } catch {
+        /* private mode */
       }
       const st = await window.ishtarkati.pinStatus();
       if (cancelled) return;
