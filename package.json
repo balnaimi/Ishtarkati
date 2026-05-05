@@ -1,7 +1,7 @@
 {
   "name": "ishtarkati",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Arabic subscription tracker (Electron)",
@@ -41,7 +41,7 @@
   },
   "build": {
     "appId": "com.mrn.ishtarkati",
-    "productName": "إشتراكاتي",
+    "productName": "Ishtarkati",
     "asar": true,
     "directories": {
       "output": "release",
