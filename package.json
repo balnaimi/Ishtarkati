@@ -2,6 +2,9 @@
   "name": "ishtarkati",
   "private": true,
   "version": "1.0.12",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Arabic subscription tracker (Electron)",
