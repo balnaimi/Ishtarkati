@@ -7,6 +7,7 @@ void i18n.use(initReactI18next).init({
   fallbackLng: "ar",
   resources: { ar: { translation: ar } },
   interpolation: { escapeValue: false },
+  react: { useSuspense: false },
 });
 
 export default i18n;

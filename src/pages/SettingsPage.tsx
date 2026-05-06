@@ -257,7 +257,11 @@ export function SettingsPage() {
     try {
       const r = await window.ishtarkati.resetLocalDatabase();
       if (r.ok) {
-        window.location.reload();
+        try {
+          sessionStorage.clear();
+        } catch {
+          /* ignore */
+        }
       } else {
         setDangerMsg(`${t("settings.dangerResetFailed")}${r.error ? ` — ${r.error}` : ""}`);
       }

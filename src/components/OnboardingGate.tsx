@@ -7,8 +7,12 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState<"check" | "done" | "pending">("check");
 
   const recheck = useCallback(async () => {
-    const v = await getSetting(ONBOARDING_COMPLETE_KEY);
-    setReady(v === "1" ? "done" : "pending");
+    try {
+      const v = await getSetting(ONBOARDING_COMPLETE_KEY);
+      setReady(v === "1" ? "done" : "pending");
+    } catch {
+      setReady("pending");
+    }
   }, []);
 
   useEffect(() => {

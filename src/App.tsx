@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { PinGate } from "./components/PinGate";
@@ -11,7 +11,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <OnboardingGate>
         <PinGate>
           <Routes>
@@ -27,6 +27,6 @@ export default function App() {
           </Routes>
         </PinGate>
       </OnboardingGate>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, shell } from "electron";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
@@ -21,6 +21,22 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null = null;
 let db: Database.Database | null = null;
+
+async function loadRendererHashHome(targetWin?: BrowserWindow | null): Promise<void> {
+  const w = targetWin ?? BrowserWindow.getFocusedWindow() ?? win;
+  if (!w || w.isDestroyed()) return;
+  try {
+    if (VITE_DEV_SERVER_URL) {
+      const base = String(VITE_DEV_SERVER_URL).replace(/\/$/, "");
+      await w.loadURL(`${base}/#/`);
+      return;
+    }
+    const fp = path.join(RENDERER_DIST, "index.html");
+    await w.loadURL(`${pathToFileURL(fp).href}#/`);
+  } catch (e) {
+    console.error("[ishtarkati] loadRendererHashHome", e);
+  }
+}
 
 /** Map Tauri-style $1 placeholders to better-sqlite3 `?` (same arg order). */
 function normalizeSql(sql: string): string {
@@ -385,7 +401,7 @@ function registerIpc(): void {
     return shell.openExternal(url);
   });
 
-  ipcMain.handle("app:resetLocalDatabase", () => {
+  ipcMain.handle("app:resetLocalDatabase", async () => {
     try {
       const dir = app.getPath("userData");
       const fp = path.join(dir, "ishtarkati.db");
@@ -398,6 +414,7 @@ function registerIpc(): void {
         }
       }
       openDatabase();
+      await loadRendererHashHome();
       return { ok: true as const };
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) };
@@ -495,11 +512,7 @@ function createWindow(): void {
     menu.popup({ window: win! });
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    void win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    void win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
+  void loadRendererHashHome(win);
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
