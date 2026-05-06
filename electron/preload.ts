@@ -16,10 +16,13 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     | { ok: true; path: string }
     | { ok: false; canceled?: boolean; error?: string }
   > => ipcRenderer.invoke("backup:export"),
-  backupImport: (): Promise<
-    | { ok: true }
-    | { ok: false; canceled?: boolean; error?: string }
-  > => ipcRenderer.invoke("backup:import"),
+  backupPrepareImport: () => ipcRenderer.invoke("backup:prepareImport"),
+  backupApplyImport: (payload: {
+    filePath: string;
+    strategy: "replace" | "merge";
+    onDuplicateId: "keep_local" | "prefer_import";
+    onSimilarSubscription: "keep_both" | "replace_local";
+  }) => ipcRenderer.invoke("backup:applyImport", payload),
   showNotification: (opts: { title: string; body: string }): Promise<boolean> =>
     ipcRenderer.invoke("notification:show", opts),
   pinStatus: (): Promise<{ enabled: boolean; hasPin: boolean }> =>

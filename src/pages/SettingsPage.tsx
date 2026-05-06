@@ -14,7 +14,9 @@ import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 import { CategoriesPage } from "./CategoriesPage";
 import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
+import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
+import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backupIPC";
 
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
@@ -45,6 +47,9 @@ export function SettingsPage() {
   const [dangerTyped, setDangerTyped] = useState("");
   const [dangerBusy, setDangerBusy] = useState(false);
   const [dangerMsg, setDangerMsg] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<BackupImportPreview | null>(null);
+  const [importDlgOpen, setImportDlgOpen] = useState(false);
+  const [importApplying, setImportApplying] = useState(false);
   const { hydrate, refresh, fx } = useFxManager();
 
   const syncFxAt = useCallback(async () => {
@@ -165,17 +170,14 @@ export function SettingsPage() {
     }
   }
 
-  async function handleImport() {
-    if (!confirm(t("backup.confirmImport"))) return;
+  async function prepareImport() {
     setBackupMsg(null);
     setBackupBusy(true);
     try {
-      const r = await window.ishtarkati.backupImport();
+      const r = await window.ishtarkati.backupPrepareImport();
       if (r.ok) {
-        setBackupMsg(t("backup.importOk"));
-        window.setTimeout(() => {
-          window.location.reload();
-        }, 600);
+        setImportPreview(r.preview);
+        setImportDlgOpen(true);
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
@@ -183,6 +185,26 @@ export function SettingsPage() {
       }
     } finally {
       setBackupBusy(false);
+    }
+  }
+
+  async function applyImport(args: BackupImportApplyArgs) {
+    setBackupMsg(null);
+    setImportApplying(true);
+    try {
+      const r = await window.ishtarkati.backupApplyImport(args);
+      if (r.ok) {
+        setImportDlgOpen(false);
+        setImportPreview(null);
+        setBackupMsg(t("backup.importOk"));
+        window.setTimeout(() => {
+          window.location.reload();
+        }, 600);
+      } else {
+        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+      }
+    } finally {
+      setImportApplying(false);
     }
   }
 
@@ -485,7 +507,7 @@ export function SettingsPage() {
                 type="button"
                 className="sk-btn-secondary flex-1"
                 disabled={backupBusy}
-                onClick={() => void handleImport()}
+                onClick={() => void prepareImport()}
               >
                 {t("backup.import")}
               </button>
@@ -557,6 +579,18 @@ export function SettingsPage() {
           </section>
         </div>
       ) : null}
+
+      <ImportBackupDialog
+        open={importDlgOpen}
+        preview={importPreview}
+        applying={importApplying}
+        onClose={() => {
+          if (importApplying) return;
+          setImportDlgOpen(false);
+          setImportPreview(null);
+        }}
+        onApply={(args) => void applyImport(args)}
+      />
     </div>
   );
 }
