@@ -515,17 +515,24 @@ export function SettingsPage() {
                   {t("settings.pinLockResume")}
                 </button>
               ) : null}
-              {pinHasStored ? (
+            </div>
+
+            {pinHasStored ? (
+              <div className="space-y-3 rounded-xl border border-rose-300/85 bg-gradient-to-br from-rose-50/95 via-cream-50/80 to-rose-50/90 p-4 shadow-sm ring-1 ring-rose-200/60 dark:border-rose-700/60 dark:from-rose-950/50 dark:via-cream-950/30 dark:to-rose-950/45 dark:ring-rose-900/40">
+                <p className="text-sm font-semibold text-rose-950 dark:text-rose-100">{t("settings.pinRemoveBoxTitle")}</p>
+                <p className="text-xs leading-relaxed text-rose-900/95 dark:text-rose-200/90">
+                  {t("settings.pinRemoveBoxHint")}
+                </p>
                 <button
                   type="button"
-                  className="text-sm font-medium text-rose-800 underline decoration-rose-700/60 underline-offset-2 hover:text-rose-950 disabled:opacity-50 dark:text-rose-300 dark:hover:text-rose-100"
+                  className="sk-btn-danger w-full sm:w-auto"
                   disabled={pinBusy || Boolean(pinPanel)}
                   onClick={() => void removeStoredPinFully()}
                 >
                   {t("settings.pinRemoveStored")}
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
 
             {pinPanel === "set" ? (
               <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
