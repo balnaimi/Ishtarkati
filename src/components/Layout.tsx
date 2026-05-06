@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
+import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 
 const linkCls = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -35,7 +36,7 @@ export function Layout() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div className="flex flex-wrap items-center gap-3">
             <img
-              src="/ishtarkati-mark.svg"
+              src={ISHTARKATI_MARK_SRC}
               alt=""
               width={40}
               height={40}

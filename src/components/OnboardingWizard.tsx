@@ -10,6 +10,7 @@ import {
 import { markSkipNextPinLock } from "../lib/pinSession";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
+import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 
 type Step = "welcome" | "currency" | "pin" | "payment";
 
@@ -117,7 +118,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
             <>
               <div className="flex justify-center">
                 <img
-                  src="/ishtarkati-mark.svg"
+                  src={ISHTARKATI_MARK_SRC}
                   alt=""
                   width={80}
                   height={80}
