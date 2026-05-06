@@ -37,7 +37,10 @@ export function SettingsPage() {
   const [remindersOn, setRemindersOn] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [primaryCurrency, setPrimaryCurrency] = useState("QAR");
+  const [pinHasStored, setPinHasStored] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
+  const [pinPanel, setPinPanel] = useState<null | "set" | "changeCurrent" | "changeNew">(null);
+  const [pinCurrent, setPinCurrent] = useState("");
   const [pin1, setPin1] = useState("");
   const [pin2, setPin2] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
@@ -66,6 +69,17 @@ export function SettingsPage() {
     }
   }, []);
 
+  const syncPinStateFromDb = useCallback(async () => {
+    try {
+      const [st, pe] = await Promise.all([window.ishtarkati.pinStatus(), getSetting(PIN_ENABLED_KEY)]);
+      setPinHasStored(Boolean(st?.hasPin));
+      setPinEnabled(pe === "1");
+    } catch {
+      setPinHasStored(false);
+      setPinEnabled(false);
+    }
+  }, []);
+
   useEffect(() => {
     void (async () => {
       const raw = await getSetting(OVERRIDES_KEY);
@@ -75,10 +89,9 @@ export function SettingsPage() {
       setRemindersOn(rem === "1");
       const prim = await getPrimaryCurrencyCode();
       setPrimaryCurrency(prim);
-      const pe = await getSetting(PIN_ENABLED_KEY);
-      setPinEnabled(pe === "1");
+      await syncPinStateFromDb();
     })();
-  }, [syncFxAt]);
+  }, [syncFxAt, syncPinStateFromDb]);
 
   useEffect(() => {
     void hydrate();
@@ -225,39 +238,106 @@ export function SettingsPage() {
     });
   }
 
-  async function applyPinSettings() {
+  function resetPinWorkflow() {
+    setPinPanel(null);
+    setPinCurrent("");
+    setPin1("");
+    setPin2("");
+  }
+
+  async function saveNewPinPair() {
     setPinFeedback(null);
+    if (pin1.length < 4) {
+      setPinFeedback(t("pin.tooShort"));
+      return;
+    }
+    if (pin1 !== pin2) {
+      setPinFeedback(t("pin.mismatch"));
+      return;
+    }
     setPinBusy(true);
     try {
-      if (!pinEnabled) {
-        await window.ishtarkati.clearPin();
-        await setSetting(PIN_ENABLED_KEY, "0");
-        setPinFeedback(t("pin.disabledOk"));
-        setPin1("");
-        setPin2("");
-        return;
-      }
-      if (pin1.length < 4) {
-        setPinFeedback(t("pin.tooShort"));
-        return;
-      }
-      if (pin1 !== pin2) {
-        setPinFeedback(t("pin.mismatch"));
-        return;
-      }
       const r = await window.ishtarkati.setPin(pin1);
       if (!r.ok) {
         setPinFeedback(t("pin.setFailed"));
         return;
       }
       await setSetting(PIN_ENABLED_KEY, "1");
-      setPinFeedback(t("pin.enabledOk"));
-      setPin1("");
-      setPin2("");
+      const isChange = pinPanel === "changeNew";
+      setPinFeedback(isChange ? t("pin.changedOk") : t("pin.enabledOk"));
+      resetPinWorkflow();
+      await syncPinStateFromDb();
     } finally {
       setPinBusy(false);
     }
   }
+
+  async function verifyCurrentPinThenAdvance() {
+    setPinFeedback(null);
+    if (pinCurrent.length < 4) {
+      setPinFeedback(t("pin.tooShort"));
+      return;
+    }
+    setPinBusy(true);
+    try {
+      const ok = await window.ishtarkati.verifyPin(pinCurrent);
+      if (!ok) {
+        setPinFeedback(t("settings.pinWrongCurrent"));
+        return;
+      }
+      setPinCurrent("");
+      setPin1("");
+      setPin2("");
+      setPinFeedback(null);
+      setPinPanel("changeNew");
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  async function pausePinLock() {
+    setPinBusy(true);
+    try {
+      await setSetting(PIN_ENABLED_KEY, "0");
+      setPinEnabled(false);
+      setPinFeedback(t("settings.pinLockPausedOk"));
+      await syncPinStateFromDb();
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  async function resumePinLock() {
+    if (!pinHasStored) return;
+    setPinBusy(true);
+    try {
+      await setSetting(PIN_ENABLED_KEY, "1");
+      setPinEnabled(true);
+      setPinFeedback(t("settings.pinLockResumedOk"));
+      await syncPinStateFromDb();
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  async function removeStoredPinFully() {
+    if (!pinHasStored) return;
+    if (!window.confirm(t("settings.pinRemoveConfirm"))) return;
+    setPinBusy(true);
+    try {
+      await window.ishtarkati.clearPin();
+      await setSetting(PIN_ENABLED_KEY, "0");
+      resetPinWorkflow();
+      setPinFeedback(t("settings.pinRemovedOk"));
+      await syncPinStateFromDb();
+    } finally {
+      setPinBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "app") void syncPinStateFromDb();
+  }, [tab, syncPinStateFromDb]);
 
   function revealDangerCode() {
     setDangerMsg(null);
@@ -363,49 +443,206 @@ export function SettingsPage() {
 
           <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("settings.pinSection")}</h3>
-            <p className="text-sm leading-relaxed text-cream-700">{t("settings.pinHint")}</p>
-            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
-              <input
-                type="checkbox"
-                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-                checked={pinEnabled}
-                onChange={(e) => setPinEnabled(e.target.checked)}
-              />
-              {t("settings.pinEnable")}
-            </label>
-            {pinEnabled ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="sk-label">{t("settings.pinOnce")}</label>
-                  <input
-                    type="password"
-                    className="sk-input"
-                    inputMode="numeric"
-                    value={pin1}
-                    onChange={(e) => setPin1(e.target.value.replace(/\D/g, "").slice(0, 12))}
-                  />
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.pinHintShort")}</p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ${
+                  pinEnabled && pinHasStored
+                    ? "bg-sage-100 text-sage-900 ring-sage-500/40 shadow-sm dark:bg-sage-900/40 dark:text-sage-100 dark:ring-sage-500/30"
+                    : "bg-cream-300/55 text-cream-800 ring-cream-500/35 dark:bg-cream-800/30 dark:text-cream-100 dark:ring-cream-600/40"
+                }`}
+              >
+                {pinEnabled && pinHasStored ? t("settings.pinBadgeOn") : t("settings.pinBadgeOff")}
+              </span>
+              {pinHasStored && !pinEnabled ? (
+                <span className="text-xs leading-relaxed text-cream-600">{t("settings.pinStoredPausedHint")}</span>
+              ) : null}
+            </div>
+
+            {pinFeedback ? (
+              <p className="rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950 dark:border-cream-600/55 dark:bg-cream-900/35 dark:text-cream-50">
+                {pinFeedback}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-3">
+              {pinHasStored ? (
+                <button
+                  type="button"
+                  className="sk-btn-secondary"
+                  disabled={pinBusy || Boolean(pinPanel)}
+                  onClick={() => {
+                    setPinFeedback(null);
+                    resetPinWorkflow();
+                    setPinPanel("changeCurrent");
+                  }}
+                >
+                  {t("settings.pinBtnChange")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sk-btn-primary"
+                  disabled={pinBusy || Boolean(pinPanel)}
+                  onClick={() => {
+                    setPinFeedback(null);
+                    resetPinWorkflow();
+                    setPinPanel("set");
+                  }}
+                >
+                  {t("settings.pinBtnSet")}
+                </button>
+              )}
+
+              {pinHasStored && pinEnabled ? (
+                <button
+                  type="button"
+                  className="sk-btn-muted text-sm dark:border-cream-600 dark:text-cream-200"
+                  disabled={pinBusy || Boolean(pinPanel)}
+                  onClick={() => void pausePinLock()}
+                >
+                  {t("settings.pinLockPause")}
+                </button>
+              ) : null}
+              {pinHasStored && !pinEnabled ? (
+                <button
+                  type="button"
+                  className="sk-btn-primary"
+                  disabled={pinBusy || Boolean(pinPanel)}
+                  onClick={() => void resumePinLock()}
+                >
+                  {t("settings.pinLockResume")}
+                </button>
+              ) : null}
+              {pinHasStored ? (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-rose-800 underline decoration-rose-700/60 underline-offset-2 hover:text-rose-950 disabled:opacity-50 dark:text-rose-300 dark:hover:text-rose-100"
+                  disabled={pinBusy || Boolean(pinPanel)}
+                  onClick={() => void removeStoredPinFully()}
+                >
+                  {t("settings.pinRemoveStored")}
+                </button>
+              ) : null}
+            </div>
+
+            {pinPanel === "set" ? (
+              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+                <p className="text-sm font-medium text-cream-900">{t("settings.pinSetTitle")}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="sk-label">{t("settings.pinOnce")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={pin1}
+                      onChange={(e) => setPin1(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    />
+                  </div>
+                  <div>
+                    <label className="sk-label">{t("settings.pinTwice")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={pin2}
+                      onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="sk-label">{t("settings.pinTwice")}</label>
-                  <input
-                    type="password"
-                    className="sk-input"
-                    inputMode="numeric"
-                    value={pin2}
-                    onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 12))}
-                  />
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" className="sk-btn-secondary" disabled={pinBusy} onClick={resetPinWorkflow}>
+                    {t("settings.pinBtnCancel")}
+                  </button>
+                  <button type="button" className="sk-btn-primary" disabled={pinBusy} onClick={() => void saveNewPinPair()}>
+                    {t("settings.pinBtnSave")}
+                  </button>
                 </div>
               </div>
             ) : null}
-            <button
-              type="button"
-              className="sk-btn-primary"
-              disabled={pinBusy}
-              onClick={() => void applyPinSettings()}
-            >
-              {t("settings.pinSave")}
-            </button>
-            {pinFeedback ? <p className="text-sm text-sage-800">{pinFeedback}</p> : null}
+
+            {pinPanel === "changeCurrent" ? (
+              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+                <p className="text-sm font-medium text-cream-900">{t("settings.pinChangeStepCurrent")}</p>
+                <div>
+                  <label className="sk-label">{t("settings.pinCurrentLabel")}</label>
+                  <input
+                    type="password"
+                    className="sk-input max-w-xs"
+                    inputMode="numeric"
+                    autoComplete="current-password"
+                    value={pinCurrent}
+                    onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void verifyCurrentPinThenAdvance();
+                    }}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" className="sk-btn-secondary" disabled={pinBusy} onClick={resetPinWorkflow}>
+                    {t("settings.pinBtnCancel")}
+                  </button>
+                  <button
+                    type="button"
+                    className="sk-btn-primary"
+                    disabled={pinBusy}
+                    onClick={() => void verifyCurrentPinThenAdvance()}
+                  >
+                    {t("settings.pinBtnContinue")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {pinPanel === "changeNew" ? (
+              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+                <p className="text-sm font-medium text-cream-900">{t("settings.pinChangeStepNew")}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="sk-label">{t("settings.pinOnceNew")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={pin1}
+                      onChange={(e) => setPin1(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    />
+                  </div>
+                  <div>
+                    <label className="sk-label">{t("settings.pinTwiceNew")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      value={pin2}
+                      onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="sk-btn-secondary"
+                    disabled={pinBusy}
+                    onClick={() => {
+                      resetPinWorkflow();
+                      setPinFeedback(null);
+                    }}
+                  >
+                    {t("settings.pinBtnCancel")}
+                  </button>
+                  <button type="button" className="sk-btn-primary" disabled={pinBusy} onClick={() => void saveNewPinPair()}>
+                    {t("settings.pinBtnSaveNew")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="sk-card space-y-4">
