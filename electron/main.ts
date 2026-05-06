@@ -27,6 +27,57 @@ function normalizeSql(sql: string): string {
   return sql.replace(/\$(\d+)/g, "?");
 }
 
+const V4_PAYMENT_SIDE_TABLES_DDL = `
+  CREATE TABLE IF NOT EXISTS credit_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    brand TEXT NOT NULL,
+    last4 TEXT NOT NULL,
+    exp_month INTEGER NOT NULL,
+    exp_year INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS wallet_methods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    service_code TEXT NOT NULL,
+    account_text TEXT NOT NULL,
+    linked_card_id INTEGER REFERENCES credit_cards(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`;
+
+function sqliteTableExists(database: Database.Database, name: string): boolean {
+  const row = database
+    .prepare("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1")
+    .get(name) as { x: number } | undefined;
+  return row != null;
+}
+
+/** True when subscriptions row already migrated to wallet linkage columns (v4 schema). */
+function subscriptionsTableIsV4Schema(database: Database.Database): boolean {
+  if (!sqliteTableExists(database, "subscriptions")) return false;
+  const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+  return cols.some((c) => c.name === "credit_card_id");
+}
+
+/** Fix leftover temp table from interrupted v4 migrations. */
+function recoverSubscriptionsRenameIfNeeded(database: Database.Database): void {
+  const hasSubs = sqliteTableExists(database, "subscriptions");
+  const hasLeg = sqliteTableExists(database, "subscriptions_legacy_v4");
+  if (!hasSubs && hasLeg) {
+    database.exec("ALTER TABLE subscriptions_legacy_v4 RENAME TO subscriptions");
+    return;
+  }
+  if (hasSubs && hasLeg) {
+    const row = database
+      .prepare("SELECT COUNT(*) AS c FROM subscriptions_legacy_v4")
+      .get() as { c: number };
+    const c = Number(row?.c ?? 0);
+    if (c === 0) database.exec("DROP TABLE subscriptions_legacy_v4");
+  }
+}
+
 function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
@@ -63,27 +114,22 @@ function runMigrations(database: Database.Database): void {
   }
   if (version < 4) {
     database.exec("PRAGMA foreign_keys = OFF");
-    const migrate = database.transaction(() => {
-    database.exec(`
-      CREATE TABLE IF NOT EXISTS credit_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        brand TEXT NOT NULL,
-        last4 TEXT NOT NULL,
-        exp_month INTEGER NOT NULL,
-        exp_year INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS wallet_methods (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        service_code TEXT NOT NULL,
-        account_text TEXT NOT NULL,
-        linked_card_id INTEGER REFERENCES credit_cards(id) ON DELETE SET NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    `);
-    database.exec(`ALTER TABLE subscriptions RENAME TO subscriptions_legacy_v4`);
+    try {
+      recoverSubscriptionsRenameIfNeeded(database);
+
+      if (subscriptionsTableIsV4Schema(database)) {
+        database.exec(V4_PAYMENT_SIDE_TABLES_DDL);
+        if (sqliteTableExists(database, "subscriptions_legacy_v4")) {
+          database.exec("DROP TABLE subscriptions_legacy_v4");
+        }
+        database.prepare("UPDATE schema_version SET version = 4").run();
+      } else {
+        const migrate = database.transaction(() => {
+          database.exec(V4_PAYMENT_SIDE_TABLES_DDL);
+          if (!sqliteTableExists(database, "subscriptions")) {
+            throw new Error("subscriptions table missing — cannot migrate to v4");
+          }
+          database.exec(`ALTER TABLE subscriptions RENAME TO subscriptions_legacy_v4`);
     database.exec(`
       CREATE TABLE subscriptions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -226,11 +272,20 @@ function runMigrations(database: Database.Database): void {
         maxId,
       );
     }
-    database.prepare("UPDATE schema_version SET version = 4").run();
-    });
-    migrate();
-    database.exec("PRAGMA foreign_keys = ON");
+          database.prepare("UPDATE schema_version SET version = 4").run();
+        });
+        migrate();
+      }
+    } finally {
+      database.exec("PRAGMA foreign_keys = ON");
+    }
   }
+
+  const versionAfterFour = database
+    .prepare("SELECT version FROM schema_version LIMIT 1")
+    .get() as { version: number } | undefined;
+  version = versionAfterFour?.version ?? version;
+
   if (version < 5) {
     const subN =
       (database.prepare("SELECT COUNT(*) AS n FROM subscriptions").get() as { n: number }).n ?? 0;
