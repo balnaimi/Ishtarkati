@@ -11,6 +11,7 @@ import {
   type SubscriptionListRow,
 } from "../db/repo";
 import { DueProgressBar } from "../components/DueProgressBar";
+import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
@@ -240,12 +241,15 @@ export function HomePage() {
                   onClick={() => nav(`/sub/${s.id}`)}
                 >
                   <span className="font-medium text-sage-900">{s.title}</span>
-                  <span className="mt-0.5 block text-xs text-cream-600">
-                    {s.amount_original} {s.currency_code}
-                    {s.amount_qar_snapshot != null
-                      ? ` · ≈ ${s.amount_qar_snapshot.toFixed(2)} ${primary}`
-                      : ""}
-                  </span>
+                  <div className="mt-1.5 text-xs">
+                    <DualCurrencyAmounts
+                      size="sm"
+                      originalAmount={s.amount_original}
+                      originalCode={s.currency_code}
+                      approxAmount={s.amount_qar_snapshot}
+                      approxCode={primary}
+                    />
+                  </div>
                 </button>
               </li>
             ))

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { SubscriptionFormValues, WalletMethod } from "../types";
+import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
-import { addCategory, loadWalletMethods } from "../db/repo";
+import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 
@@ -41,14 +41,42 @@ export function SubscriptionForm({
   const [newCatName, setNewCatName] = useState("");
   const [addCatBusy, setAddCatBusy] = useState(false);
   const [wallets, setWallets] = useState<WalletMethod[]>([]);
+  const [cards, setCards] = useState<CreditCard[]>([]);
 
   useEffect(() => {
     setV(initial);
   }, [initial]);
 
   useEffect(() => {
-    void loadWalletMethods().then(setWallets);
+    void Promise.all([loadWalletMethods(), loadCreditCards()]).then(([w, c]) => {
+      setWallets(w);
+      setCards(c);
+    });
   }, []);
+
+  const paymentSelectValue =
+    v.wallet_method_id.trim() !== ""
+      ? `w:${v.wallet_method_id}`
+      : v.credit_card_id.trim() !== ""
+        ? `c:${v.credit_card_id}`
+        : "";
+
+  function onPaymentChange(raw: string) {
+    if (!raw) {
+      setField("wallet_method_id", "");
+      setField("credit_card_id", "");
+      return;
+    }
+    if (raw.startsWith("w:")) {
+      setField("wallet_method_id", raw.slice(2));
+      setField("credit_card_id", "");
+      return;
+    }
+    if (raw.startsWith("c:")) {
+      setField("credit_card_id", raw.slice(2));
+      setField("wallet_method_id", "");
+    }
+  }
 
   const cur = (v.currency_code || "").trim().toUpperCase();
   const primary = primaryCurrencyCode.trim().toUpperCase();
@@ -282,17 +310,26 @@ export function SubscriptionForm({
         <label className="sk-label">{t("form.paymentMethod")}</label>
         <select
           className="sk-select"
-          value={v.wallet_method_id}
-          onChange={(e) => setField("wallet_method_id", e.target.value)}
+          value={paymentSelectValue}
+          onChange={(e) => onPaymentChange(e.target.value)}
         >
           <option value="">{t("common.none")}</option>
-          {wallets.map((w) => (
-            <option key={w.id} value={String(w.id)}>
-              {PAYMENT_SERVICES.find((s) => s.code === w.service_code)?.nameAr ?? w.service_code}{" "}
-              · {w.account_text.slice(0, 24)}
-              {w.account_text.length > 24 ? "…" : ""}
-            </option>
-          ))}
+          <optgroup label={t("form.paymentOptgroupServices")}>
+            {wallets.map((w) => (
+              <option key={`w-${w.id}`} value={`w:${w.id}`}>
+                {PAYMENT_SERVICES.find((s) => s.code === w.service_code)?.nameAr ?? w.service_code} ·{" "}
+                {w.account_text.slice(0, 24)}
+                {w.account_text.length > 24 ? "…" : ""}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label={t("form.paymentOptgroupCards")}>
+            {cards.map((c) => (
+              <option key={`c-${c.id}`} value={`c:${c.id}`}>
+                {c.brand} ·••• {c.last4} ({t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })})
+              </option>
+            ))}
+          </optgroup>
         </select>
         <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodHint")}</p>
       </div>

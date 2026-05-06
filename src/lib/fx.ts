@@ -44,7 +44,8 @@ export function mergeRatesFromCacheJson(cacheRaw: string | null): UsdBasedRates 
   }
 }
 
-const FX_ENDPOINT = "https://api.exchangerate.host/latest?base=USD";
+/** frankfurter.app redirects to frankfurter.dev — free, no API key (GCC pegs merged from built-ins). */
+const FX_ENDPOINT = "https://api.frankfurter.dev/v1/latest?base=USD";
 
 export interface FxFetchResult {
   rates: UsdBasedRates;
@@ -115,11 +116,19 @@ export async function fetchFxRates(): Promise<FxFetchResult> {
   const body = (await res.json()) as {
     success?: boolean;
     rates?: Record<string, number>;
+    error?: unknown;
+    message?: string;
   };
-  if (!body.rates || typeof body.rates !== "object") {
-    throw new Error("FX response invalid");
+  if (body.success === false || body.error) {
+    const msg =
+      typeof body.message === "string"
+        ? body.message
+        : typeof body.error === "string"
+          ? body.error
+          : "provider error";
+    throw new Error(`FX provider: ${msg}`);
   }
-  if (body.success === false) {
+  if (!body.rates || typeof body.rates !== "object") {
     throw new Error("FX response invalid");
   }
   const rates = mergeUsdRates({ ...body.rates, USD: 1 });

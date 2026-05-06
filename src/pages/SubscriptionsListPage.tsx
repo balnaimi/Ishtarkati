@@ -11,6 +11,7 @@ import {
 } from "../db/repo";
 import { useFxManager } from "../hooks/useFx";
 import { DueProgressBar } from "../components/DueProgressBar";
+import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
@@ -274,9 +275,8 @@ export function SubscriptionsListPage() {
                 <th className="px-3 py-3 font-semibold">{t("list.category")}</th>
                 <th className="px-3 py-3 font-semibold">{t("list.billing")}</th>
                 <th className="px-3 py-3 font-semibold">{t("list.nextDue")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.amount")}</th>
                 <th className="px-3 py-3 font-semibold">
-                  {t("list.primaryApprox", { code: primaryCode })}
+                  {t("list.amountAndApprox", { code: primaryCode })}
                 </th>
                 <th className="px-3 py-3 font-semibold">{t("common.actions")}</th>
               </tr>
@@ -327,11 +327,14 @@ export function SubscriptionsListPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-3 text-cream-800">
-                      {s.amount_original} {s.currency_code}
-                    </td>
-                    <td className="px-3 py-3 font-medium text-sage-800">
-                      {s.amount_qar_snapshot != null ? s.amount_qar_snapshot.toFixed(2) : "—"}
+                    <td className="px-3 py-3 align-top">
+                      <DualCurrencyAmounts
+                        size="sm"
+                        originalAmount={s.amount_original}
+                        originalCode={s.currency_code}
+                        approxAmount={s.amount_qar_snapshot}
+                        approxCode={primaryCode}
+                      />
                     </td>
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <Link

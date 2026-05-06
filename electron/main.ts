@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, Notification, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
@@ -327,6 +328,25 @@ function registerIpc(): void {
   );
   ipcMain.handle("shell:openExternal", (_evt, url: string) => {
     return shell.openExternal(url);
+  });
+
+  ipcMain.handle("app:resetLocalDatabase", () => {
+    try {
+      const dir = app.getPath("userData");
+      const fp = path.join(dir, "ishtarkati.db");
+      closeDatabase();
+      for (const p of [fp, `${fp}-wal`, `${fp}-shm`]) {
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch {
+          /* ignore single-file errors */
+        }
+      }
+      openDatabase();
+      return { ok: true as const };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : String(e) };
+    }
   });
 
   ipcMain.handle(

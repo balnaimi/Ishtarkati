@@ -19,7 +19,7 @@ import { listCurrenciesSorted } from "../lib/currenciesData";
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
-type TabId = "app" | "categories" | "payments" | "export";
+type TabId = "app" | "categories" | "payments" | "export" | "danger";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -40,6 +40,11 @@ export function SettingsPage() {
   const [pin2, setPin2] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
   const [pinFeedback, setPinFeedback] = useState<string | null>(null);
+  const [dangerStep, setDangerStep] = useState<0 | 1>(0);
+  const [dangerCode, setDangerCode] = useState("");
+  const [dangerTyped, setDangerTyped] = useState("");
+  const [dangerBusy, setDangerBusy] = useState(false);
+  const [dangerMsg, setDangerMsg] = useState<string | null>(null);
   const { hydrate, refresh, fx } = useFxManager();
 
   const syncFxAt = useCallback(async () => {
@@ -75,8 +80,17 @@ export function SettingsPage() {
   }, [hydrate]);
 
   useEffect(() => {
+    if (tab !== "danger") {
+      setDangerStep(0);
+      setDangerCode("");
+      setDangerTyped("");
+      setDangerMsg(null);
+    }
+  }, [tab]);
+
+  useEffect(() => {
     const raw = searchParams.get("tab");
-    if (raw === "categories" || raw === "payments" || raw === "export") {
+    if (raw === "categories" || raw === "payments" || raw === "export" || raw === "danger") {
       setTab(raw);
     } else {
       setTab("app");
@@ -223,11 +237,48 @@ export function SettingsPage() {
     }
   }
 
+  function revealDangerCode() {
+    setDangerMsg(null);
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    const code = String(100000 + (Number(arr[0]) % 900000));
+    setDangerCode(code);
+    setDangerTyped("");
+    setDangerStep(1);
+  }
+
+  async function executeDangerReset() {
+    setDangerMsg(null);
+    if (dangerTyped.trim() !== dangerCode) {
+      setDangerMsg(t("settings.dangerResetCodeMismatch"));
+      return;
+    }
+    setDangerBusy(true);
+    try {
+      const r = await window.ishtarkati.resetLocalDatabase();
+      if (r.ok) {
+        window.location.reload();
+      } else {
+        setDangerMsg(`${t("settings.dangerResetFailed")}${r.error ? ` — ${r.error}` : ""}`);
+      }
+    } finally {
+      setDangerBusy(false);
+    }
+  }
+
+  function cancelDangerReset() {
+    setDangerStep(0);
+    setDangerCode("");
+    setDangerTyped("");
+    setDangerMsg(null);
+  }
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "app", label: t("settings.tabApp") },
     { id: "categories", label: t("settings.tabCategories") },
     { id: "payments", label: t("settings.tabPayments") },
     { id: "export", label: t("settings.tabExport") },
+    { id: "danger", label: t("settings.tabDanger") },
   ];
 
   return (
@@ -438,6 +489,65 @@ export function SettingsPage() {
             {backupMsg ? (
               <p className="rounded-lg border border-cream-400 bg-cream-200/60 px-3 py-2 text-sm text-cream-900">
                 {backupMsg}
+              </p>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {tab === "danger" ? (
+        <div className="space-y-6">
+          <section className="sk-card border-rose-600/85 bg-rose-50/90 space-y-4">
+            <h3 className="text-base font-semibold text-rose-950">{t("settings.dangerZoneTitle")}</h3>
+            <p className="text-sm leading-relaxed text-rose-950/95">{t("settings.dangerResetIntro")}</p>
+            <p className="text-sm text-rose-900/90">{t("settings.dangerResetExportHint")}</p>
+
+            {dangerStep === 0 ? (
+              <div className="space-y-3 border-t border-rose-300/80 pt-4">
+                <p className="text-sm text-rose-900">{t("settings.dangerResetStep1Prompt")}</p>
+                <button type="button" className="sk-btn-danger" onClick={revealDangerCode}>
+                  {t("settings.dangerResetShowCode")}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 border-t border-rose-300/80 pt-4">
+                <p className="text-sm font-medium text-rose-950">{t("settings.dangerResetChallenge")}</p>
+                <p
+                  dir="ltr"
+                  className="rounded-lg border border-rose-400 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-rose-950"
+                >
+                  {dangerCode}
+                </p>
+                <div>
+                  <label className="sk-label">{t("settings.dangerResetInputLabel")}</label>
+                  <input
+                    className="sk-input font-mono"
+                    dir="ltr"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={dangerTyped}
+                    onChange={(e) => setDangerTyped(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="sk-btn-danger"
+                    disabled={dangerBusy}
+                    onClick={() => void executeDangerReset()}
+                  >
+                    {t("settings.dangerResetExecute")}
+                  </button>
+                  <button type="button" className="sk-btn-secondary" disabled={dangerBusy} onClick={cancelDangerReset}>
+                    {t("settings.dangerResetCancel")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dangerMsg ? (
+              <p className="rounded-lg border border-amber-600/90 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                {dangerMsg}
               </p>
             ) : null}
           </section>

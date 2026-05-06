@@ -7,6 +7,7 @@ import {
   getPrimaryCurrencyCode,
   insertSubscription,
   loadCategories,
+  loadCreditCards,
   loadWalletMethods,
 } from "../db/repo";
 import { defaultFormValues, formToRow } from "../lib/formMappers";
@@ -21,7 +22,7 @@ export function NewSubscriptionPage() {
   const { fx, hydrate, refresh } = useFxManager();
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [primaryCode, setPrimaryCode] = useState("QAR");
-  const [walletCount, setWalletCount] = useState<number | null>(null);
+  const [paymentMethodCount, setPaymentMethodCount] = useState<number | null>(null);
   const initial = useMemo(() => defaultFormValues(), []);
 
   const reloadMeta = useCallback(async () => {
@@ -29,9 +30,9 @@ export function NewSubscriptionPage() {
     setCategories(cats);
   }, []);
 
-  const reloadWallets = useCallback(async () => {
-    const w = await loadWalletMethods();
-    setWalletCount(w.length);
+  const reloadPaymentMethods = useCallback(async () => {
+    const [w, c] = await Promise.all([loadWalletMethods(), loadCreditCards()]);
+    setPaymentMethodCount(w.length + c.length);
   }, []);
 
   useEffect(() => {
@@ -41,8 +42,8 @@ export function NewSubscriptionPage() {
   }, [hydrate, reloadMeta]);
 
   useEffect(() => {
-    void reloadWallets();
-  }, [reloadWallets, location.pathname, location.key]);
+    void reloadPaymentMethods();
+  }, [reloadPaymentMethods, location.pathname, location.key]);
 
   async function onSubmit(
     values: SubscriptionFormValues,
@@ -53,12 +54,12 @@ export function NewSubscriptionPage() {
     nav(`/sub/${id}`);
   }
 
-  const blocked = walletCount === 0;
+  const blocked = paymentMethodCount === 0;
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-cream-900">{t("form.newTitle")}</h2>
-      {walletCount === null ? (
+      {paymentMethodCount === null ? (
         <p className="text-sm text-cream-700">{t("common.loading")}</p>
       ) : blocked ? (
         <div className="sk-card space-y-4 border-amber-300/80 bg-amber-50/90">

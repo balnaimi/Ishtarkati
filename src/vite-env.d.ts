@@ -21,5 +21,6 @@ interface Window {
     setPin: (pin: string) => Promise<{ ok: boolean; error?: string }>;
     clearPin: () => Promise<{ ok: boolean }>;
     verifyPin: (pin: string) => Promise<boolean>;
+    resetLocalDatabase: () => Promise<{ ok: true } | { ok: false; error?: string }>;
   };
 }

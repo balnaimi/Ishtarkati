@@ -80,6 +80,25 @@ export function parseDateInput(s: string | null | undefined): Date | null {
   return isValid(d) ? d : null;
 }
 
+/** Payment anniversaries from `anchorDay` onward, spaced by billing, each ≤ `untilDay` inclusive. */
+export function listPaymentDatesThrough(
+  anchorDay: string,
+  untilDay: string,
+  unit: IntervalUnit | null,
+  count: number,
+): string[] {
+  const until = parseDateInput(untilDay);
+  let cur = parseDateInput(anchorDay);
+  if (!until || !cur || cur > until || !unit) return [];
+  const n = Math.max(1, count || 1);
+  const isoList: string[] = [];
+  while (cur <= until) {
+    isoList.push(formatDateInput(cur));
+    cur = addBillingSteps(cur, unit, n);
+  }
+  return isoList;
+}
+
 export function advanceNextDueAfterRenewal(
   previousNext: string | null,
   renewalYears: number,
