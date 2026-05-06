@@ -6,6 +6,8 @@ import type { FxState } from "../lib/fxState";
 import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
+import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
+import { SiteFavicon } from "./SiteFavicon";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
@@ -212,6 +214,7 @@ export function SubscriptionForm({
   }
 
   const primaryMeta = getCurrencyInfo(primary);
+  const websiteHost = useMemo(() => hostnameFromWebsiteUrl(v.website_url), [v.website_url]);
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 md:space-y-6">
@@ -243,7 +246,16 @@ export function SubscriptionForm({
           className="sk-input"
           value={v.website_url}
           onChange={(e) => setField("website_url", e.target.value)}
+          placeholder="https://"
         />
+        {websiteHost ? (
+          <div className="mt-2 flex items-center gap-3 rounded-xl border border-cream-400/90 bg-cream-100/60 px-3 py-2">
+            <SiteFavicon websiteUrl={v.website_url} size="md" />
+            <span dir="ltr" className="min-w-0 truncate text-xs text-cream-700">{websiteHost}</span>
+          </div>
+        ) : (
+          <p className="mt-1 text-xs text-cream-600">{t("form.websiteFaviconHint")}</p>
+        )}
       </div>
 
       <div>

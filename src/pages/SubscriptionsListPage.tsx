@@ -12,6 +12,7 @@ import {
 import { useFxManager } from "../hooks/useFx";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
+import { SiteFavicon } from "../components/SiteFavicon";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
@@ -293,13 +294,18 @@ export function SubscriptionsListPage() {
                     onClick={() => nav(`/sub/${s.id}`)}
                   >
                     <td className="px-3 py-3 align-top">
-                      <Link
-                        to={`/sub/${s.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-medium text-sage-800 underline-offset-2 hover:underline"
-                      >
-                        {s.title}
-                      </Link>
+                      <div className="flex items-start justify-end gap-2">
+                        {s.website_url?.trim() ? (
+                          <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
+                        ) : null}
+                        <Link
+                          to={`/sub/${s.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="min-w-0 font-medium text-sage-800 underline-offset-2 hover:underline"
+                        >
+                          {s.title}
+                        </Link>
+                      </div>
                       {tagTokens(s.tags).length ? (
                         <span className="mt-1 flex flex-wrap gap-1">
                           {tagTokens(s.tags).map((tag) => (

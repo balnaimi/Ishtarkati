@@ -22,7 +22,9 @@ import {
 import type { IntervalUnit } from "../types";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
+import { SiteFavicon } from "../components/SiteFavicon";
 import { tagTokens } from "../lib/tags";
+import { displayUrlForUi } from "../lib/siteFavicon";
 
 export function DetailPage() {
   const { t } = useTranslation();
@@ -207,31 +209,40 @@ export function DetailPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
-          <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
-          <p className="text-sm text-cream-700">
-            {sub.category_name ?? "—"}
-            {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}
-            {sub.start_date ? ` · ${t("form.startDate")}: ${sub.start_date}` : ""}
-          </p>
-          <div className="text-sm">
-            <DualCurrencyAmounts
-              originalAmount={sub.amount_original}
-              originalCode={sub.currency_code}
-              approxAmount={sub.amount_qar_snapshot}
-              approxCode={primaryCode}
-            />
+        <div className="min-w-0 flex-1 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            {sub.website_url?.trim() ? (
+              <SiteFavicon websiteUrl={sub.website_url} size="lg" className="sm:mt-0.5" />
+            ) : null}
+            <div className="min-w-0 flex-1 space-y-2">
+              <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
+              <p className="text-sm text-cream-700">
+                {sub.category_name ?? "—"}
+                {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}
+                {sub.start_date ? ` · ${t("form.startDate")}: ${sub.start_date}` : ""}
+              </p>
+              <div className="text-sm">
+                <DualCurrencyAmounts
+                  originalAmount={sub.amount_original}
+                  originalCode={sub.currency_code}
+                  approxAmount={sub.amount_qar_snapshot}
+                  approxCode={primaryCode}
+                />
+              </div>
+              {sub.website_url ? (
+                <a
+                  href={sub.website_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex max-w-full items-center rounded-lg border border-cream-400/90 bg-cream-100/90 px-3 py-2 text-sm text-sage-900 shadow-sm transition-colors hover:border-sage-400 hover:bg-cream-200/70"
+                >
+                  <span dir="ltr" className="min-w-0 truncate font-medium">
+                    {displayUrlForUi(sub.website_url)}
+                  </span>
+                </a>
+              ) : null}
+            </div>
           </div>
-          {sub.website_url ? (
-            <a
-              href={sub.website_url}
-              target="_blank"
-              rel="noreferrer"
-              className="break-all text-sm text-sage-800 underline-offset-2 hover:underline"
-            >
-              {sub.website_url}
-            </a>
-          ) : null}
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               type="button"

@@ -12,6 +12,7 @@ import {
 } from "../db/repo";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
+import { SiteFavicon } from "../components/SiteFavicon";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
@@ -191,7 +192,12 @@ export function HomePage() {
                     className="min-w-0 flex-1 text-right"
                     onClick={() => nav(`/sub/${s.id}`)}
                   >
-                    <span className="font-semibold text-sage-900">{s.title}</span>
+                    <span className="flex items-start justify-end gap-2">
+                      {s.website_url?.trim() ? (
+                        <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
+                      ) : null}
+                      <span className="min-w-0 font-semibold text-sage-900">{s.title}</span>
+                    </span>
                     <span className="mt-1 block text-sm text-cream-700">
                       {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
                     </span>
@@ -237,18 +243,23 @@ export function HomePage() {
               <li key={s.id}>
                 <button
                   type="button"
-                  className="w-full rounded-xl border border-cream-400 bg-cream-50/95 px-4 py-3 text-right shadow-sm hover:bg-cream-200/50"
+                  className="flex w-full items-start gap-3 rounded-xl border border-cream-400 bg-cream-50/95 px-4 py-3 text-right shadow-sm hover:bg-cream-200/50"
                   onClick={() => nav(`/sub/${s.id}`)}
                 >
-                  <span className="font-medium text-sage-900">{s.title}</span>
-                  <div className="mt-1.5 text-xs">
-                    <DualCurrencyAmounts
-                      size="sm"
-                      originalAmount={s.amount_original}
-                      originalCode={s.currency_code}
-                      approxAmount={s.amount_qar_snapshot}
-                      approxCode={primary}
-                    />
+                  {s.website_url?.trim() ? (
+                    <SiteFavicon websiteUrl={s.website_url} size="md" className="shrink-0" />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium text-sage-900">{s.title}</span>
+                    <div className="mt-1.5 text-xs">
+                      <DualCurrencyAmounts
+                        size="sm"
+                        originalAmount={s.amount_original}
+                        originalCode={s.currency_code}
+                        approxAmount={s.amount_qar_snapshot}
+                        approxCode={primary}
+                      />
+                    </div>
                   </div>
                 </button>
               </li>
