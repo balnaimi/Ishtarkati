@@ -115,6 +115,16 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
         <div className="sk-card space-y-5 border-cream-400/80 shadow-lg">
           {step === "welcome" ? (
             <>
+              <div className="flex justify-center">
+                <img
+                  src="/ishtarkati-mark.svg"
+                  alt=""
+                  width={80}
+                  height={80}
+                  className="h-20 w-20 rounded-2xl shadow-md ring-1 ring-cream-400/80"
+                  decoding="async"
+                />
+              </div>
               <h1 className="text-center text-2xl font-bold text-cream-900">{t("onboarding.welcomeTitle")}</h1>
               <p className="text-center text-sm leading-relaxed text-cream-800">{t("onboarding.welcomeBody")}</p>
               <button type="button" className="sk-btn-primary w-full py-3 text-base" onClick={() => setStep("currency")}>

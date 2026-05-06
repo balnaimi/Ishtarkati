@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Ishtarkati">
+  <defs>
+    <linearGradient id="bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0%" stop-color="#6d8f76"/>
+      <stop offset="55%" stop-color="#54715b"/>
+      <stop offset="100%" stop-color="#3d5343"/>
+    </linearGradient>
+    <filter id="s" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1f2a21" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="120" ry="120" fill="url(#bg)"/>
+  <g filter="url(#s)">
+    <rect x="76" y="98" width="360" height="316" rx="40" ry="40" fill="#faf7f0"/>
+    <rect x="128" y="168" width="256" height="22" rx="11" fill="#3d5343" opacity=".2"/>
+    <rect x="128" y="214" width="200" height="22" rx="11" fill="#3d5343" opacity=".14"/>
+    <rect x="128" y="260" width="220" height="22" rx="11" fill="#54715b" opacity=".38"/>
+    <rect x="128" y="306" width="156" height="22" rx="11" fill="#54715b"/>
+  </g>
+  <g fill="none" stroke="#faf7f0" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M352 328a56 56 0 1 0 0-80" opacity=".95"/>
+    <path d="M352 248v-24h24M352 368h24v-24" opacity=".95"/>
+  </g>
+  <circle cx="352" cy="328" r="56" stroke="#54715b" stroke-width="10" fill="none" opacity=".35"/>
+</svg>

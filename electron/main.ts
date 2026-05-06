@@ -22,6 +22,15 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 let win: BrowserWindow | null = null;
 let db: Database.Database | null = null;
 
+function resolveWindowIconPath(): string | undefined {
+  const root = process.env.APP_ROOT ?? path.join(__dirname, "..");
+  const fromBuild = path.join(root, "build", "icon.png");
+  const fromDist = path.join(RENDERER_DIST, "app-icon.png");
+  if (fs.existsSync(fromBuild)) return fromBuild;
+  if (fs.existsSync(fromDist)) return fromDist;
+  return undefined;
+}
+
 async function loadRendererHashHome(targetWin?: BrowserWindow | null): Promise<void> {
   const w = targetWin ?? BrowserWindow.getFocusedWindow() ?? win;
   if (!w || w.isDestroyed()) return;
@@ -471,12 +480,14 @@ function registerIpc(): void {
 }
 
 function createWindow(): void {
+  const iconPath = resolveWindowIconPath();
   win = new BrowserWindow({
     width: 960,
     height: 720,
     minWidth: 720,
     minHeight: 520,
     show: false,
+    ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
       contextIsolation: true,

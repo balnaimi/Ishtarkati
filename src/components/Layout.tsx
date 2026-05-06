@@ -34,6 +34,14 @@ export function Layout() {
       <header className="border-b border-cream-400 bg-cream-100/85 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div className="flex flex-wrap items-center gap-3">
+            <img
+              src="/ishtarkati-mark.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 shrink-0 rounded-xl shadow-sm ring-1 ring-cream-400/80 dark:ring-cream-600/50"
+              decoding="async"
+            />
             <div>
               <h1 className="text-lg font-semibold text-cream-900">{t("app.title")}</h1>
               <p className="text-xs text-cream-600">
