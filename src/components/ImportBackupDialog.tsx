@@ -39,7 +39,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-cream-950/50 p-4 backdrop-blur-sm">
+    <div className="sk-modal-overlay">
       <div
         dir="rtl"
         className="sk-card max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto border-cream-500/70 shadow-xl"
@@ -81,9 +81,9 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
         {(preview.idConflicts.subscriptions > 0 ||
           preview.similarSubscriptions.length > 0 ||
           preview.similarTruncated) && (
-          <div className="rounded-lg border border-amber-300/85 bg-amber-50/90 px-3 py-2 text-sm text-amber-950">
+          <div className="sk-callout-warning">
             <p className="font-medium">{t("backup.previewOverlapHeading")}</p>
-            <p className="mt-1 text-amber-900/95">
+            <p className="mt-1">
               {t("backup.previewConflictsSubs", {
                 n: preview.idConflicts.subscriptions,
                 cats: preview.idConflicts.categories,
@@ -93,7 +93,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
               })}
             </p>
             {preview.similarSubscriptions.length > 0 ? (
-              <div className="mt-2 max-h-40 overflow-y-auto rounded border border-amber-400/70 bg-cream-50/90 p-2 text-xs leading-relaxed text-cream-900">
+              <div className="sk-list-in-callout">
                 <p className="mb-2 font-semibold text-cream-950">{t("backup.previewSimilarHeading")}</p>
                 <ul className="space-y-2">
                   {preview.similarSubscriptions.map((pair) => (
@@ -111,7 +111,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
               </div>
             ) : null}
             {preview.similarTruncated ? (
-              <p className="mt-2 text-xs text-amber-900">{t("backup.previewSimilarTruncated")}</p>
+              <p className="sk-text-hint mt-2 text-xs">{t("backup.previewSimilarTruncated")}</p>
             ) : null}
           </div>
         )}
@@ -131,10 +131,10 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
               <span className="mt-1 block text-sm leading-relaxed text-cream-800">
                 {t("backup.strategyMergeBody")}
               </span>
-              <span className="mt-1 block text-xs text-cream-600">{t("backup.mergeSettingsNote")}</span>
+              <span className="mt-1 block text-xs sk-text-hint">{t("backup.mergeSettingsNote")}</span>
             </span>
           </label>
-          <label className="flex cursor-pointer gap-3 rounded-lg border border-rose-300/85 bg-rose-50/50 px-3 py-2">
+          <label className="sk-choice-row-danger">
             <input
               type="radio"
               name="imp-strategy"
@@ -143,8 +143,8 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
               className="mt-1"
             />
             <span>
-              <span className="font-medium text-rose-950">{t("backup.strategyReplaceTitle")}</span>
-              <span className="mt-1 block text-sm leading-relaxed text-rose-950/95">
+              <span className="font-medium">{t("backup.strategyReplaceTitle")}</span>
+              <span className="mt-1 block text-sm leading-relaxed opacity-95">
                 {t("backup.strategyReplaceBody")}
               </span>
             </span>
@@ -157,7 +157,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
 
             <div className="space-y-1">
               <p className="text-sm font-medium text-cream-900">{t("backup.dupByIdLegend")}</p>
-              <p className="text-xs text-cream-700">{t("backup.dupByIdHint")}</p>
+              <p className="sk-text-hint text-xs">{t("backup.dupByIdHint")}</p>
               <label className="flex gap-3 text-sm">
                 <input
                   type="radio"
@@ -182,7 +182,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
 
             <div className="space-y-1 border-t border-cream-400/40 pt-3">
               <p className="text-sm font-medium text-cream-900">{t("backup.similarLegend")}</p>
-              <p className="text-xs text-cream-700">{t("backup.similarHint")}</p>
+              <p className="sk-text-hint text-xs">{t("backup.similarHint")}</p>
               <label className="flex gap-3 text-sm">
                 <input
                   type="radio"

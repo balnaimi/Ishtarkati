@@ -204,7 +204,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   </div>
                 </div>
               ) : null}
-              {pinErr ? <p className="text-sm text-red-800">{pinErr}</p> : null}
+              {pinErr ? <p className="sk-text-error text-sm">{pinErr}</p> : null}
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button type="button" className="sk-btn-secondary sm:flex-1" onClick={() => setStep("currency")} disabled={busy}>
                   {t("common.back")}
@@ -248,7 +248,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   placeholder={t("onboarding.paymentAccountPlaceholder")}
                 />
               </div>
-              {payErr ? <p className="text-sm text-red-800">{payErr}</p> : null}
+              {payErr ? <p className="sk-text-error text-sm">{payErr}</p> : null}
               <div className="flex flex-col gap-3">
                 <button
                   type="button"

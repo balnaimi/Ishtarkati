@@ -85,7 +85,7 @@ function CategoryRow({
   }
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-cream-400 bg-cream-50/95 p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center">
+    <li className="sk-card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center">
       <input
         className="sk-input min-w-0 flex-1 sm:min-w-[12rem]"
         value={name}

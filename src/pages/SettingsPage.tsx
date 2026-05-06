@@ -447,24 +447,18 @@ export function SettingsPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <span
-                className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ${
-                  pinEnabled && pinHasStored
-                    ? "bg-sage-100 text-sage-900 ring-sage-500/40 shadow-sm dark:bg-sage-900/40 dark:text-sage-100 dark:ring-sage-500/30"
-                    : "bg-cream-300/55 text-cream-800 ring-cream-500/35 dark:bg-cream-800/30 dark:text-cream-100 dark:ring-cream-600/40"
-                }`}
+                className={
+                  pinEnabled && pinHasStored ? "sk-status-badge-on" : "sk-status-badge-off"
+                }
               >
                 {pinEnabled && pinHasStored ? t("settings.pinBadgeOn") : t("settings.pinBadgeOff")}
               </span>
               {pinHasStored && !pinEnabled ? (
-                <span className="text-xs leading-relaxed text-cream-600">{t("settings.pinStoredPausedHint")}</span>
+                <span className="sk-text-hint text-xs leading-relaxed">{t("settings.pinStoredPausedHint")}</span>
               ) : null}
             </div>
 
-            {pinFeedback ? (
-              <p className="rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950 dark:border-cream-600/55 dark:bg-cream-900/35 dark:text-cream-50">
-                {pinFeedback}
-              </p>
-            ) : null}
+            {pinFeedback ? <p className="sk-callout-muted">{pinFeedback}</p> : null}
 
             <div className="flex flex-wrap gap-3">
               {pinHasStored ? (
@@ -498,7 +492,7 @@ export function SettingsPage() {
               {pinHasStored && pinEnabled ? (
                 <button
                   type="button"
-                  className="sk-btn-muted text-sm dark:border-cream-600 dark:text-cream-200"
+                  className="sk-btn-muted text-sm"
                   disabled={pinBusy || Boolean(pinPanel)}
                   onClick={() => void pausePinLock()}
                 >
@@ -518,11 +512,9 @@ export function SettingsPage() {
             </div>
 
             {pinHasStored ? (
-              <div className="space-y-3 rounded-xl border border-rose-300/85 bg-gradient-to-br from-rose-50/95 via-cream-50/80 to-rose-50/90 p-4 shadow-sm ring-1 ring-rose-200/60 dark:border-rose-700/60 dark:from-rose-950/50 dark:via-cream-950/30 dark:to-rose-950/45 dark:ring-rose-900/40">
-                <p className="text-sm font-semibold text-rose-950 dark:text-rose-100">{t("settings.pinRemoveBoxTitle")}</p>
-                <p className="text-xs leading-relaxed text-rose-900/95 dark:text-rose-200/90">
-                  {t("settings.pinRemoveBoxHint")}
-                </p>
+              <div className="sk-callout-danger">
+                <p className="text-sm font-semibold">{t("settings.pinRemoveBoxTitle")}</p>
+                <p className="text-xs leading-relaxed opacity-90">{t("settings.pinRemoveBoxHint")}</p>
                 <button
                   type="button"
                   className="sk-btn-danger w-full sm:w-auto"
@@ -535,7 +527,7 @@ export function SettingsPage() {
             ) : null}
 
             {pinPanel === "set" ? (
-              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+              <div className="sk-panel-nested">
                 <p className="text-sm font-medium text-cream-900">{t("settings.pinSetTitle")}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -573,7 +565,7 @@ export function SettingsPage() {
             ) : null}
 
             {pinPanel === "changeCurrent" ? (
-              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+              <div className="sk-panel-nested">
                 <p className="text-sm font-medium text-cream-900">{t("settings.pinChangeStepCurrent")}</p>
                 <div>
                   <label className="sk-label">{t("settings.pinCurrentLabel")}</label>
@@ -606,7 +598,7 @@ export function SettingsPage() {
             ) : null}
 
             {pinPanel === "changeNew" ? (
-              <div className="space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4 dark:border-cream-600/60 dark:bg-cream-900/25">
+              <div className="sk-panel-nested">
                 <p className="text-sm font-medium text-cream-900">{t("settings.pinChangeStepNew")}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -663,9 +655,7 @@ export function SettingsPage() {
             <p className="text-sm text-cream-700">
               {t("settings.fxCache")}: <span className="font-mono text-cream-900">{fxAt ?? "—"}</span>
             </p>
-            {!fx.hasLiveFxCache ? (
-              <p className="text-xs text-walnut-600">{t("fx.noLiveCacheYet")}</p>
-            ) : null}
+            {!fx.hasLiveFxCache ? <p className="sk-text-hint text-xs">{t("fx.noLiveCacheYet")}</p> : null}
             <button
               type="button"
               className="sk-btn-primary"
@@ -674,9 +664,9 @@ export function SettingsPage() {
             >
               {t("settings.refreshFxButton")}
             </button>
-            {fxMsg ? <p className="text-sm text-sage-800">{fxMsg}</p> : null}
+            {fxMsg ? <p className="sk-text-success text-sm">{fxMsg}</p> : null}
             {fxErrDetail ? (
-              <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-950">
+              <p className="sk-code-error">
                 {t("settings.fxErrorDetail")}: {fxErrDetail}
               </p>
             ) : null}
@@ -684,7 +674,7 @@ export function SettingsPage() {
 
           <section className="space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("settings.fxOverrides")}</h3>
-            <p className="mb-2 text-xs text-cream-600">{t("settings.fxOverridesHint")}</p>
+            <p className="sk-text-hint mb-2 text-xs">{t("settings.fxOverridesHint")}</p>
             <textarea
               className="sk-textarea font-mono text-sm leading-relaxed"
               value={overridesText}
@@ -695,7 +685,7 @@ export function SettingsPage() {
             </button>
           </section>
 
-          <p className="text-sm text-cream-600">
+          <p className="sk-text-hint text-sm">
             {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
           </p>
         </div>
@@ -756,36 +746,29 @@ export function SettingsPage() {
                 {t("backup.import")}
               </button>
             </div>
-            {backupMsg ? (
-              <p className="rounded-lg border border-cream-400 bg-cream-200/60 px-3 py-2 text-sm text-cream-900">
-                {backupMsg}
-              </p>
-            ) : null}
+            {backupMsg ? <p className="sk-callout-muted">{backupMsg}</p> : null}
           </section>
         </div>
       ) : null}
 
       {tab === "danger" ? (
         <div className="space-y-6">
-          <section className="sk-card border-rose-600/85 bg-rose-50/90 space-y-4">
-            <h3 className="text-base font-semibold text-rose-950">{t("settings.dangerZoneTitle")}</h3>
-            <p className="text-sm leading-relaxed text-rose-950/95">{t("settings.dangerResetIntro")}</p>
-            <p className="text-sm text-rose-900/90">{t("settings.dangerResetExportHint")}</p>
+          <section className="sk-section-danger">
+            <h3>{t("settings.dangerZoneTitle")}</h3>
+            <p>{t("settings.dangerResetIntro")}</p>
+            <p>{t("settings.dangerResetExportHint")}</p>
 
             {dangerStep === 0 ? (
-              <div className="space-y-3 border-t border-rose-300/80 pt-4">
-                <p className="text-sm text-rose-900">{t("settings.dangerResetStep1Prompt")}</p>
+              <div className="space-y-3 border-t border-cream-500/25 pt-4">
+                <p className="text-sm">{t("settings.dangerResetStep1Prompt")}</p>
                 <button type="button" className="sk-btn-danger" onClick={revealDangerCode}>
                   {t("settings.dangerResetShowCode")}
                 </button>
               </div>
             ) : (
-              <div className="space-y-4 border-t border-rose-300/80 pt-4">
-                <p className="text-sm font-medium text-rose-950">{t("settings.dangerResetChallenge")}</p>
-                <p
-                  dir="ltr"
-                  className="rounded-lg border border-rose-400 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-rose-950"
-                >
+              <div className="space-y-4 border-t border-cream-500/25 pt-4">
+                <p className="text-sm font-medium">{t("settings.dangerResetChallenge")}</p>
+                <p dir="ltr" className="sk-danger-code-box">
                   {dangerCode}
                 </p>
                 <div>
@@ -815,11 +798,7 @@ export function SettingsPage() {
               </div>
             )}
 
-            {dangerMsg ? (
-              <p className="rounded-lg border border-amber-600/90 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                {dangerMsg}
-              </p>
-            ) : null}
+            {dangerMsg ? <p className="sk-callout-warning text-sm">{dangerMsg}</p> : null}
           </section>
         </div>
       ) : null}

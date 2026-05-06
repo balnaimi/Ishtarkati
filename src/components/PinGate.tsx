@@ -56,10 +56,10 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-b from-cream-900/95 via-walnut-900/90 to-cream-950 p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-cream-400/40 bg-cream-50/95 p-8 shadow-2xl">
+    <div className="sk-modal-overlay p-6">
+      <div className="sk-card w-full max-w-sm rounded-2xl border-cream-400/40 p-8 shadow-2xl">
         <p className="text-center text-lg font-semibold text-cream-900">{t("pin.title")}</p>
-        <p className="mt-2 text-center text-sm text-cream-700">{t("pin.subtitle")}</p>
+        <p className="sk-text-hint mt-2 text-center text-sm">{t("pin.subtitle")}</p>
         <input
           type="password"
           inputMode="numeric"
@@ -72,7 +72,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           }}
           aria-label={t("pin.title")}
         />
-        {err ? <p className="mt-3 text-center text-sm text-red-800">{err}</p> : null}
+        {err ? <p className="sk-text-error mt-3 text-center text-sm">{err}</p> : null}
         <button type="button" className="sk-btn-primary mt-6 w-full py-3" onClick={() => void tryUnlock()}>
           {t("pin.unlock")}
         </button>

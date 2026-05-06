@@ -46,12 +46,12 @@ export function DueProgressBar({
         <p
           className={`mt-1.5 text-xs font-medium leading-tight ${
             tone === "overdue" || tone === "due"
-              ? "text-red-900"
+              ? "sk-tone-due-bar-critical"
               : tone === "urgent"
-                ? "text-orange-900"
+                ? "sk-tone-due-urgent"
                 : tone === "warn"
-                  ? "text-amber-900"
-                  : "text-cream-700"
+                  ? "sk-tone-due-bar-warn"
+                  : "sk-text-hint"
           }`}
         >
           {caption}

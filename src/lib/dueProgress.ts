@@ -99,22 +99,22 @@ export const DUE_TONE_BAR: Record<
   ReturnType<typeof dueProgressTone>,
   string
 > = {
-  safe: "bg-sage-500",
-  warn: "bg-amber-500",
-  urgent: "bg-orange-600",
-  due: "bg-red-600",
-  overdue: "bg-red-800",
+  safe: "sk-due-bar-fill-safe",
+  warn: "sk-due-bar-fill-warn",
+  urgent: "sk-due-bar-fill-urgent",
+  due: "sk-due-bar-fill-due",
+  overdue: "sk-due-bar-fill-overdue",
 };
 
 export const DUE_TONE_TRACK: Record<
   ReturnType<typeof dueProgressTone>,
   string
 > = {
-  safe: "bg-cream-300/90",
-  warn: "bg-amber-200/80",
-  urgent: "bg-orange-200/70",
-  due: "bg-red-200/70",
-  overdue: "bg-red-300/80",
+  safe: "sk-due-bar-track-safe",
+  warn: "sk-due-bar-track-warn",
+  urgent: "sk-due-bar-track-urgent",
+  due: "sk-due-bar-track-due",
+  overdue: "sk-due-bar-track-overdue",
 };
 
 /** Bar width 0–100; overdue stays full. */
@@ -141,10 +141,10 @@ export type DueTone = ReturnType<typeof dueProgressTone>;
 /** Subtle table row background by urgency (empty if safe or unknown). */
 export function dueListRowHighlightClass(tone: DueTone): string {
   if (tone === "safe") return "";
-  if (tone === "warn") return "bg-amber-50/50";
-  if (tone === "urgent") return "bg-orange-50/45";
-  if (tone === "due") return "bg-red-50/55";
-  return "bg-red-100/50";
+  if (tone === "warn") return "sk-due-row-warn";
+  if (tone === "urgent") return "sk-due-row-urgent";
+  if (tone === "due") return "sk-due-row-due";
+  return "sk-due-row-overdue";
 }
 
 /** Card expiry: months remaining until end of exp year/month (rough bar). */

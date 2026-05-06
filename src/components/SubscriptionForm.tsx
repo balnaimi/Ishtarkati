@@ -446,7 +446,7 @@ export function SubscriptionForm({
             <p className="text-xs text-cream-600">{t("fx.builtinHint")}</p>
           ) : null}
           {primaryPreview.error ? (
-            <p className="text-sm text-red-900">{primaryPreview.error}</p>
+            <p className="sk-text-error text-sm">{primaryPreview.error}</p>
           ) : null}
           <button type="button" className="sk-btn-secondary w-full sm:w-auto" onClick={() => void onFetchFx()}>
             {t("form.recalcFx")}

@@ -60,11 +60,11 @@ export function NewSubscriptionPage() {
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-cream-900">{t("form.newTitle")}</h2>
       {paymentMethodCount === null ? (
-        <p className="text-sm text-cream-700">{t("common.loading")}</p>
+        <p className="sk-text-hint text-sm">{t("common.loading")}</p>
       ) : blocked ? (
-        <div className="sk-card space-y-4 border-amber-300/80 bg-amber-50/90">
-          <p className="text-base font-semibold text-cream-900">{t("form.needsPaymentMethodTitle")}</p>
-          <p className="text-sm leading-relaxed text-cream-800">{t("form.needsPaymentMethodBody")}</p>
+        <div className="sk-banner-warn-card">
+          <p className="text-base font-semibold text-cream-950">{t("form.needsPaymentMethodTitle")}</p>
+          <p className="sk-text-hint text-sm leading-relaxed">{t("form.needsPaymentMethodBody")}</p>
           <button
             type="button"
             className="sk-btn-primary"

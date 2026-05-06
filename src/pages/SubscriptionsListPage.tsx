@@ -24,10 +24,10 @@ import {
 import { tagTokens } from "../lib/tags";
 
 function toneTextClass(tone: DueTone): string {
-  if (tone === "overdue" || tone === "due") return "text-red-800";
-  if (tone === "urgent") return "text-orange-900";
-  if (tone === "warn") return "text-amber-900";
-  return "text-sage-800";
+  if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
+  if (tone === "urgent") return "sk-tone-due-urgent";
+  if (tone === "warn") return "sk-tone-due-bar-warn";
+  return "sk-tone-due-safe";
 }
 
 type SortKey = "next_due" | "title" | "category" | "amount" | "primary";
@@ -264,11 +264,11 @@ export function SubscriptionsListPage() {
       </div>
 
       {loading ? (
-        <p className="text-cream-700">{t("common.loading")}</p>
+        <p className="sk-text-hint">{t("common.loading")}</p>
       ) : items.length === 0 ? (
-        <p className="text-cream-700">{t("list.empty")}</p>
+        <p className="sk-text-hint">{t("list.empty")}</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-cream-400 bg-cream-50/95 shadow-sm">
+        <div className="sk-card overflow-x-auto p-0 shadow-sm">
           <table className="w-full min-w-[640px] text-right text-sm">
             <thead className="border-b border-cream-400 bg-cream-200/80 text-cream-800">
               <tr>
@@ -301,7 +301,7 @@ export function SubscriptionsListPage() {
                         <Link
                           to={`/sub/${s.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="min-w-0 font-medium text-sage-800 underline-offset-2 hover:underline"
+                          className="min-w-0 font-medium text-cream-950 underline-offset-2 hover:underline"
                         >
                           {s.title}
                         </Link>

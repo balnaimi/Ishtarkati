@@ -234,7 +234,7 @@ export function DetailPage() {
                   href={sub.website_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex max-w-full items-center rounded-lg border border-cream-400/90 bg-cream-100/90 px-3 py-2 text-sm text-sage-900 shadow-sm transition-colors hover:border-sage-400 hover:bg-cream-200/70"
+                  className="sk-link-pill"
                 >
                   <span dir="ltr" className="min-w-0 truncate font-medium">
                     {displayUrlForUi(sub.website_url)}
@@ -276,9 +276,7 @@ export function DetailPage() {
             ) : null}
           </div>
           {needsPaid ? (
-            <p className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-              {t("detail.needsPaidHint")}
-            </p>
+            <p className="sk-callout-warning text-sm">{t("detail.needsPaidHint")}</p>
           ) : null}
           {tagTokens(sub.tags).length ? (
             <div className="space-y-1.5 pt-1">
