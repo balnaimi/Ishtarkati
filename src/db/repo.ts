@@ -96,7 +96,7 @@ export async function deleteCurrency(code: string): Promise<void> {
 export async function loadCreditCards(): Promise<CreditCard[]> {
   const db = await getDb();
   return db.select<CreditCard>(
-    "SELECT id, brand, last4, exp_month, exp_year, created_at, updated_at FROM credit_cards ORDER BY exp_year ASC, exp_month ASC, id ASC",
+    "SELECT id, brand, last4, exp_month, exp_year, description, created_at, updated_at FROM credit_cards ORDER BY exp_year ASC, exp_month ASC, id ASC",
   );
 }
 
@@ -105,13 +105,15 @@ export async function insertCreditCard(row: {
   last4: string;
   exp_month: number;
   exp_year: number;
+  description: string | null;
 }): Promise<number> {
   const db = await getDb();
   const now = new Date().toISOString();
+  const desc = (row.description ?? "").trim() || null;
   const r = await db.execute(
-    `INSERT INTO credit_cards (brand, last4, exp_month, exp_year, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, now, now],
+    `INSERT INTO credit_cards (brand, last4, exp_month, exp_year, description, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, desc, now, now],
   );
   if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
   const idRows = await db.select<{ id: number }>("SELECT last_insert_rowid() AS id");
@@ -120,13 +122,14 @@ export async function insertCreditCard(row: {
 
 export async function updateCreditCard(
   id: number,
-  row: { brand: string; last4: string; exp_month: number; exp_year: number },
+  row: { brand: string; last4: string; exp_month: number; exp_year: number; description: string | null },
 ): Promise<void> {
   const db = await getDb();
   const now = new Date().toISOString();
+  const desc = (row.description ?? "").trim() || null;
   await db.execute(
-    `UPDATE credit_cards SET brand = $1, last4 = $2, exp_month = $3, exp_year = $4, updated_at = $5 WHERE id = $6`,
-    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, now, id],
+    `UPDATE credit_cards SET brand = $1, last4 = $2, exp_month = $3, exp_year = $4, description = $5, updated_at = $6 WHERE id = $7`,
+    [row.brand.trim(), row.last4.trim(), row.exp_month, row.exp_year, desc, now, id],
   );
 }
 

@@ -5,7 +5,8 @@ import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
 import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
-import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
+import { PAYMENT_SERVICES, CARD_BRANDS } from "../lib/paymentCatalog";
+import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 import { SiteFavicon } from "./SiteFavicon";
 
@@ -338,7 +339,11 @@ export function SubscriptionForm({
           <optgroup label={t("form.paymentOptgroupCards")}>
             {cards.map((c) => (
               <option key={`c-${c.id}`} value={`c:${c.id}`}>
-                {c.brand} ·••• {c.last4} ({t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })})
+                {creditCardPrimaryLine(
+                  c,
+                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
+                )}{" "}
+                ({t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })})
               </option>
             ))}
           </optgroup>

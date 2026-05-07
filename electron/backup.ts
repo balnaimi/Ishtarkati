@@ -2,7 +2,7 @@ import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
 
-export const BACKUP_EXPORT_VERSION = 4;
+export const BACKUP_EXPORT_VERSION = 5;
 
 interface BackupPayload {
   exportVersion: number;
@@ -69,6 +69,12 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return x != null && typeof x === "object" && !Array.isArray(x);
 }
 
+function importCreditCardDescription(row: Record<string, unknown>): string | null {
+  if (!("description" in row) || row.description == null) return null;
+  const s = String(row.description).trim();
+  return s.length ? s : null;
+}
+
 function validatePayload(raw: unknown): BackupPayload {
   if (!isRecord(raw)) throw new Error("Invalid backup file");
   const exportVersion = raw.exportVersion;
@@ -76,7 +82,8 @@ function validatePayload(raw: unknown): BackupPayload {
     exportVersion !== 1 &&
     exportVersion !== 2 &&
     exportVersion !== 3 &&
-    exportVersion !== 4
+    exportVersion !== 4 &&
+    exportVersion !== 5
   ) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
@@ -433,8 +440,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
     database.prepare("DELETE FROM settings").run();
 
     const insCard = database.prepare(`
-      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     for (const row of data.credit_cards) {
       if (!isRecord(row)) throw new Error("Invalid credit card row");
@@ -444,6 +451,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         row.last4,
         row.exp_month,
         row.exp_year,
+        importCreditCardDescription(row),
         row.created_at,
         row.updated_at,
       );
@@ -576,19 +584,29 @@ function mergeImportIntoDb(
 
     const cardExists = database.prepare("SELECT id FROM credit_cards WHERE id = ?");
     const cardInsert = database.prepare(`
-      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const cardUpdate = database.prepare(`
-      UPDATE credit_cards SET brand = ?, last4 = ?, exp_month = ?, exp_year = ?,
+      UPDATE credit_cards SET brand = ?, last4 = ?, exp_month = ?, exp_year = ?, description = ?,
       created_at = ?, updated_at = ? WHERE id = ?
     `);
     for (const row of data.credit_cards) {
       if (!isRecord(row)) throw new Error("Invalid credit card row");
       const id = Number(row.id);
+      const desc = importCreditCardDescription(row);
       if (cardExists.get(id)) {
         if (preferDup)
-          cardUpdate.run(row.brand, row.last4, row.exp_month, row.exp_year, row.created_at, row.updated_at, id);
+          cardUpdate.run(
+            row.brand,
+            row.last4,
+            row.exp_month,
+            row.exp_year,
+            desc,
+            row.created_at,
+            row.updated_at,
+            id,
+          );
       } else {
         cardInsert.run(
           id,
@@ -596,6 +614,7 @@ function mergeImportIntoDb(
           row.last4,
           row.exp_month,
           row.exp_year,
+          desc,
           row.created_at,
           row.updated_at,
         );

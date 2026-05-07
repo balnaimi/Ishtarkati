@@ -325,6 +325,21 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 5").run();
   }
+
+  const versionAfterFive = database
+    .prepare("SELECT version FROM schema_version LIMIT 1")
+    .get() as { version: number } | undefined;
+  version = versionAfterFive?.version ?? version;
+
+  if (version < 6) {
+    if (sqliteTableExists(database, "credit_cards")) {
+      const cols = database.pragma("table_info(credit_cards)") as { name: string }[];
+      if (!cols.some((c) => c.name === "description")) {
+        database.exec("ALTER TABLE credit_cards ADD COLUMN description TEXT");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 6").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

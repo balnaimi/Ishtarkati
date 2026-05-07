@@ -17,6 +17,8 @@ export interface CreditCard {
   last4: string;
   exp_month: number;
   exp_year: number;
+  /** Optional note to tell apart cards with the same brand/last4 pattern (name, perks, etc.). */
+  description: string | null;
   created_at: string;
   updated_at: string;
 }

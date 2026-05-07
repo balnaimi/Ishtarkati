@@ -11,6 +11,7 @@ import {
   updateWalletMethod,
 } from "../db/repo";
 import type { CreditCard, WalletMethod } from "../types";
+import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { PAYMENT_SERVICES, CARD_BRANDS } from "../lib/paymentCatalog";
 import { cardExpiryProgress, DUE_TONE_BAR, DUE_TONE_TRACK } from "../lib/dueProgress";
 
@@ -109,7 +110,10 @@ function WalletSection({
             <option value="">{t("common.none")}</option>
             {cards.map((c) => (
               <option key={c.id} value={String(c.id)}>
-                {c.brand} ·••• {c.last4}
+                {creditCardPrimaryLine(
+                  c,
+                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
+                )}
               </option>
             ))}
           </select>
@@ -186,7 +190,10 @@ function WalletRow({
           <option value="">{t("common.none")}</option>
           {cards.map((c) => (
             <option key={c.id} value={String(c.id)}>
-              {c.brand} ·••• {c.last4}
+              {creditCardPrimaryLine(
+                c,
+                CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
+              )}
             </option>
           ))}
         </select>
@@ -210,9 +217,15 @@ function WalletRow({
         {w.linked_card_id ? (
           <p className="text-xs text-cream-600">
             {t("payment.linkedCard")}:{" "}
-            {cards.find((c) => c.id === w.linked_card_id)
-              ? `${cards.find((c) => c.id === w.linked_card_id)!.brand} ·••• ${cards.find((c) => c.id === w.linked_card_id)!.last4}`
-              : "—"}
+            {(() => {
+              const lc = cards.find((c) => c.id === w.linked_card_id);
+              return lc
+                ? creditCardPrimaryLine(
+                    lc,
+                    CARD_BRANDS.find((b) => b.code === lc.brand)?.nameAr ?? lc.brand,
+                  )
+                : "—";
+            })()}
           </p>
         ) : null}
       </div>
@@ -238,6 +251,7 @@ function CardSection({
   const { t } = useTranslation();
   const [brand, setBrand] = useState("VISA");
   const [last4, setLast4] = useState("");
+  const [description, setDescription] = useState("");
   const [expM, setExpM] = useState(String(new Date().getMonth() + 1));
   const [expY, setExpY] = useState(String(new Date().getFullYear()));
 
@@ -248,8 +262,15 @@ function CardSection({
     const m = parseInt(expM, 10);
     const y = parseInt(expY, 10);
     if (m < 1 || m > 12 || y < 2000) return;
-    await insertCreditCard({ brand, last4: d, exp_month: m, exp_year: y });
+    await insertCreditCard({
+      brand,
+      last4: d,
+      exp_month: m,
+      exp_year: y,
+      description: description.trim() || null,
+    });
     setLast4("");
+    setDescription("");
     onChanged();
   }
 
@@ -266,6 +287,17 @@ function CardSection({
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="sk-label">{t("payment.cardDescription")}</label>
+          <textarea
+            className="sk-textarea"
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t("payment.cardDescriptionPlaceholder")}
+          />
+          <p className="mt-1 text-xs text-cream-600">{t("payment.cardDescriptionHint")}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
@@ -321,12 +353,14 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
   const [edit, setEdit] = useState(false);
   const [brand, setBrand] = useState(c.brand);
   const [last4, setLast4] = useState(c.last4);
+  const [description, setDescription] = useState(c.description ?? "");
   const [expM, setExpM] = useState(String(c.exp_month));
   const [expY, setExpY] = useState(String(c.exp_year));
 
   useEffect(() => {
     setBrand(c.brand);
     setLast4(c.last4);
+    setDescription(c.description ?? "");
     setExpM(String(c.exp_month));
     setExpY(String(c.exp_year));
   }, [c]);
@@ -340,7 +374,13 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
     if (d.length !== 4) return;
     const m = parseInt(expM, 10);
     const y = parseInt(expY, 10);
-    await updateCreditCard(c.id, { brand, last4: d, exp_month: m, exp_year: y });
+    await updateCreditCard(c.id, {
+      brand,
+      last4: d,
+      exp_month: m,
+      exp_year: y,
+      description: description.trim() || null,
+    });
     setEdit(false);
     onChanged();
   }
@@ -363,6 +403,13 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
             </option>
           ))}
         </select>
+        <textarea
+          className="sk-textarea"
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("payment.cardDescriptionPlaceholder")}
+        />
         <input className="sk-input font-mono" value={last4} maxLength={4} onChange={(e) => setLast4(e.target.value)} />
         <div className="flex gap-2">
           <input type="number" className="sk-input w-24" value={expM} onChange={(e) => setExpM(e.target.value)} />
@@ -387,6 +434,9 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
           <p className="font-semibold text-cream-900">
             {label} ·••• {c.last4}
           </p>
+          {(c.description ?? "").trim() ? (
+            <p className="text-sm text-cream-800">{(c.description ?? "").trim()}</p>
+          ) : null}
           <p className="text-sm text-cream-700">
             {t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })}
           </p>
