@@ -190,10 +190,10 @@ export function HomePage() {
                     onClick={() => nav(`/sub/${s.id}`)}
                   >
                     <span className="flex w-full items-start justify-start gap-2">
-                      <span className="min-w-0 font-semibold text-cream-950">{s.title}</span>
                       {s.website_url?.trim() ? (
                         <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
                       ) : null}
+                      <span className="min-w-0 font-semibold text-cream-950">{s.title}</span>
                     </span>
                     <span className="mt-1 block text-sm sk-text-hint">
                       {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
