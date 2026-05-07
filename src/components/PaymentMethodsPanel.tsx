@@ -12,6 +12,7 @@ import {
 } from "../db/repo";
 import type { CreditCard, WalletMethod } from "../types";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
+import { tCardBrand, tPaymentService } from "../lib/i18nLabels";
 import { PAYMENT_SERVICES, CARD_BRANDS } from "../lib/paymentCatalog";
 import { cardExpiryProgress, DUE_TONE_BAR, DUE_TONE_TRACK } from "../lib/dueProgress";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -96,7 +97,7 @@ function WalletSection({
           <select className="sk-select" value={service} onChange={(e) => setService(e.target.value)}>
             {PAYMENT_SERVICES.map((s) => (
               <option key={s.code} value={s.code}>
-                {s.nameAr}
+                {tPaymentService(t, s.code)}
               </option>
             ))}
           </select>
@@ -111,10 +112,7 @@ function WalletSection({
             <option value="">{t("common.none")}</option>
             {cards.map((c) => (
               <option key={c.id} value={String(c.id)}>
-                {creditCardPrimaryLine(
-                  c,
-                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
-                )}
+                {creditCardPrimaryLine(c, tCardBrand(t, c.brand))}
               </option>
             ))}
           </select>
@@ -176,7 +174,7 @@ function WalletRow({
     onChanged();
   }
 
-  const svc = PAYMENT_SERVICES.find((s) => s.code === w.service_code)?.nameAr ?? w.service_code;
+  const svc = tPaymentService(t, w.service_code);
 
   if (edit) {
     return (
@@ -187,7 +185,7 @@ function WalletRow({
           <select className="sk-select" value={service} onChange={(e) => setService(e.target.value)}>
             {PAYMENT_SERVICES.map((s) => (
               <option key={s.code} value={s.code}>
-                {s.nameAr}
+                {tPaymentService(t, s.code)}
               </option>
             ))}
           </select>
@@ -202,10 +200,7 @@ function WalletRow({
             <option value="">{t("common.none")}</option>
             {cards.map((c) => (
               <option key={c.id} value={String(c.id)}>
-                {creditCardPrimaryLine(
-                  c,
-                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
-                )}
+                {creditCardPrimaryLine(c, tCardBrand(t, c.brand))}
               </option>
             ))}
           </select>
@@ -246,7 +241,7 @@ function WalletRow({
                 return lc
                   ? creditCardPrimaryLine(
                       lc,
-                      CARD_BRANDS.find((b) => b.code === lc.brand)?.nameAr ?? lc.brand,
+                      tCardBrand(t, lc.brand),
                     )
                   : "—";
               })()}
@@ -308,7 +303,7 @@ function CardSection({
           <select className="sk-select" value={brand} onChange={(e) => setBrand(e.target.value)}>
             {CARD_BRANDS.map((b) => (
               <option key={b.code} value={b.code}>
-                {b.nameAr}
+                {tCardBrand(t, b.code)}
               </option>
             ))}
           </select>
@@ -417,7 +412,7 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
     onChanged();
   }
 
-  const label = CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand;
+  const label = tCardBrand(t, c.brand);
 
   if (edit) {
     return (
@@ -428,7 +423,7 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
           <select className="sk-select" value={brand} onChange={(e) => setBrand(e.target.value)}>
             {CARD_BRANDS.map((b) => (
               <option key={b.code} value={b.code}>
-                {b.nameAr}
+                {tCardBrand(t, b.code)}
               </option>
             ))}
           </select>

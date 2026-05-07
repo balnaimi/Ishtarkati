@@ -1,6 +1,7 @@
 import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
+import localeAr from "../src/locales/ar.json";
 
 export const BACKUP_EXPORT_VERSION = 5;
 
@@ -138,7 +139,7 @@ function normalizeTitle(t: unknown): string {
     .toLowerCase();
 }
 
-/** Similarity bucket: عنوان منظّف + اسم المضيف من الرابط إن وجد. */
+/** Similarity key: normalized title + normalized hostname from URL when present. */
 function subscriptionSimilarityKey(title: unknown, websiteUrl: unknown): string {
   const host = hostnameNorm(websiteUrl == null ? undefined : String(websiteUrl));
   return `${normalizeTitle(title)}|${host}`;
@@ -848,7 +849,7 @@ export function registerBackupIpc(
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
-      title: "تصدير نسخة إشتراكاتي",
+      title: localeAr.electron.backupSaveTitle,
       defaultPath: `ishtarkati-backup-${stamp}.json`,
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
@@ -890,7 +891,7 @@ export function registerBackupIpc(
     if (!w) return { ok: false as const, error: "no-window" };
 
     const { filePaths, canceled } = await dialog.showOpenDialog(w, {
-      title: "استيراد نسخة",
+      title: localeAr.electron.backupOpenTitle,
       properties: ["openFile"],
       filters: [{ name: "JSON", extensions: ["json"] }],
     });

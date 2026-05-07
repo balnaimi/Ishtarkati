@@ -9,6 +9,7 @@ import {
 } from "../db/repo";
 import { markSkipNextPinLock } from "../lib/pinSession";
 import { listCurrenciesSorted } from "../lib/currenciesData";
+import { tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 
@@ -145,7 +146,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
               >
                 {currencies.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.flag} {c.code} — {c.nameAr}
+                    {c.flag} {c.code} — {tCurrency(t, c.code)}
                   </option>
                 ))}
               </select>
@@ -231,7 +232,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                 <select className="sk-select" value={payService} onChange={(e) => setPayService(e.target.value)}>
                   {PAYMENT_SERVICES.map((s) => (
                     <option key={s.code} value={s.code}>
-                      {s.nameAr}
+                      {tPaymentService(t, s.code)}
                     </option>
                   ))}
                 </select>

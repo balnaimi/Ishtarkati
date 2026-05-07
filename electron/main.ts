@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
+import localeAr from "../src/locales/ar.json";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -524,14 +525,14 @@ function createWindow(): void {
     const template: Electron.MenuItemConstructorOptions[] = [];
     if (params.isEditable) {
       template.push(
-        { role: "cut", label: "قص" },
-        { role: "copy", label: "نسخ" },
-        { role: "paste", label: "لصق" },
+        { role: "cut", label: localeAr.electron.menuCut },
+        { role: "copy", label: localeAr.electron.menuCopy },
+        { role: "paste", label: localeAr.electron.menuPaste },
         { type: "separator" },
-        { role: "selectAll", label: "تحديد الكل" },
+        { role: "selectAll", label: localeAr.electron.menuSelectAll },
       );
     } else if (params.selectionText?.trim()) {
-      template.push({ role: "copy", label: "نسخ" });
+      template.push({ role: "copy", label: localeAr.electron.menuCopy });
     }
     if (template.length === 0) return;
     const menu = Menu.buildFromTemplate(template);

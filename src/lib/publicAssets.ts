@@ -1,6 +1,6 @@
 /**
- * أصول من `public/` تُنسَخ إلى جذر `dist/`.
- * يجب أن يكون المسار نسبيًا (يبدأ بـ `./`) ليعمل تحميل الصور مع `file://` في Electron،
- * وليس بصيغة `/…` التي تُفسَّر من جذر نظام الملفات.
+ * Asset URLs under `public/` copied to the root of `dist/`.
+ * Paths must be relative (`./…`) so images load with `file://` in Electron,
+ * not absolute `/…` which resolves from the filesystem root.
  */
 export const ISHTARKATI_MARK_SRC = "./ishtarkati-mark.svg";

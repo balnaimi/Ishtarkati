@@ -1,4 +1,4 @@
-/** يطابق حقول المعاينة من عملية Electron (IPC). */
+/** Mirrors the backup import preview DTO from the Electron IPC layer. */
 export interface BackupImportPreview {
   filePath: string;
   exportVersion: number;

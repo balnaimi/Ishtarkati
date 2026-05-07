@@ -128,7 +128,7 @@ export function StatsPage() {
                   <li key={row.name} className="flex flex-wrap justify-between gap-2 text-sm text-cream-800">
                     <span>{row.name}</span>
                     <span className="font-medium text-sage-800">
-                      {row.monthlyPrimary.toFixed(2)} {summary.primaryCode} / شهريًا
+                      {row.monthlyPrimary.toFixed(2)} {summary.primaryCode} / {t("stats.perMonth")}
                     </span>
                   </li>
                 ))

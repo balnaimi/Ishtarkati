@@ -29,6 +29,48 @@
     "deleteTitle": "تأكيد الحذف",
     "pinRemoveTitle": "إزالة رمز القفل المحفوظ"
   },
+  "errorBoundary": {
+    "title": "حدث خطأ غير متوقّع في الواجهة",
+    "hint": "يمكنك إعادة تحميل التطبيق. إن تكرّر الخطأ بعد التحديث، أعد تشغيل البرنامج.",
+    "reload": "إعادة تحميل"
+  },
+  "paymentCatalog": {
+    "services": {
+      "PAYPAL": "PayPal",
+      "STRIPE": "Stripe",
+      "APPLE_PAY": "Apple Pay",
+      "GOOGLE_PAY": "Google Pay",
+      "AMAZON_PAY": "Amazon Pay",
+      "SAMSUNG_PAY": "Samsung Pay",
+      "SKRILL": "Skrill",
+      "NETELLER": "Neteller",
+      "WISE": "Wise (TransferWise)",
+      "REVOLUT": "Revolut",
+      "PAYONEER": "Payoneer",
+      "MADA_PAY": "مدى / Mada",
+      "STC_PAY": "STC Pay",
+      "OTHER": "أخرى / يدوي"
+    },
+    "brands": {
+      "VISA": "Visa",
+      "MASTERCARD": "Mastercard",
+      "AMEX": "American Express",
+      "DISCOVER": "Discover",
+      "MADA": "مدى (Mada)",
+      "DINERS": "Diners Club",
+      "JCB": "JCB",
+      "UNIONPAY": "UnionPay",
+      "OTHER": "أخرى"
+    }
+  },
+  "electron": {
+    "menuCut": "قص",
+    "menuCopy": "نسخ",
+    "menuPaste": "لصق",
+    "menuSelectAll": "تحديد الكل",
+    "backupSaveTitle": "تصدير نسخة إشتراكاتي",
+    "backupOpenTitle": "استيراد نسخة"
+  },
   "home": {
     "dashboardTitle": "لوحة التحكم",
     "dashboardSubtitle": "ملخص سريع وأقرب الاستحقاقات وآخر ما أضفته",

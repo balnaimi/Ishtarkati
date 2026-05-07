@@ -98,12 +98,12 @@ body {
     @apply inline-flex items-center rounded-md border border-cream-400 bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-800;
   }
 
-  /** لوحات داخل بطاقات (نماذج PIN وغيرها) — كلها من سلسلة cream التي تعيد `.dark` تعريفها */
+  /** Nested panels inside cards (PIN forms, etc.) — cream palette; `.dark` overrides below */
   .sk-panel-nested {
     @apply space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4;
   }
 
-  /** شارات حالة (مفعّل / غير مفعّل) */
+  /** Status badges (on / off) */
   .sk-status-badge-on {
     @apply inline-flex items-center rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm ring-1 ring-sage-600/35;
     @apply bg-sage-600/20 text-cream-950;
@@ -114,23 +114,23 @@ body {
     @apply bg-cream-300/55 text-cream-900;
   }
 
-  /** تنبيهات محايدة (رسائل مرجعة، تنبيه نسخ احتياطي) */
+  /** Neutral callouts (return messages, backup hints) */
   .sk-callout-muted {
     @apply rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950;
   }
 
-  /** تحذير: حدود لون تحذيري والنص من cream (يثبت الوضوح مع الثيم الداكن) */
+  /** Warning callout — cream-tinted text stays legible in dark mode */
   .sk-callout-warning {
     @apply rounded-lg border px-3 py-2 text-sm leading-relaxed;
     @apply border-amber-600/35 bg-amber-500/14 text-cream-950;
   }
 
-  /** صندوق خطر أو حذف — خلفية/حدود متباينة في الفاتح والداكن */
+  /** Danger / delete callout — contrasting border & bg in light & dark */
   .sk-callout-danger {
     @apply space-y-3 rounded-xl border border-red-800/35 bg-red-950/10 p-4 text-cream-950 shadow-sm ring-1 ring-red-900/22;
   }
 
-  /** كامل قسم المنطقة الحسّاسة في الإعدادات */
+  /** Full “danger zone” block in settings */
   .sk-section-danger {
     @apply rounded-xl border border-red-800/38 bg-red-950/14 p-4 shadow-sm ring-1 ring-red-900/20;
     @apply space-y-4;
@@ -144,18 +144,18 @@ body {
     @apply text-sm leading-relaxed text-cream-900;
   }
 
-  /** خيار خطر داخل مجموعة اختيار (بدون ألوان rose الثابتة للنص) */
+  /** Danger option row in a choice group (no fixed rose text color) */
   .sk-choice-row-danger {
     @apply flex cursor-pointer gap-3 rounded-lg border border-red-800/35 bg-red-950/10 px-3 py-2 ring-1 ring-red-900/18;
     @apply text-cream-950;
   }
 
-  /** أغطية النوافذ المنبثقة — محايدة حتى لا تنعكس `.dark` على cream-950 */
+  /** Modal overlay — neutral scrim so `.dark` doesn’t skew cream-950 panels */
   .sk-modal-overlay {
     @apply fixed inset-0 z-[200] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm;
   }
 
-  /** نبرة المواعيد القادمة / التأخر */
+  /** Due-date bar tone utilities */
   .sk-tone-due-bar-critical {
     @apply text-red-800;
   }
@@ -180,17 +180,17 @@ body {
     @apply text-sage-800;
   }
 
-  /** تلميحات ثانوية (متباينة في الداكن) */
+  /** Secondary hint text (adjusted under `.dark`) */
   .sk-text-hint {
     @apply text-cream-600;
   }
 
-  /** خطأ داخل حقول أو نص تقني صغير */
+  /** Small error / code panel */
   .sk-code-error {
     @apply rounded-lg border border-red-800/35 bg-red-950/15 px-3 py-2 text-xs text-cream-950;
   }
 
-  /** بطاقات قوائم منزلقة / قوائم داخل تنبيه */
+  /** Scrollable lists inside a callout */
   .sk-list-in-callout {
     @apply mt-2 max-h-40 overflow-y-auto rounded-lg border border-cream-400/70 bg-cream-50 p-2 text-xs leading-relaxed text-cream-900 shadow-inner;
   }
@@ -199,28 +199,28 @@ body {
     @apply rounded-lg border border-red-800/32 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-cream-950;
   }
 
-  /** لوحة تنبيه بعرض بطاقة (صفحة تحتاج دفع…) */
+  /** Card-width warning banner (e.g. payment needed) */
   .sk-banner-warn-card {
     @apply space-y-4 rounded-xl border border-amber-600/38 bg-amber-500/14 p-4 text-cream-950 shadow-sm ring-1 ring-amber-700/22;
   }
 
-  /** إبراز بطاقة تستحق الدفع — حلقة متباينة في الثيمين */
+  /** Highlight ring for subscriptions that need payment */
   .sk-ring-needs-pay {
     @apply ring-2 ring-amber-600/85;
   }
 
-  /** بطاقة قائمة قابلة للنقر — نفس sk-card مع تمويه عند المرور */
+  /** Interactive list row — same as sk-card with hover wash */
   .sk-card-interactive {
     @apply transition-colors hover:bg-cream-200/55;
   }
 
-  /** زرّ رابط معرِّف المواقع (صفحة التفاصيل) */
+  /** Website URL pill button (detail page) */
   .sk-link-pill {
     @apply inline-flex max-w-full items-center rounded-lg border border-cream-400/90 bg-cream-100/90 px-3 py-2 text-sm text-cream-950 shadow-sm transition-colors;
     @apply hover:border-sage-400 hover:bg-cream-200/70;
   }
 
-  /** تظليل خفيف لصفوف ذات ضغط الموعد (قوائم) */
+  /** Soft row tint by due urgency (list views) */
   .sk-due-row-warn {
     @apply bg-amber-500/12;
   }
@@ -234,7 +234,7 @@ body {
     @apply bg-red-600/14;
   }
 
-  /** مسار ومِلء شريط تقدّم الموعد — واضح في الفاتح والداكن */
+  /** Due progress bar track & fill — readable in light & dark */
   .sk-due-bar-track-safe {
     @apply bg-cream-300/90;
   }

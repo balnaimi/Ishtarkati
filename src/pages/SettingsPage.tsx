@@ -17,6 +17,7 @@ import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
+import { tCurrency } from "../lib/i18nLabels";
 import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backupIPC";
 
 const OVERRIDES_KEY = "fx_overrides_json";
@@ -429,7 +430,7 @@ export function SettingsPage() {
             >
               {listCurrenciesSorted().map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.flag} {c.code} — {c.nameAr}
+                  {c.flag} {c.code} — {tCurrency(t, c.code)}
                 </option>
               ))}
             </select>

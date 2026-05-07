@@ -4,8 +4,8 @@ import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types"
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
 import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
-import { listCurrenciesSorted, getCurrencyInfo } from "../lib/currenciesData";
-import { PAYMENT_SERVICES, CARD_BRANDS } from "../lib/paymentCatalog";
+import { listCurrenciesSorted } from "../lib/currenciesData";
+import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 import { SiteFavicon } from "./SiteFavicon";
@@ -214,7 +214,7 @@ export function SubscriptionForm({
     }
   }
 
-  const primaryMeta = getCurrencyInfo(primary);
+  const primaryMetaLabel = tCurrency(t, primary);
   const websiteHost = useMemo(() => hostnameFromWebsiteUrl(v.website_url), [v.website_url]);
 
   return (
@@ -330,7 +330,7 @@ export function SubscriptionForm({
           <optgroup label={t("form.paymentOptgroupServices")}>
             {wallets.map((w) => (
               <option key={`w-${w.id}`} value={`w:${w.id}`}>
-                {PAYMENT_SERVICES.find((s) => s.code === w.service_code)?.nameAr ?? w.service_code} ·{" "}
+                {tPaymentService(t, w.service_code)} ·{" "}
                 {w.account_text.slice(0, 24)}
                 {w.account_text.length > 24 ? "…" : ""}
               </option>
@@ -341,7 +341,7 @@ export function SubscriptionForm({
               <option key={`c-${c.id}`} value={`c:${c.id}`}>
                 {creditCardPrimaryLine(
                   c,
-                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
+                  tCardBrand(t, c.brand),
                 )}{" "}
                 ({t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })})
               </option>
@@ -432,7 +432,7 @@ export function SubscriptionForm({
             <option value="">{t("form.selectCurrency")}</option>
             {currencyOptions.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.flag} {c.code} — {c.nameAr}
+                {c.flag} {c.code} — {tCurrency(t, c.code)}
               </option>
             ))}
           </select>
@@ -442,7 +442,7 @@ export function SubscriptionForm({
       {showFxPrimaryCard ? (
         <div className="sk-card space-y-3">
           <p className="text-sm font-medium text-cream-700">
-            {t("form.approxPrimary", { code: primary, label: primaryMeta.nameAr })}
+            {t("form.approxPrimary", { code: primary, label: primaryMetaLabel })}
           </p>
           <p className="text-xl font-semibold text-sage-800">
             {primaryPreview.primary != null ? primaryPreview.primary.toFixed(2) : "—"}
