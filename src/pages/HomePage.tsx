@@ -240,7 +240,7 @@ export function HomePage() {
               <li key={s.id}>
                 <button
                   type="button"
-                  className="sk-card sk-card-interactive flex w-full items-start gap-3 px-4 py-3 text-right shadow-sm"
+                  className="sk-card sk-card-interactive flex w-full items-start gap-3 px-4 py-3 text-start shadow-sm"
                   onClick={() => nav(`/sub/${s.id}`)}
                 >
                   {s.website_url?.trim() ? (

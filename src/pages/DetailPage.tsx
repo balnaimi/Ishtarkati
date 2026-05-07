@@ -221,12 +221,12 @@ export function DetailPage() {
       />
       <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1 flex flex-col gap-3 text-start">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start">
             {sub.website_url?.trim() ? (
               <SiteFavicon websiteUrl={sub.website_url} size="lg" className="sm:mt-0.5" />
             ) : null}
-            <div className="min-w-0 flex-1 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2 text-start">
               <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
               <p className="text-sm text-cream-700">
                 {sub.category_name ?? "—"}

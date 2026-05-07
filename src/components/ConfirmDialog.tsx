@@ -51,16 +51,16 @@ export function ConfirmDialog({
           </h3>
         ) : null}
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-cream-800">{message}</p>
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="sk-btn-secondary min-h-10 text-sm" onClick={onCancel}>
-            {cancelLabel ?? t("common.cancel")}
-          </button>
+        <div className="flex flex-wrap justify-start gap-2">
           <button
             type="button"
             className={`min-h-10 text-sm ${variant === "danger" ? "sk-btn-danger" : "sk-btn-primary"}`}
             onClick={onConfirm}
           >
             {confirmLabel ?? t("common.confirm")}
+          </button>
+          <button type="button" className="sk-btn-secondary min-h-10 text-sm" onClick={onCancel}>
+            {cancelLabel ?? t("common.cancel")}
           </button>
         </div>
       </div>

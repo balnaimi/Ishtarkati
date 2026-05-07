@@ -18,7 +18,7 @@ export function DualCurrencyAmounts({
   const small = size === "sm";
   return (
     <div
-      className={`flex flex-col items-end gap-0.5 ${small ? "text-xs" : "text-sm"} ${className}`.trim()}
+      className={`flex flex-col items-start gap-0.5 ${small ? "text-xs" : "text-sm"} ${className}`.trim()}
     >
       <span
         dir="ltr"

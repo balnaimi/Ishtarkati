@@ -269,7 +269,7 @@ export function SubscriptionsListPage() {
         <p className="sk-text-hint">{t("list.empty")}</p>
       ) : (
         <div className="sk-card overflow-x-auto p-0 shadow-sm">
-          <table className="w-full min-w-[640px] text-right text-sm">
+          <table className="w-full min-w-[640px] text-start text-sm">
             <thead className="border-b border-cream-400 bg-cream-200/80 text-cream-800">
               <tr>
                 <th className="px-3 py-3 font-semibold">{t("list.name")}</th>
@@ -294,7 +294,7 @@ export function SubscriptionsListPage() {
                     onClick={() => nav(`/sub/${s.id}`)}
                   >
                     <td className="px-3 py-3 align-top">
-                      <div className="flex items-start justify-end gap-2">
+                      <div className="flex w-full items-start justify-start gap-2">
                         {s.website_url?.trim() ? (
                           <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
                         ) : null}
