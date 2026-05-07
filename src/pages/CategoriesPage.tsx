@@ -7,11 +7,13 @@ import {
   updateCategory,
 } from "../db/repo";
 import type { Category } from "../types";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
   const { t } = useTranslation();
   const [items, setItems] = useState<Category[]>([]);
   const [name, setName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const reload = useCallback(async () => {
     setItems(await loadCategories());
@@ -29,14 +31,28 @@ export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
     void reload();
   }
 
-  async function handleDelete(c: Category) {
-    if (!confirm(t("categories.confirmDelete"))) return;
-    await deleteCategory(c.id);
+  async function confirmDeleteCategory() {
+    if (!deleteTarget) return;
+    await deleteCategory(deleteTarget.id);
+    setDeleteTarget(null);
     void reload();
+  }
+
+  async function handleDelete(c: Category) {
+    setDeleteTarget(c);
   }
 
   return (
     <div className="space-y-8">
+      <ConfirmDialog
+        open={deleteTarget != null}
+        title={t("confirmDialog.deleteTitle")}
+        message={t("categories.confirmDelete")}
+        variant="danger"
+        confirmLabel={t("common.delete")}
+        onConfirm={() => void confirmDeleteCategory()}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {omitTitle ? null : (
         <h2 className="text-xl font-semibold text-cream-900">{t("categories.title")}</h2>
       )}

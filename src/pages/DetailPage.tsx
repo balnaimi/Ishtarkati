@@ -25,6 +25,7 @@ import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { tagTokens } from "../lib/tags";
 import { displayUrlForUi } from "../lib/siteFavicon";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function DetailPage() {
   const { t } = useTranslation();
@@ -46,6 +47,7 @@ export function DetailPage() {
   const [backfillBusy, setBackfillBusy] = useState(false);
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
   const [backfillAdvanceNext, setBackfillAdvanceNext] = useState(true);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -89,8 +91,8 @@ export function DetailPage() {
 
   async function handleDelete() {
     if (!id || !sub) return;
-    if (!confirm(t("detail.confirmDeleteSub"))) return;
     await deleteSubscription(parseInt(id, 10));
+    setDeleteConfirmOpen(false);
     nav("/");
   }
 
@@ -207,7 +209,17 @@ export function DetailPage() {
   const needsPaid = subscriptionNeedsPaidAttention(sub);
 
   return (
-    <div className="space-y-8">
+    <>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t("confirmDialog.deleteTitle")}
+        message={t("detail.confirmDeleteSub")}
+        variant="danger"
+        confirmLabel={t("common.delete")}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+      <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -295,7 +307,7 @@ export function DetailPage() {
           <Link to={`/sub/${sub.id}/edit`} className="sk-btn-secondary text-sm">
             {t("common.edit")}
           </Link>
-          <button type="button" className="sk-btn-danger text-sm" onClick={() => void handleDelete()}>
+          <button type="button" className="sk-btn-danger text-sm" onClick={() => setDeleteConfirmOpen(true)}>
             {t("common.delete")}
           </button>
         </div>
@@ -464,5 +476,6 @@ export function DetailPage() {
         ← {t("common.back")}
       </Link>
     </div>
+    </>
   );
 }

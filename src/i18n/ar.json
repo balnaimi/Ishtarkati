@@ -22,7 +22,12 @@
     "actions": "إجراءات",
     "details": "التفاصيل",
     "none": "لا شيء",
-    "all": "الكل"
+    "all": "الكل",
+    "confirm": "تأكيد"
+  },
+  "confirmDialog": {
+    "deleteTitle": "تأكيد الحذف",
+    "pinRemoveTitle": "إزالة رمز القفل المحفوظ"
   },
   "home": {
     "dashboardTitle": "لوحة التحكم",
@@ -301,6 +306,10 @@
     "serviceName": "اسم الخدمة",
     "accountOnService": "حسابك أو المعرف على الخدمة",
     "optionalLinkCard": "ربط بطاقة احفظتها هنا (اختياري — يظهر إن وُجدت بطاقات)",
+    "editWalletTitle": "تعديل طريقة الدفع",
+    "editCardTitle": "تعديل البطاقة",
+    "savedCardPickerLabel": "البطاقات المحفوظة (قائمة الربط)",
+    "savedCardPickerHint": "هذه القائمة تعرض البطاقات التي أضفتها في تبويب «بطاقة ائتمانية». اختر واحدة لربطها بهذه الخدمة، أو اترك «لا شيء» إن لم يكن هناك ربط.",
     "saveWallet": "حفظ",
     "noWallets": "لا توجد طرق محفظة بعد.",
     "confirmDeleteWallet": "حذف هذه الطريقة؟",

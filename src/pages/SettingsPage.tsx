@@ -15,6 +15,7 @@ import { APP_VERSION } from "../version";
 import { CategoriesPage } from "./CategoriesPage";
 import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backupIPC";
 
@@ -38,6 +39,7 @@ export function SettingsPage() {
   const [exportBusy, setExportBusy] = useState(false);
   const [primaryCurrency, setPrimaryCurrency] = useState("QAR");
   const [pinHasStored, setPinHasStored] = useState(false);
+  const [pinRemoveConfirmOpen, setPinRemoveConfirmOpen] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
   const [pinPanel, setPinPanel] = useState<null | "set" | "changeCurrent" | "changeNew">(null);
   const [pinCurrent, setPinCurrent] = useState("");
@@ -322,7 +324,7 @@ export function SettingsPage() {
 
   async function removeStoredPinFully() {
     if (!pinHasStored) return;
-    if (!window.confirm(t("settings.pinRemoveConfirm"))) return;
+    setPinRemoveConfirmOpen(false);
     setPinBusy(true);
     try {
       await window.ishtarkati.clearPin();
@@ -389,6 +391,15 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <ConfirmDialog
+        open={pinRemoveConfirmOpen}
+        title={t("confirmDialog.pinRemoveTitle")}
+        message={t("settings.pinRemoveConfirm")}
+        variant="danger"
+        confirmLabel={t("settings.pinRemoveStored")}
+        onConfirm={() => void removeStoredPinFully()}
+        onCancel={() => setPinRemoveConfirmOpen(false)}
+      />
       <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
 
       <div className="flex flex-wrap gap-2 border-b border-cream-400 pb-3">
@@ -519,7 +530,7 @@ export function SettingsPage() {
                   type="button"
                   className="sk-btn-danger w-full sm:w-auto"
                   disabled={pinBusy || Boolean(pinPanel)}
-                  onClick={() => void removeStoredPinFully()}
+                  onClick={() => setPinRemoveConfirmOpen(true)}
                 >
                   {t("settings.pinRemoveStored")}
                 </button>

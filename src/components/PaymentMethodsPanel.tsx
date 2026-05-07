@@ -14,6 +14,7 @@ import type { CreditCard, WalletMethod } from "../types";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { PAYMENT_SERVICES, CARD_BRANDS } from "../lib/paymentCatalog";
 import { cardExpiryProgress, DUE_TONE_BAR, DUE_TONE_TRACK } from "../lib/dueProgress";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function PaymentMethodsPanel() {
   const { t } = useTranslation();
@@ -117,6 +118,7 @@ function WalletSection({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-cream-600">{t("payment.savedCardPickerHint")}</p>
         </div>
         <button type="submit" className="sk-btn-primary">
           {t("payment.saveWallet")}
@@ -150,6 +152,7 @@ function WalletRow({
   const [service, setService] = useState(w.service_code);
   const [account, setAccount] = useState(w.account_text);
   const [linkCard, setLinkCard] = useState(w.linked_card_id != null ? String(w.linked_card_id) : "");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     setService(w.service_code);
@@ -168,8 +171,8 @@ function WalletRow({
   }
 
   async function del() {
-    if (!confirm(t("payment.confirmDeleteWallet"))) return;
     await deleteWalletMethod(w.id);
+    setDeleteConfirmOpen(false);
     onChanged();
   }
 
@@ -177,26 +180,37 @@ function WalletRow({
 
   if (edit) {
     return (
-      <li className="sk-card space-y-3">
-        <select className="sk-select" value={service} onChange={(e) => setService(e.target.value)}>
-          {PAYMENT_SERVICES.map((s) => (
-            <option key={s.code} value={s.code}>
-              {s.nameAr}
-            </option>
-          ))}
-        </select>
-        <input className="sk-input" value={account} onChange={(e) => setAccount(e.target.value)} />
-        <select className="sk-select" value={linkCard} onChange={(e) => setLinkCard(e.target.value)}>
-          <option value="">{t("common.none")}</option>
-          {cards.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {creditCardPrimaryLine(
-                c,
-                CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
-              )}
-            </option>
-          ))}
-        </select>
+      <li className="sk-card space-y-4">
+        <p className="font-semibold text-cream-900">{t("payment.editWalletTitle")}</p>
+        <div>
+          <label className="sk-label">{t("payment.serviceName")}</label>
+          <select className="sk-select" value={service} onChange={(e) => setService(e.target.value)}>
+            {PAYMENT_SERVICES.map((s) => (
+              <option key={s.code} value={s.code}>
+                {s.nameAr}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sk-label">{t("payment.accountOnService")}</label>
+          <input className="sk-input" value={account} onChange={(e) => setAccount(e.target.value)} />
+        </div>
+        <div>
+          <label className="sk-label">{t("payment.savedCardPickerLabel")}</label>
+          <select className="sk-select" value={linkCard} onChange={(e) => setLinkCard(e.target.value)}>
+            <option value="">{t("common.none")}</option>
+            {cards.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {creditCardPrimaryLine(
+                  c,
+                  CARD_BRANDS.find((b) => b.code === c.brand)?.nameAr ?? c.brand,
+                )}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-cream-600">{t("payment.savedCardPickerHint")}</p>
+        </div>
         <div className="flex gap-2">
           <button type="button" className="sk-btn-primary text-sm" onClick={() => void save()}>
             {t("common.save")}
@@ -210,34 +224,45 @@ function WalletRow({
   }
 
   return (
-    <li className="sk-card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="font-semibold text-cream-900">{svc}</p>
-        <p className="text-sm text-cream-800">{w.account_text}</p>
-        {w.linked_card_id ? (
-          <p className="text-xs text-cream-600">
-            {t("payment.linkedCard")}:{" "}
-            {(() => {
-              const lc = cards.find((c) => c.id === w.linked_card_id);
-              return lc
-                ? creditCardPrimaryLine(
-                    lc,
-                    CARD_BRANDS.find((b) => b.code === lc.brand)?.nameAr ?? lc.brand,
-                  )
-                : "—";
-            })()}
-          </p>
-        ) : null}
-      </div>
-      <div className="flex gap-2">
-        <button type="button" className="sk-btn-secondary text-sm" onClick={() => setEdit(true)}>
-          {t("common.edit")}
-        </button>
-        <button type="button" className="sk-btn-danger text-sm" onClick={() => void del()}>
-          {t("common.delete")}
-        </button>
-      </div>
-    </li>
+    <>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t("confirmDialog.deleteTitle")}
+        message={t("payment.confirmDeleteWallet")}
+        variant="danger"
+        confirmLabel={t("common.delete")}
+        onConfirm={() => void del()}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+      <li className="sk-card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold text-cream-900">{svc}</p>
+          <p className="text-sm text-cream-800">{w.account_text}</p>
+          {w.linked_card_id ? (
+            <p className="text-xs text-cream-600">
+              {t("payment.linkedCard")}:{" "}
+              {(() => {
+                const lc = cards.find((c) => c.id === w.linked_card_id);
+                return lc
+                  ? creditCardPrimaryLine(
+                      lc,
+                      CARD_BRANDS.find((b) => b.code === lc.brand)?.nameAr ?? lc.brand,
+                    )
+                  : "—";
+              })()}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex gap-2">
+          <button type="button" className="sk-btn-secondary text-sm" onClick={() => setEdit(true)}>
+            {t("common.edit")}
+          </button>
+          <button type="button" className="sk-btn-danger text-sm" onClick={() => setDeleteConfirmOpen(true)}>
+            {t("common.delete")}
+          </button>
+        </div>
+      </li>
+    </>
   );
 }
 
@@ -351,6 +376,7 @@ function CardSection({
 function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
   const { t } = useTranslation();
   const [edit, setEdit] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [brand, setBrand] = useState(c.brand);
   const [last4, setLast4] = useState(c.last4);
   const [description, setDescription] = useState(c.description ?? "");
@@ -386,8 +412,8 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
   }
 
   async function del() {
-    if (!confirm(t("payment.confirmDeleteCard"))) return;
     await deleteCreditCard(c.id);
+    setDeleteConfirmOpen(false);
     onChanged();
   }
 
@@ -395,25 +421,42 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
 
   if (edit) {
     return (
-      <li className="sk-card space-y-3">
-        <select className="sk-select" value={brand} onChange={(e) => setBrand(e.target.value)}>
-          {CARD_BRANDS.map((b) => (
-            <option key={b.code} value={b.code}>
-              {b.nameAr}
-            </option>
-          ))}
-        </select>
-        <textarea
-          className="sk-textarea"
-          rows={2}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={t("payment.cardDescriptionPlaceholder")}
-        />
-        <input className="sk-input font-mono" value={last4} maxLength={4} onChange={(e) => setLast4(e.target.value)} />
-        <div className="flex gap-2">
-          <input type="number" className="sk-input w-24" value={expM} onChange={(e) => setExpM(e.target.value)} />
-          <input type="number" className="sk-input w-28" value={expY} onChange={(e) => setExpY(e.target.value)} />
+      <li className="sk-card space-y-4">
+        <p className="font-semibold text-cream-900">{t("payment.editCardTitle")}</p>
+        <div>
+          <label className="sk-label">{t("payment.cardBrand")}</label>
+          <select className="sk-select" value={brand} onChange={(e) => setBrand(e.target.value)}>
+            {CARD_BRANDS.map((b) => (
+              <option key={b.code} value={b.code}>
+                {b.nameAr}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="sk-label">{t("payment.cardDescription")}</label>
+          <textarea
+            className="sk-textarea"
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t("payment.cardDescriptionPlaceholder")}
+          />
+          <p className="mt-1 text-xs text-cream-600">{t("payment.cardDescriptionHint")}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <label className="sk-label">{t("payment.cardLast4")}</label>
+            <input className="sk-input font-mono" value={last4} maxLength={4} onChange={(e) => setLast4(e.target.value)} />
+          </div>
+          <div>
+            <label className="sk-label">{t("payment.cardExpMonth")}</label>
+            <input type="number" className="sk-input w-full min-w-0" value={expM} onChange={(e) => setExpM(e.target.value)} />
+          </div>
+          <div>
+            <label className="sk-label">{t("payment.cardExpYear")}</label>
+            <input type="number" className="sk-input w-full min-w-0" value={expY} onChange={(e) => setExpY(e.target.value)} />
+          </div>
         </div>
         <div className="flex gap-2">
           <button type="button" className="sk-btn-primary text-sm" onClick={() => void save()}>
@@ -428,42 +471,53 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
   }
 
   return (
-    <li className="sk-card space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="font-semibold text-cream-900">
-            {label} ·••• {c.last4}
-          </p>
-          {(c.description ?? "").trim() ? (
-            <p className="text-sm text-cream-800">{(c.description ?? "").trim()}</p>
-          ) : null}
-          <p className="text-sm text-cream-700">
-            {t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })}
-          </p>
-          <p className="text-xs text-cream-600">
-            {xp.monthsLeft < 0
-              ? t("payment.cardExpired")
-              : t("payment.monthsUntilExpiry", { count: xp.monthsLeft })}
-          </p>
+    <>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t("confirmDialog.deleteTitle")}
+        message={t("payment.confirmDeleteCard")}
+        variant="danger"
+        confirmLabel={t("common.delete")}
+        onConfirm={() => void del()}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+      <li className="sk-card space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="font-semibold text-cream-900">
+              {label} ·••• {c.last4}
+            </p>
+            {(c.description ?? "").trim() ? (
+              <p className="text-sm text-cream-800">{(c.description ?? "").trim()}</p>
+            ) : null}
+            <p className="text-sm text-cream-700">
+              {t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })}
+            </p>
+            <p className="text-xs text-cream-600">
+              {xp.monthsLeft < 0
+                ? t("payment.cardExpired")
+                : t("payment.monthsUntilExpiry", { count: xp.monthsLeft })}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" className="sk-btn-secondary text-sm" onClick={() => setEdit(true)}>
+              {t("common.edit")}
+            </button>
+            <button type="button" className="sk-btn-danger text-sm" onClick={() => setDeleteConfirmOpen(true)}>
+              {t("common.delete")}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button type="button" className="sk-btn-secondary text-sm" onClick={() => setEdit(true)}>
-            {t("common.edit")}
-          </button>
-          <button type="button" className="sk-btn-danger text-sm" onClick={() => void del()}>
-            {t("common.delete")}
-          </button>
-        </div>
-      </div>
-      <div
-        className={`overflow-hidden rounded-full ${DUE_TONE_TRACK[tone]} h-2 shadow-inner`}
-        title={t("payment.expiryBarHint")}
-      >
         <div
-          className={`${DUE_TONE_BAR[tone]} h-2 rounded-full transition-[width]`}
-          style={{ width: `${Math.min(100, Math.round(xp.ratio * 100))}%` }}
-        />
-      </div>
-    </li>
+          className={`overflow-hidden rounded-full ${DUE_TONE_TRACK[tone]} h-2 shadow-inner`}
+          title={t("payment.expiryBarHint")}
+        >
+          <div
+            className={`${DUE_TONE_BAR[tone]} h-2 rounded-full transition-[width]`}
+            style={{ width: `${Math.min(100, Math.round(xp.ratio * 100))}%` }}
+          />
+        </div>
+      </li>
+    </>
   );
 }
