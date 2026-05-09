@@ -199,6 +199,7 @@ type NormalizedImportPayment = {
   currency: string | null;
   amount_qar: number | null;
   renewal_years: number | null;
+  renewal_step_count: number | null;
   note: string | null;
 };
 
@@ -263,6 +264,22 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
 }
 
 function normalizeImportedPayment(row: Record<string, unknown>): NormalizedImportPayment {
+  const renewal_years =
+    row.renewal_years == null || row.renewal_years === "" ? null : Number(row.renewal_years);
+  let renewal_step_count =
+    "renewal_step_count" in row && row.renewal_step_count != null && row.renewal_step_count !== ""
+      ? Number(row.renewal_step_count)
+      : null;
+  if (
+    renewal_step_count == null ||
+    !Number.isFinite(renewal_step_count) ||
+    renewal_step_count <= 0
+  ) {
+    renewal_step_count =
+      renewal_years != null && Number.isFinite(renewal_years) && renewal_years > 0
+        ? renewal_years
+        : null;
+  }
   return {
     sourceId: Number(row.id),
     subscriptionSourceId: Number(row.subscription_id),
@@ -277,7 +294,13 @@ function normalizeImportedPayment(row: Record<string, unknown>): NormalizedImpor
         : String(row.currency).trim().toUpperCase(),
     amount_qar: row.amount_qar == null || row.amount_qar === "" ? null : Number(row.amount_qar),
     renewal_years:
-      row.renewal_years == null || row.renewal_years === "" ? null : Number(row.renewal_years),
+      renewal_years != null && Number.isFinite(renewal_years) && renewal_years > 0
+        ? renewal_years
+        : null,
+    renewal_step_count:
+      renewal_step_count != null && Number.isFinite(renewal_step_count) && renewal_step_count > 0
+        ? Math.floor(renewal_step_count)
+        : null,
     note: row.note == null || row.note === "" ? null : String(row.note),
   };
 }
@@ -487,8 +510,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
 
       const insPayOnly = database.prepare(`
       INSERT INTO payment_events (
-        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, note
-      ) VALUES (?,?,?,?,?,?,?,?)
+        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note
+      ) VALUES (?,?,?,?,?,?,?,?,?)
     `);
       for (const row of data.payment_events) {
         if (!isRecord(row)) throw new Error("Invalid payment row");
@@ -501,6 +524,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
           pv.currency,
           pv.amount_qar,
           pv.renewal_years,
+          pv.renewal_step_count,
           pv.note,
         );
       }
@@ -587,8 +611,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
 
     const insPay = database.prepare(`
       INSERT INTO payment_events (
-        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, note
-      ) VALUES (?,?,?,?,?,?,?,?)
+        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note
+      ) VALUES (?,?,?,?,?,?,?,?,?)
     `);
     for (const row of data.payment_events) {
       if (!isRecord(row)) throw new Error("Invalid payment row");
@@ -601,6 +625,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         pv.currency,
         pv.amount_qar,
         pv.renewal_years,
+        pv.renewal_step_count,
         pv.note,
       );
     }
@@ -853,12 +878,12 @@ function mergeImportIntoDb(
     const payExists = database.prepare("SELECT id FROM payment_events WHERE id = ?");
     const insPay = database.prepare(`
       INSERT INTO payment_events (
-        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, note
-      ) VALUES (?,?,?,?,?,?,?,?)
+        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note
+      ) VALUES (?,?,?,?,?,?,?,?,?)
     `);
     const updPay = database.prepare(`
       UPDATE payment_events SET subscription_id = ?, paid_at = ?, amount_original = ?, currency = ?,
-      amount_qar = ?, renewal_years = ?, note = ? WHERE id = ?
+      amount_qar = ?, renewal_years = ?, renewal_step_count = ?, note = ? WHERE id = ?
     `);
 
     const importNormPays = data.payment_events.map((row) => {
@@ -882,6 +907,7 @@ function mergeImportIntoDb(
             pv.currency,
             pv.amount_qar,
             pv.renewal_years,
+            pv.renewal_step_count,
             pv.note,
             pv.sourceId,
           );
@@ -895,6 +921,7 @@ function mergeImportIntoDb(
           pv.currency,
           pv.amount_qar,
           pv.renewal_years,
+          pv.renewal_step_count,
           pv.note,
         );
       }

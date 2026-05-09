@@ -361,6 +361,19 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 8").run();
   }
+
+  if (version < 9) {
+    if (sqliteTableExists(database, "payment_events")) {
+      const cols = database.pragma("table_info(payment_events)") as { name: string }[];
+      if (!cols.some((c) => c.name === "renewal_step_count")) {
+        database.exec("ALTER TABLE payment_events ADD COLUMN renewal_step_count INTEGER");
+        database.exec(
+          "UPDATE payment_events SET renewal_step_count = renewal_years WHERE renewal_years IS NOT NULL",
+        );
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 9").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

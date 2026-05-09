@@ -404,6 +404,9 @@ export function SubscriptionForm({
                   value={v.interval_count}
                   onChange={(e) => setField("interval_count", e.target.value)}
                 />
+                {v.interval_unit === "year" ? (
+                  <p className="mt-1 text-xs leading-relaxed text-cream-600">{t("form.intervalCountHintYear")}</p>
+                ) : null}
               </div>
             </div>
           </div>

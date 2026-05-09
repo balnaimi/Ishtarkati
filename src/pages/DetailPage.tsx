@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   cancelSubscription,
   confirmSubscriptionPaid,
@@ -28,6 +29,18 @@ import { SiteFavicon } from "../components/SiteFavicon";
 import { tagTokens } from "../lib/tags";
 import { displayUrlForUi } from "../lib/siteFavicon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { effectiveRenewalSteps } from "../lib/paymentRenewal";
+
+function renewalStepUnitWord(t: TFunction, iu: IntervalUnit | null): string {
+  if (!iu) return "";
+  const keys: Record<IntervalUnit, string> = {
+    day: "detail.renewalStepUnit.day",
+    week: "detail.renewalStepUnit.week",
+    month: "detail.renewalStepUnit.month",
+    year: "detail.renewalStepUnit.year",
+  };
+  return t(keys[iu]);
+}
 
 export function DetailPage() {
   const { t } = useTranslation();
@@ -42,6 +55,7 @@ export function DetailPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payNote, setPayNote] = useState("");
   const [advanceRecurring, setAdvanceRecurring] = useState(true);
+  const [payRenewalSteps, setPayRenewalSteps] = useState("1");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [backfillFrom, setBackfillFrom] = useState("");
@@ -68,6 +82,9 @@ export function DetailPage() {
       if (s) {
         setPayAmount(String(s.amount_original));
         setBackfillFrom(s.start_date?.slice(0, 10) ?? "");
+        if (s.billing_model === "recurring") {
+          setPayRenewalSteps(String(Math.max(1, s.interval_count ?? 1)));
+        }
       }
     } finally {
       setLoading(false);
@@ -106,20 +123,28 @@ export function DetailPage() {
     const amt = parseFloat(payAmount.replace(",", "."));
     const amountOriginal = Number.isNaN(amt) ? null : amt;
     const amountPrimary = sub.amount_qar_snapshot;
+    const parsedSteps = parseInt(payRenewalSteps.trim(), 10);
+    const renewalStepsForPayment =
+      sub.billing_model === "recurring" &&
+      sub.interval_unit &&
+      Number.isFinite(parsedSteps) &&
+      parsedSteps > 0
+        ? parsedSteps
+        : null;
     await insertPaymentEvent(
       sid,
       paidAt,
       amountOriginal,
       sub.currency_code,
       amountPrimary,
-      null,
+      renewalStepsForPayment,
       payNote.trim() || null,
     );
-    if (sub.billing_model === "recurring" && advanceRecurring) {
+    if (sub.billing_model === "recurring" && advanceRecurring && sub.interval_unit) {
       const base =
         parseDateInput(sub.next_due_date) ?? parseDateInput(paidAt) ?? new Date();
-      const cnt = Math.max(1, sub.interval_count ?? 1);
-      const next = addBillingSteps(base, sub.interval_unit as IntervalUnit | null, cnt);
+      const cnt = renewalStepsForPayment ?? Math.max(1, sub.interval_count ?? 1);
+      const next = addBillingSteps(base, sub.interval_unit as IntervalUnit, cnt);
       await setSubscriptionNextDue(sid, formatDateInput(next));
     }
     setPayNote("");
@@ -161,7 +186,7 @@ export function DetailPage() {
     setBackfillBusy(true);
     try {
       for (const paidAt of isoDates) {
-        await insertPaymentEvent(sid, paidAt, amtOriginal, cur, amtPrimary, null, autoNote);
+        await insertPaymentEvent(sid, paidAt, amtOriginal, cur, amtPrimary, cnt, autoNote);
       }
       if (backfillAdvanceNext && isoDates.length > 0) {
         const lastInserted = isoDates[isoDates.length - 1]!;
@@ -413,9 +438,22 @@ export function DetailPage() {
                 />
               </div>
               <div>
-                <label className="sk-label">{t("detail.paymentNote")}</label>
-                <input className="sk-input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
-              </div>
+                  <label className="sk-label">{t("detail.paymentNote")}</label>
+                  <input className="sk-input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
+                </div>
+              {sub.billing_model === "recurring" && sub.interval_unit ? (
+                <div>
+                  <label className="sk-label">{t("detail.renewalStepsThisPayment")}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="sk-input max-w-xs"
+                    value={payRenewalSteps}
+                    onChange={(e) => setPayRenewalSteps(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs leading-relaxed text-cream-600">{t("detail.renewalStepsHint")}</p>
+                </div>
+              ) : null}
               {sub.billing_model === "recurring" ? (
                 <div className="space-y-2">
                   <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
@@ -514,9 +552,18 @@ export function DetailPage() {
                     ≈ {p.amount_qar.toFixed(2)} {primaryCode}
                   </span>
                 ) : null}
-                {p.renewal_years != null ? (
-                  <span className="me-2 mt-1 block text-xs text-walnut-600">+{p.renewal_years} y</span>
-                ) : null}
+                {(() => {
+                  const steps = effectiveRenewalSteps(p);
+                  const iu = sub.interval_unit as IntervalUnit | null;
+                  const unitWord = renewalStepUnitWord(t, iu);
+                  return steps != null ? (
+                    <span className="me-2 mt-1 block text-xs text-walnut-600">
+                      {iu
+                        ? t("detail.renewalStepsLine", { count: steps, unit: unitWord })
+                        : t("detail.renewalStepsLineNoUnit", { count: steps })}
+                    </span>
+                  ) : null;
+                })()}
                 {p.note ? <p className="mt-2 text-xs text-cream-600">{p.note}</p> : null}
               </li>
             ))

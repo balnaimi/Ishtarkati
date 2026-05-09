@@ -524,14 +524,14 @@ export async function insertPaymentEvent(
   amountOriginal: number | null,
   currency: string | null,
   amountQar: number | null,
-  renewalYears: number | null,
+  renewalStepCount: number | null,
   note: string | null,
 ): Promise<void> {
   const db = await getDb();
   await db.execute(
-    `INSERT INTO payment_events (subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, note)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [subId, paidAt, amountOriginal, currency, amountQar, renewalYears, note],
+    `INSERT INTO payment_events (subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [subId, paidAt, amountOriginal, currency, amountQar, null, renewalStepCount, note],
   );
 }
 

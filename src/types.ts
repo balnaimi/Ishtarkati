@@ -70,7 +70,10 @@ export interface PaymentEvent {
   amount_original: number | null;
   currency: string | null;
   amount_qar: number | null;
+  /** Legacy: was used for multi-year domain renewals; prefer `renewal_step_count`. */
   renewal_years: number | null;
+  /** How many billing steps (each step = subscription `interval_unit`) this payment extended coverage. */
+  renewal_step_count: number | null;
   note: string | null;
 }
 
