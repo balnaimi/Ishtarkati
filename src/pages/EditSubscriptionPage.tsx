@@ -25,6 +25,7 @@ export function EditSubscriptionPage() {
   const [primaryCode, setPrimaryCode] = useState("QAR");
   const [initial, setInitial] = useState<SubscriptionFormValues | null>(null);
   const [existingId, setExistingId] = useState<number | null>(null);
+  const [cancelledAt, setCancelledAt] = useState<string | null>(null);
 
   const reloadMeta = useCallback(async () => {
     const cats = await loadCategories();
@@ -45,9 +46,11 @@ export function EditSubscriptionPage() {
       if (sub) {
         setInitial(subscriptionToForm(sub));
         setExistingId(sub.id);
+        setCancelledAt(sub.cancelled_at);
       } else {
         setInitial(defaultFormValues());
         setExistingId(null);
+        setCancelledAt(null);
       }
     })();
   }, [id]);
@@ -70,6 +73,12 @@ export function EditSubscriptionPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-cream-900">{t("form.editTitle")}</h2>
+      {cancelledAt ? (
+        <div className="sk-callout-muted text-sm">
+          <p className="font-medium text-cream-900">{t("form.editCancelledHint", { date: cancelledAt })}</p>
+          <p className="mt-1 text-cream-800">{t("form.editCancelledHintBody")}</p>
+        </div>
+      ) : null}
       <SubscriptionForm
         key={id}
         initial={initial}

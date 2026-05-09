@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  cancelSubscription,
   confirmSubscriptionPaid,
   deleteSubscription,
   getPrimaryCurrencyCode,
   getSubscription,
   insertPaymentEvent,
   listPayments,
+  reactivateSubscription,
   setSubscriptionNextDue,
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
@@ -48,6 +50,7 @@ export function DetailPage() {
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
   const [backfillAdvanceNext, setBackfillAdvanceNext] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -190,6 +193,19 @@ export function DetailPage() {
     void reload();
   }
 
+  async function handleReactivate() {
+    if (!id) return;
+    await reactivateSubscription(parseInt(id, 10));
+    void reload();
+  }
+
+  async function handleMarkCancelled() {
+    if (!id) return;
+    await cancelSubscription(parseInt(id, 10));
+    setCancelConfirmOpen(false);
+    void reload();
+  }
+
   if (loading) {
     return <p className="text-cream-700">{t("common.loading")}</p>;
   }
@@ -211,6 +227,14 @@ export function DetailPage() {
   return (
     <>
       <ConfirmDialog
+        open={cancelConfirmOpen}
+        title={t("detail.cancelSubscriptionTitle")}
+        message={t("detail.cancelSubscriptionConfirm")}
+        confirmLabel={t("detail.cancelSubscriptionConfirmBtn")}
+        onConfirm={() => void handleMarkCancelled()}
+        onCancel={() => setCancelConfirmOpen(false)}
+      />
+      <ConfirmDialog
         open={deleteConfirmOpen}
         title={t("confirmDialog.deleteTitle")}
         message={t("detail.confirmDeleteSub")}
@@ -228,6 +252,15 @@ export function DetailPage() {
             ) : null}
             <div className="min-w-0 flex-1 space-y-2 text-start">
               <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
+              {sub.cancelled_at ? (
+                <div className="sk-callout-muted text-sm">
+                  <p className="font-medium text-cream-900">{t("detail.cancelledBannerTitle")}</p>
+                  <p className="mt-1 text-cream-800">{t("detail.cancelledBannerBody", { date: sub.cancelled_at })}</p>
+                  <Link to="/cancelled" className="mt-2 inline-block text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
+                    {t("detail.cancelledBannerLink")}
+                  </Link>
+                </div>
+              ) : null}
               {sub.account_label?.trim() ? (
                 <p className="text-sm text-cream-700">
                   {t("detail.accountLabel")}: {sub.account_label.trim()}
@@ -312,13 +345,22 @@ export function DetailPage() {
           <Link to={`/sub/${sub.id}/edit`} className="sk-btn-secondary text-sm">
             {t("common.edit")}
           </Link>
+          {sub.cancelled_at ? (
+            <button type="button" className="sk-btn-primary text-sm" onClick={() => void handleReactivate()}>
+              {t("detail.reactivate")}
+            </button>
+          ) : (
+            <button type="button" className="sk-btn-secondary text-sm" onClick={() => setCancelConfirmOpen(true)}>
+              {t("detail.markCancelled")}
+            </button>
+          )}
           <button type="button" className="sk-btn-danger text-sm" onClick={() => setDeleteConfirmOpen(true)}>
             {t("common.delete")}
           </button>
         </div>
       </div>
 
-      {sub.next_due_date ? (
+      {sub.next_due_date && !sub.cancelled_at ? (
         <div className="sk-card space-y-3">
           <h3 className="font-semibold text-cream-900">{t("detail.dueProgressTitle")}</h3>
           <DueProgressBar sub={progSub} size="md" />
@@ -338,11 +380,16 @@ export function DetailPage() {
           <button
             type="button"
             className="sk-btn-primary shrink-0 px-4"
+            disabled={Boolean(sub.cancelled_at)}
+            title={sub.cancelled_at ? t("detail.paymentsDisabledCancelled") : undefined}
             onClick={() => setPaymentsOpen((p) => !p)}
           >
             {paymentsOpen ? t("detail.closePaymentPanel") : t("detail.openPaymentPanel")}
           </button>
         </div>
+        {sub.cancelled_at ? (
+          <p className="text-xs text-cream-600">{t("detail.paymentsReadOnlyCancelled")}</p>
+        ) : null}
 
         {paymentsOpen ? (
           <div className="space-y-6 border-t border-cream-400/80 pt-4">

@@ -8,6 +8,7 @@ import { NewSubscriptionPage } from "./pages/NewSubscriptionPage";
 import { EditSubscriptionPage } from "./pages/EditSubscriptionPage";
 import { DetailPage } from "./pages/DetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { CancelledSubscriptionsPage } from "./pages/CancelledSubscriptionsPage";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route index element={<HomePage />} />
               <Route path="list" element={<SubscriptionsListPage />} />
+              <Route path="cancelled" element={<CancelledSubscriptionsPage />} />
               <Route path="new" element={<NewSubscriptionPage />} />
               <Route path="sub/:id" element={<DetailPage />} />
               <Route path="sub/:id/edit" element={<EditSubscriptionPage />} />

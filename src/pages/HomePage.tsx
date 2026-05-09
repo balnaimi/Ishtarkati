@@ -101,6 +101,9 @@ export function HomePage() {
           <Link to="/list" className="sk-btn-secondary px-4 py-2.5 text-center">
             {t("home.allSubscriptions")}
           </Link>
+          <Link to="/cancelled" className="sk-btn-secondary px-4 py-2.5 text-center">
+            {t("nav.cancelled")}
+          </Link>
         </div>
       </div>
 

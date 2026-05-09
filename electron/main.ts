@@ -351,6 +351,16 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 7").run();
   }
+
+  if (version < 8) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      if (!cols.some((c) => c.name === "cancelled_at")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN cancelled_at TEXT");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 8").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

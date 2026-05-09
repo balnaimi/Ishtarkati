@@ -28,6 +28,7 @@ export function Layout() {
   const nav = [
     { to: "/", label: t("nav.home") },
     { to: "/list", label: t("nav.subscriptions") },
+    { to: "/cancelled", label: t("nav.cancelled") },
     { to: "/settings", label: t("nav.settings") },
   ];
 
@@ -65,10 +66,12 @@ export function Layout() {
               const homeMatch =
                 to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
               const listMatch = to === "/list" && loc.pathname === "/list";
+              const cancelledMatch = to === "/cancelled" && loc.pathname === "/cancelled";
               const active =
                 listMatch ||
+                cancelledMatch ||
                 loc.pathname === to ||
-                (to !== "/" && to !== "/list" && loc.pathname.startsWith(to)) ||
+                (to !== "/" && to !== "/list" && to !== "/cancelled" && loc.pathname.startsWith(to)) ||
                 homeMatch;
               return (
                 <Link key={to} to={to} className={linkCls(active)}>

@@ -195,6 +195,8 @@ function buildSubscriptionQuery(filters: {
   currency?: string;
   dueWithinDays?: number;
   search?: string;
+  /** Default `active`: excludes cancelled rows (`cancelled_at` set). */
+  subscriptionStatus?: "active" | "cancelled" | "all";
 }): { sql: string; args: unknown[] } {
   const clauses: string[] = ["1=1"];
   const args: unknown[] = [];
@@ -204,6 +206,13 @@ function buildSubscriptionQuery(filters: {
     i += 1;
     return `$${i}`;
   };
+
+  const status = filters.subscriptionStatus ?? "active";
+  if (status === "active") {
+    clauses.push("s.cancelled_at IS NULL");
+  } else if (status === "cancelled") {
+    clauses.push("s.cancelled_at IS NOT NULL");
+  }
 
   if (filters.categoryId != null) {
     clauses.push(`s.category_id = ${next(filters.categoryId)}`);
@@ -225,12 +234,17 @@ function buildSubscriptionQuery(filters: {
     clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.tags,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1})`);
   }
 
+  const orderBy =
+    status === "cancelled"
+      ? "ORDER BY s.cancelled_at DESC, s.updated_at DESC, s.title ASC"
+      : "ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC";
+
   const sql = `
     SELECT s.*, c.name AS category_name
     FROM subscriptions s
     LEFT JOIN categories c ON c.id = s.category_id
     WHERE ${clauses.join(" AND ")}
-    ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC
+    ${orderBy}
   `;
   return { sql, args };
 }
@@ -240,6 +254,7 @@ export async function loadSubscriptions(filters: {
   currency?: string;
   dueWithinDays?: number;
   search?: string;
+  subscriptionStatus?: "active" | "cancelled" | "all";
 }): Promise<SubscriptionListRow[]> {
   const db = await getDb();
   const { sql, args } = buildSubscriptionQuery(filters);
@@ -253,9 +268,14 @@ export async function loadSubscriptionsRecent(limit: number): Promise<Subscripti
     `SELECT s.*, c.name AS category_name
      FROM subscriptions s
      LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL
      ORDER BY s.created_at DESC, s.id DESC
      LIMIT ${lim}`,
   );
+}
+
+export async function loadSubscriptionsCancelled(): Promise<SubscriptionListRow[]> {
+  return loadSubscriptions({ subscriptionStatus: "cancelled" });
 }
 
 export async function loadSubscriptionsDueSoon(limit: number): Promise<SubscriptionListRow[]> {
@@ -265,7 +285,7 @@ export async function loadSubscriptionsDueSoon(limit: number): Promise<Subscript
     `SELECT s.*, c.name AS category_name
      FROM subscriptions s
      LEFT JOIN categories c ON c.id = s.category_id
-     WHERE s.next_due_date IS NOT NULL
+     WHERE s.next_due_date IS NOT NULL AND s.cancelled_at IS NULL
      ORDER BY s.next_due_date ASC, s.title ASC
      LIMIT ${lim}`,
   );
@@ -313,9 +333,9 @@ export async function insertSubscription(row: {
     `INSERT INTO subscriptions (
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
       interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-      start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id, created_at, updated_at
+      start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id, cancelled_at, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
     )`,
     [
       row.title,
@@ -340,6 +360,7 @@ export async function insertSubscription(row: {
       row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
+      null,
       now,
       now,
     ],
@@ -419,6 +440,25 @@ export async function updateSubscription(
   );
 }
 
+export async function cancelSubscription(id: number): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  const day = now.slice(0, 10);
+  await db.execute(
+    "UPDATE subscriptions SET cancelled_at = $1, updated_at = $2 WHERE id = $3",
+    [day, now, id],
+  );
+}
+
+export async function reactivateSubscription(id: number): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.execute("UPDATE subscriptions SET cancelled_at = NULL, updated_at = $1 WHERE id = $2", [
+    now,
+    id,
+  ]);
+}
+
 export async function deleteSubscription(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM subscriptions WHERE id = $1", [id]);
@@ -452,7 +492,7 @@ export async function setSubscriptionNextDue(
 
 export async function confirmSubscriptionPaid(id: number): Promise<void> {
   const sub = await getSubscription(id);
-  if (!sub || !sub.next_due_date) return;
+  if (!sub || sub.cancelled_at || !sub.next_due_date) return;
   if (sub.billing_model === "recurring" && sub.interval_unit) {
     const base = parseDateInput(sub.next_due_date) ?? new Date();
     const cnt = Math.max(1, sub.interval_count ?? 1);
@@ -464,6 +504,7 @@ export async function confirmSubscriptionPaid(id: number): Promise<void> {
 }
 
 export function subscriptionNeedsPaidAttention(sub: Subscription): boolean {
+  if (sub.cancelled_at) return false;
   if (!sub.next_due_date) return false;
   const today = new Date().toISOString().slice(0, 10);
   return sub.next_due_date <= today;

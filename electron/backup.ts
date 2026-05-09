@@ -186,6 +186,7 @@ type NormalizedImportSubscription = {
   credit_card_id: number | null;
   wallet_method_id: number | null;
   account_label: string | null;
+  cancelled_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -251,6 +252,10 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
     account_label:
       "account_label" in row && row.account_label != null && String(row.account_label).trim() !== ""
         ? String(row.account_label).trim()
+        : null,
+    cancelled_at:
+      "cancelled_at" in row && row.cancelled_at != null && String(row.cancelled_at).trim() !== ""
+        ? String(row.cancelled_at).trim().slice(0, 10)
         : null,
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
@@ -443,6 +448,7 @@ function subscriptionRowParams(
     r.credit_card_id,
     r.wallet_method_id,
     r.account_label,
+    r.cancelled_at,
     r.created_at,
     r.updated_at,
   ];
@@ -469,8 +475,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
       for (const row of data.subscriptions) {
         if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -570,8 +576,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     for (const row of data.subscriptions) {
       if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -775,8 +781,8 @@ function mergeImportIntoDb(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     const updSub = database.prepare(`
       UPDATE subscriptions SET
@@ -784,7 +790,7 @@ function mergeImportIntoDb(
         interval_months = ?, interval_count = ?, auto_renew = ?, amount_original = ?, currency_code = ?,
         amount_qar_snapshot = ?, fx_rate_used = ?, fx_quote_at = ?, start_date = ?, next_due_date = ?,
         end_date = ?, is_domain = ?, tags = ?, credit_card_id = ?, wallet_method_id = ?,
-        account_label = ?, created_at = ?, updated_at = ?
+        account_label = ?, cancelled_at = ?, created_at = ?, updated_at = ?
       WHERE id = ?
     `);
     const delSub = database.prepare("DELETE FROM subscriptions WHERE id = ?");
@@ -816,6 +822,7 @@ function mergeImportIntoDb(
           imp.credit_card_id,
           imp.wallet_method_id,
           imp.account_label,
+          imp.cancelled_at,
           imp.created_at,
           imp.updated_at,
           imp.sourceId,

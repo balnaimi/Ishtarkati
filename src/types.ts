@@ -55,6 +55,8 @@ export interface Subscription {
   tags: string | null;
   /** User-defined label for the logged-in / family account (optional). */
   account_label: string | null;
+  /** When set (YYYY-MM-DD), subscription is treated as cancelled / inactive (history). */
+  cancelled_at: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
   created_at: string;
