@@ -222,7 +222,7 @@ function buildSubscriptionQuery(filters: {
   if (filters.search?.trim()) {
     const pat = `%${filters.search.trim()}%`;
     const p1 = next(pat);
-    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.tags,'') LIKE ${p1})`);
+    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.tags,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1})`);
   }
 
   const sql = `
@@ -303,6 +303,7 @@ export async function insertSubscription(row: {
   end_date: string | null;
   is_domain: number;
   tags: string | null;
+  account_label: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
 }): Promise<number> {
@@ -312,9 +313,9 @@ export async function insertSubscription(row: {
     `INSERT INTO subscriptions (
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
       interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-      start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id, created_at, updated_at
+      start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24
     )`,
     [
       row.title,
@@ -336,6 +337,7 @@ export async function insertSubscription(row: {
       row.end_date,
       row.is_domain,
       row.tags,
+      row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
       now,
@@ -373,6 +375,7 @@ export async function updateSubscription(
     end_date: string | null;
     is_domain: number;
     tags: string | null;
+    account_label: string | null;
     credit_card_id: number | null;
     wallet_method_id: number | null;
   },
@@ -385,8 +388,8 @@ export async function updateSubscription(
       billing_model = $5, interval_unit = $6, interval_months = $7, interval_count = $8, auto_renew = $9,
       amount_original = $10, currency_code = $11, amount_qar_snapshot = $12,
       fx_rate_used = $13, fx_quote_at = $14, start_date = $15, next_due_date = $16,
-      end_date = $17, is_domain = $18, tags = $19, credit_card_id = $20, wallet_method_id = $21, updated_at = $22
-    WHERE id = $23`,
+      end_date = $17, is_domain = $18, tags = $19, account_label = $20, credit_card_id = $21, wallet_method_id = $22, updated_at = $23
+    WHERE id = $24`,
     [
       row.title,
       row.notes,
@@ -407,6 +410,7 @@ export async function updateSubscription(
       row.end_date,
       row.is_domain,
       row.tags,
+      row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
       now,

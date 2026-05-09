@@ -28,6 +28,7 @@ export function downloadSubscriptionsCsv(rows: SubscriptionListRow[], t: TFuncti
     t("list.qar"),
     t("form.tags"),
     t("form.notes"),
+    t("form.accountLabel"),
     t("form.website"),
   ];
   const lines = [
@@ -43,6 +44,7 @@ export function downloadSubscriptionsCsv(rows: SubscriptionListRow[], t: TFuncti
         s.amount_qar_snapshot != null ? String(s.amount_qar_snapshot) : "",
         s.tags ?? "",
         s.notes ?? "",
+        s.account_label ?? "",
         s.website_url ?? "",
       ]
         .map((c) => csvCell(c))

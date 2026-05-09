@@ -53,6 +53,8 @@ export interface Subscription {
   end_date: string | null;
   is_domain: number;
   tags: string | null;
+  /** User-defined label for the logged-in / family account (optional). */
+  account_label: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
   created_at: string;
@@ -85,6 +87,7 @@ export interface SubscriptionFormValues {
   next_due_date: string;
   end_date: string;
   tags: string;
+  account_label: string;
   wallet_method_id: string;
   credit_card_id: string;
 }

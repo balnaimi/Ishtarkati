@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
 import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
+import { useDesktopReminders } from "../hooks/useDesktopReminders";
 
 const linkCls = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -15,6 +16,7 @@ export function Layout() {
   const { t } = useTranslation();
   const loc = useLocation();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useDesktopReminders();
 
   function toggleTheme() {
     const next = !document.documentElement.classList.contains("dark");
@@ -26,7 +28,6 @@ export function Layout() {
   const nav = [
     { to: "/", label: t("nav.home") },
     { to: "/list", label: t("nav.subscriptions") },
-    { to: "/new", label: t("nav.add") },
     { to: "/settings", label: t("nav.settings") },
   ];
 

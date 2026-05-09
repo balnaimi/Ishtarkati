@@ -2,6 +2,7 @@
 export interface BackupImportPreview {
   filePath: string;
   exportVersion: number;
+  exportScope: "full" | "subscriptions_only";
   exportedAt: string;
   backupAppVersion: string;
   counts: {

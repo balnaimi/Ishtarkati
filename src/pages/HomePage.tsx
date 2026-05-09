@@ -198,6 +198,15 @@ export function HomePage() {
                     <span className="mt-1 block text-sm sk-text-hint">
                       {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
                     </span>
+                    <div className="mt-2 text-xs">
+                      <DualCurrencyAmounts
+                        size="sm"
+                        originalAmount={s.amount_original}
+                        originalCode={s.currency_code}
+                        approxAmount={s.amount_qar_snapshot}
+                        approxCode={primary}
+                      />
+                    </div>
                     {prog && tone ? (
                       <span className={`mt-1 block text-xs font-medium ${toneTextClass(tone)}`}>
                         {relativeDueCaption(t, prog)}

@@ -228,6 +228,11 @@ export function DetailPage() {
             ) : null}
             <div className="min-w-0 flex-1 space-y-2 text-start">
               <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
+              {sub.account_label?.trim() ? (
+                <p className="text-sm text-cream-700">
+                  {t("detail.accountLabel")}: {sub.account_label.trim()}
+                </p>
+              ) : null}
               <p className="text-sm text-cream-700">
                 {sub.category_name ?? "—"}
                 {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}

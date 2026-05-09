@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   loadSubscriptions,
   loadCategories,
-  getSetting,
   getPrimaryCurrencyCode,
   type AppCurrency,
   type SubscriptionListRow,
@@ -124,28 +123,6 @@ export function SubscriptionsListPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const on = await getSetting("reminders_enabled");
-      if (cancelled || on !== "1") return;
-      const today = new Date().toISOString().slice(0, 10);
-      const key = `due_digest_${today}`;
-      if (sessionStorage.getItem(key)) return;
-      const near = await loadSubscriptions({ dueWithinDays: 7 });
-      const n = near.filter((s) => s.next_due_date).length;
-      if (n === 0) return;
-      const ok = await window.ishtarkati.showNotification({
-        title: t("notify.digestTitle"),
-        body: t("notify.digestBody", { count: n }),
-      });
-      if (ok) sessionStorage.setItem(key, "1");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -298,13 +275,18 @@ export function SubscriptionsListPage() {
                         {s.website_url?.trim() ? (
                           <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
                         ) : null}
-                        <Link
-                          to={`/sub/${s.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="min-w-0 font-medium text-cream-950 underline-offset-2 hover:underline"
-                        >
-                          {s.title}
-                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to={`/sub/${s.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-medium text-cream-950 underline-offset-2 hover:underline"
+                          >
+                            {s.title}
+                          </Link>
+                          {s.account_label?.trim() ? (
+                            <span className="mt-0.5 block text-xs text-cream-600">{s.account_label.trim()}</span>
+                          ) : null}
+                        </div>
                       </div>
                       {tagTokens(s.tags).length ? (
                         <span className="mt-1 flex flex-wrap gap-1">

@@ -341,6 +341,16 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 6").run();
   }
+
+  if (version < 7) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      if (!cols.some((c) => c.name === "account_label")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN account_label TEXT");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 7").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";
@@ -573,6 +583,7 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
     openDatabase();
     registerIpc();
     createWindow();

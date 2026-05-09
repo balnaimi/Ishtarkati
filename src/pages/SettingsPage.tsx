@@ -37,6 +37,9 @@ export function SettingsPage() {
   const [fxErrDetail, setFxErrDetail] = useState<string | null>(null);
   const [fxBusy, setFxBusy] = useState(false);
   const [remindersOn, setRemindersOn] = useState(false);
+  const [reminderDays, setReminderDays] = useState("7");
+  const [reminderWeekly, setReminderWeekly] = useState(false);
+  const [reminderMonthly, setReminderMonthly] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [primaryCurrency, setPrimaryCurrency] = useState("QAR");
   const [pinHasStored, setPinHasStored] = useState(false);
@@ -90,6 +93,13 @@ export function SettingsPage() {
       await syncFxAt();
       const rem = await getSetting("reminders_enabled");
       setRemindersOn(rem === "1");
+      const rd = await getSetting("reminder_due_days");
+      const d = Math.max(1, Math.min(90, parseInt(rd ?? "7", 10) || 7));
+      setReminderDays(String(d));
+      const rw = await getSetting("reminder_weekly_enabled");
+      setReminderWeekly(rw === "1");
+      const rm = await getSetting("reminder_monthly_enabled");
+      setReminderMonthly(rm === "1");
       const prim = await getPrimaryCurrencyCode();
       setPrimaryCurrency(prim);
       await syncPinStateFromDb();
@@ -169,13 +179,30 @@ export function SettingsPage() {
     }
   }
 
-  async function handleExport() {
+  async function handleExportFull() {
     setBackupMsg(null);
     setBackupBusy(true);
     try {
-      const r = await window.ishtarkati.backupExport();
+      const r = await window.ishtarkati.backupExport({ scope: "full" });
       if (r.ok) {
         setBackupMsg(`${t("backup.exportOk")}: ${r.path}`);
+      } else if (r.canceled) {
+        setBackupMsg(t("backup.canceled"));
+      } else {
+        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+      }
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function handleExportSubsOnly() {
+    setBackupMsg(null);
+    setBackupBusy(true);
+    try {
+      const r = await window.ishtarkati.backupExport({ scope: "subscriptions_only" });
+      if (r.ok) {
+        setBackupMsg(`${t("backup.exportOkSubs")}: ${r.path}`);
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
@@ -229,6 +256,22 @@ export function SettingsPage() {
     setRemindersOn(on);
   }
 
+  async function persistReminderDays(raw: string) {
+    const n = Math.max(1, Math.min(90, parseInt(raw, 10) || 7));
+    await setSetting("reminder_due_days", String(n));
+    setReminderDays(String(n));
+  }
+
+  async function setWeeklyDigest(on: boolean) {
+    await setSetting("reminder_weekly_enabled", on ? "1" : "0");
+    setReminderWeekly(on);
+  }
+
+  async function setMonthlyDigest(on: boolean) {
+    await setSetting("reminder_monthly_enabled", on ? "1" : "0");
+    setReminderMonthly(on);
+  }
+
   async function savePrimary(code: string) {
     await setSetting(PRIMARY_CURRENCY_KEY, code.trim().toUpperCase());
     setPrimaryCurrency(code.trim().toUpperCase());
@@ -237,7 +280,12 @@ export function SettingsPage() {
   async function testNotify() {
     await window.ishtarkati.showNotification({
       title: t("notify.digestTitle"),
-      body: t("settings.testNotifyBody"),
+      body: [
+        t("settings.testNotifyBody"),
+        "",
+        "• Netflix: 45 USD — ≈ 164.00 QAR",
+        "• Spotify (عائلة): 26 QAR",
+      ].join("\n"),
     });
   }
 
@@ -448,6 +496,44 @@ export function SettingsPage() {
               />
               {t("settings.remindersEnable")}
             </label>
+            <div>
+              <label className="sk-label" htmlFor="reminder-days">
+                {t("settings.reminderDaysLabel")}
+              </label>
+              <input
+                id="reminder-days"
+                type="number"
+                min={1}
+                max={90}
+                className="sk-input mt-1 max-w-[8rem]"
+                value={reminderDays}
+                onChange={(e) => setReminderDays(e.target.value)}
+                onBlur={() => void persistReminderDays(reminderDays)}
+              />
+              <p className="mt-1 text-xs text-cream-600">{t("settings.reminderDaysHint")}</p>
+            </div>
+            <p className="text-xs font-medium text-cream-800">{t("settings.reminderDigestSchedTitle")}</p>
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={reminderWeekly}
+                onChange={(e) => void setWeeklyDigest(e.target.checked)}
+                disabled={!remindersOn}
+              />
+              {t("settings.reminderWeekly")}
+            </label>
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={reminderMonthly}
+                onChange={(e) => void setMonthlyDigest(e.target.checked)}
+                disabled={!remindersOn}
+              />
+              {t("settings.reminderMonthly")}
+            </label>
+            <p className="text-xs text-cream-600">{t("settings.reminderSchedHint")}</p>
             <button type="button" className="sk-btn-secondary" onClick={() => void testNotify()}>
               {t("settings.testNotify")}
             </button>
@@ -740,18 +826,27 @@ export function SettingsPage() {
           <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("backup.title")}</h3>
             <p className="text-sm leading-relaxed text-cream-700">{t("backup.hint")}</p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <p className="text-xs text-cream-600">{t("backup.versionHint", { exportV: 6 })}</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                className="sk-btn-primary flex-1"
+                className="sk-btn-primary"
                 disabled={backupBusy}
-                onClick={() => void handleExport()}
+                onClick={() => void handleExportFull()}
               >
-                {t("backup.export")}
+                {t("backup.exportFull")}
               </button>
               <button
                 type="button"
-                className="sk-btn-secondary flex-1"
+                className="sk-btn-secondary"
+                disabled={backupBusy}
+                onClick={() => void handleExportSubsOnly()}
+              >
+                {t("backup.exportSubsOnly")}
+              </button>
+              <button
+                type="button"
+                className="sk-btn-secondary"
                 disabled={backupBusy}
                 onClick={() => void prepareImport()}
               >

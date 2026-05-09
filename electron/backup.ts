@@ -3,10 +3,11 @@ import fs from "node:fs";
 import type Database from "better-sqlite3";
 import localeAr from "../src/locales/ar.json";
 
-export const BACKUP_EXPORT_VERSION = 5;
+export const BACKUP_EXPORT_VERSION = 6;
 
 interface BackupPayload {
   exportVersion: number;
+  exportScope?: "full" | "subscriptions_only";
   exportedAt: string;
   appVersion: string;
   categories: unknown[];
@@ -21,6 +22,7 @@ interface BackupPayload {
 export interface ImportPreviewDTO {
   filePath: string;
   exportVersion: number;
+  exportScope: "full" | "subscriptions_only";
   exportedAt: string;
   backupAppVersion: string;
   counts: {
@@ -84,10 +86,13 @@ function validatePayload(raw: unknown): BackupPayload {
     exportVersion !== 2 &&
     exportVersion !== 3 &&
     exportVersion !== 4 &&
-    exportVersion !== 5
+    exportVersion !== 5 &&
+    exportVersion !== 6
   ) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
+  const exportScope: "full" | "subscriptions_only" =
+    raw.exportScope === "subscriptions_only" ? "subscriptions_only" : "full";
   const categories = raw.categories;
   const subscriptions = raw.subscriptions;
   const payment_events = raw.payment_events;
@@ -101,6 +106,7 @@ function validatePayload(raw: unknown): BackupPayload {
   if (!Array.isArray(settings)) throw new Error("Invalid backup: settings");
   return {
     exportVersion,
+    exportScope,
     exportedAt: String(raw.exportedAt ?? ""),
     appVersion: String(raw.appVersion ?? ""),
     categories,
@@ -140,15 +146,20 @@ function normalizeTitle(t: unknown): string {
 }
 
 /** Similarity key: normalized title + normalized hostname from URL when present. */
-function subscriptionSimilarityKey(title: unknown, websiteUrl: unknown): string {
+function subscriptionSimilarityKey(title: unknown, websiteUrl: unknown, accountLabel?: unknown): string {
+  const acc =
+    accountLabel == null || String(accountLabel).trim() === ""
+      ? ""
+      : String(accountLabel).trim().toLowerCase();
   const host = hostnameNorm(websiteUrl == null ? undefined : String(websiteUrl));
-  return `${normalizeTitle(title)}|${host}`;
+  return `${normalizeTitle(title)}|${host}|${acc}`;
 }
 
 type LocalSubBrief = {
   id: number;
   title: string;
   website_url: string | null;
+  account_label: string | null;
 };
 
 type NormalizedImportSubscription = {
@@ -174,6 +185,7 @@ type NormalizedImportSubscription = {
   tags: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
+  account_label: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -236,6 +248,10 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
       "wallet_method_id" in row && row.wallet_method_id != null && row.wallet_method_id !== ""
         ? Number(row.wallet_method_id)
         : null,
+    account_label:
+      "account_label" in row && row.account_label != null && String(row.account_label).trim() !== ""
+        ? String(row.account_label).trim()
+        : null,
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
   };
@@ -263,7 +279,7 @@ function normalizeImportedPayment(row: Record<string, unknown>): NormalizedImpor
 
 function buildImportPreview(database: Database.Database, filePath: string, data: BackupPayload): ImportPreviewDTO {
   const localSubs = database
-    .prepare("SELECT id, title, website_url FROM subscriptions ORDER BY id")
+    .prepare("SELECT id, title, website_url, account_label FROM subscriptions ORDER BY id")
     .all() as LocalSubBrief[];
   const localSubIds = new Set(localSubs.map((s) => s.id));
 
@@ -313,13 +329,13 @@ function buildImportPreview(database: Database.Database, filePath: string, data:
   const sortedImp = [...importSubs].sort((a, b) => a.sourceId - b.sourceId);
   for (const imp of sortedImp) {
     if (localSubIds.has(imp.sourceId)) continue;
-    const k = subscriptionSimilarityKey(imp.title, imp.website_url);
+    const k = subscriptionSimilarityKey(imp.title, imp.website_url, imp.account_label);
 
     let picked: LocalSubBrief | undefined;
     for (const loc of localSubs) {
       if (claimedLocals.has(loc.id)) continue;
       if (loc.id === imp.sourceId) continue;
-      if (subscriptionSimilarityKey(loc.title, loc.website_url) !== k) continue;
+      if (subscriptionSimilarityKey(loc.title, loc.website_url, loc.account_label) !== k) continue;
       picked = loc;
       break;
     }
@@ -357,6 +373,7 @@ function buildImportPreview(database: Database.Database, filePath: string, data:
   return {
     filePath,
     exportVersion: data.exportVersion,
+    exportScope: data.exportScope ?? "full",
     exportedAt: data.exportedAt,
     backupAppVersion: data.appVersion,
     counts: {
@@ -425,13 +442,69 @@ function subscriptionRowParams(
     r.tags,
     r.credit_card_id,
     r.wallet_method_id,
+    r.account_label,
     r.created_at,
     r.updated_at,
   ];
 }
 
 function importIntoDb(database: Database.Database, data: BackupPayload): void {
+  const scope = data.exportScope ?? "full";
   const tx = database.transaction(() => {
+    if (scope === "subscriptions_only") {
+      database.prepare("DELETE FROM payment_events").run();
+      database.prepare("DELETE FROM subscriptions").run();
+      database.prepare("DELETE FROM categories").run();
+
+      const insCatOnly = database.prepare(
+        "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
+      );
+      for (const row of data.categories) {
+        if (!isRecord(row)) throw new Error("Invalid category row");
+        insCatOnly.run(row.id, row.name, row.sort_order);
+      }
+
+      const insSubOnly = database.prepare(`
+      INSERT INTO subscriptions (
+        id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
+        interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
+        start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
+        account_label, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `);
+      for (const row of data.subscriptions) {
+        if (!isRecord(row)) throw new Error("Invalid subscription row");
+        const raw = normalizeImportedSubscription(row);
+        const r = { ...raw, credit_card_id: null, wallet_method_id: null };
+        insSubOnly.run(...subscriptionRowParams(r, r.sourceId));
+      }
+
+      const insPayOnly = database.prepare(`
+      INSERT INTO payment_events (
+        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, note
+      ) VALUES (?,?,?,?,?,?,?,?)
+    `);
+      for (const row of data.payment_events) {
+        if (!isRecord(row)) throw new Error("Invalid payment row");
+        const pv = normalizeImportedPayment(row);
+        insPayOnly.run(
+          pv.sourceId,
+          pv.subscriptionSourceId,
+          pv.paid_at,
+          pv.amount_original,
+          pv.currency,
+          pv.amount_qar,
+          pv.renewal_years,
+          pv.note,
+        );
+      }
+
+      resetAutoincrement(database, "categories");
+      resetAutoincrement(database, "subscriptions");
+      resetAutoincrement(database, "payment_events");
+      return;
+    }
+
     database.prepare("DELETE FROM payment_events").run();
     database.prepare("DELETE FROM subscriptions").run();
     database.prepare("DELETE FROM wallet_methods").run();
@@ -497,8 +570,8 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     for (const row of data.subscriptions) {
       if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -550,6 +623,7 @@ function mergeImportIntoDb(
 ): void {
   const { onDuplicateId, onSimilarSubscription } = opts;
   const preferDup = onDuplicateId === "prefer_import";
+  const stripPay = data.exportScope === "subscriptions_only";
 
   const tx = database.transaction(() => {
     const insCurPrefer = database.prepare(`
@@ -645,12 +719,16 @@ function mergeImportIntoDb(
     }
 
     const localRowsFull = database
-      .prepare("SELECT id, title, website_url FROM subscriptions ORDER BY id")
+      .prepare("SELECT id, title, website_url, account_label FROM subscriptions ORDER BY id")
       .all() as LocalSubBrief[];
 
     const importNormSubs = data.subscriptions.map((row) => {
       if (!isRecord(row)) throw new Error("Invalid subscription row");
-      return normalizeImportedSubscription(row);
+      let s = normalizeImportedSubscription(row);
+      if (stripPay) {
+        s = { ...s, credit_card_id: null, wallet_method_id: null };
+      }
+      return s;
     });
     importNormSubs.sort((a, b) => a.sourceId - b.sourceId);
 
@@ -682,11 +760,11 @@ function mergeImportIntoDb(
     const remapSubs = new Map<number, number>();
 
     function findSimMate(imp: NormalizedImportSubscription): LocalSubBrief | undefined {
-      const k = subscriptionSimilarityKey(imp.title, imp.website_url);
+      const k = subscriptionSimilarityKey(imp.title, imp.website_url, imp.account_label);
       for (const L of localRowsFull) {
         if (pickedSimLocals.has(L.id)) continue;
         if (L.id === imp.sourceId) continue;
-        if (subscriptionSimilarityKey(L.title, L.website_url) !== k) continue;
+        if (subscriptionSimilarityKey(L.title, L.website_url, L.account_label) !== k) continue;
         return L;
       }
       return undefined;
@@ -697,8 +775,8 @@ function mergeImportIntoDb(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     const updSub = database.prepare(`
       UPDATE subscriptions SET
@@ -706,7 +784,7 @@ function mergeImportIntoDb(
         interval_months = ?, interval_count = ?, auto_renew = ?, amount_original = ?, currency_code = ?,
         amount_qar_snapshot = ?, fx_rate_used = ?, fx_quote_at = ?, start_date = ?, next_due_date = ?,
         end_date = ?, is_domain = ?, tags = ?, credit_card_id = ?, wallet_method_id = ?,
-        created_at = ?, updated_at = ?
+        account_label = ?, created_at = ?, updated_at = ?
       WHERE id = ?
     `);
     const delSub = database.prepare("DELETE FROM subscriptions WHERE id = ?");
@@ -737,6 +815,7 @@ function mergeImportIntoDb(
           imp.tags,
           imp.credit_card_id,
           imp.wallet_method_id,
+          imp.account_label,
           imp.created_at,
           imp.updated_at,
           imp.sourceId,
@@ -841,16 +920,29 @@ export function registerBackupIpc(
   getDb: () => Database.Database | null,
   getWin: () => BrowserWindow | null,
 ): void {
-  ipcMain.handle("backup:export", async () => {
+  ipcMain.handle("backup:export", async (_evt, raw?: unknown) => {
+    let scope: "full" | "subscriptions_only" = "full";
+    if (
+      raw != null &&
+      typeof raw === "object" &&
+      !Array.isArray(raw) &&
+      (raw as { scope?: string }).scope === "subscriptions_only"
+    ) {
+      scope = "subscriptions_only";
+    }
     const database = getDb();
     const w = getWin();
     if (!database) return { ok: false as const, error: "no-database" };
     if (!w) return { ok: false as const, error: "no-window" };
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const defaultPath =
+      scope === "subscriptions_only"
+        ? `ishtarkati-subs-${stamp}.json`
+        : `ishtarkati-backup-${stamp}.json`;
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
       title: localeAr.electron.backupSaveTitle,
-      defaultPath: `ishtarkati-backup-${stamp}.json`,
+      defaultPath,
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
     if (canceled || !filePath) return { ok: false as const, canceled: true };
@@ -862,23 +954,51 @@ export function registerBackupIpc(
     const payment_events = database
       .prepare("SELECT * FROM payment_events ORDER BY id")
       .all();
-    const settings = database.prepare("SELECT * FROM settings ORDER BY key").all();
-    const currencies = database.prepare("SELECT * FROM currencies ORDER BY sort_order, code").all();
-    const credit_cards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
-    const wallet_methods = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
+    const settings =
+      scope === "subscriptions_only"
+        ? []
+        : database.prepare("SELECT * FROM settings ORDER BY key").all();
+    const currencies =
+      scope === "subscriptions_only"
+        ? []
+        : database.prepare("SELECT * FROM currencies ORDER BY sort_order, code").all();
+    const credit_cards =
+      scope === "subscriptions_only"
+        ? []
+        : database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
+    const wallet_methods =
+      scope === "subscriptions_only"
+        ? []
+        : database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
 
-    const payload: BackupPayload = {
-      exportVersion: BACKUP_EXPORT_VERSION,
-      exportedAt: new Date().toISOString(),
-      appVersion: app.getVersion(),
-      categories,
-      subscriptions,
-      payment_events,
-      settings,
-      currencies,
-      credit_cards,
-      wallet_methods,
-    };
+    const payload: BackupPayload =
+      scope === "subscriptions_only"
+        ? {
+            exportVersion: BACKUP_EXPORT_VERSION,
+            exportScope: "subscriptions_only",
+            exportedAt: new Date().toISOString(),
+            appVersion: app.getVersion(),
+            categories,
+            subscriptions,
+            payment_events,
+            settings,
+            currencies,
+            credit_cards,
+            wallet_methods,
+          }
+        : {
+            exportVersion: BACKUP_EXPORT_VERSION,
+            exportScope: "full",
+            exportedAt: new Date().toISOString(),
+            appVersion: app.getVersion(),
+            categories,
+            subscriptions,
+            payment_events,
+            settings,
+            currencies,
+            credit_cards,
+            wallet_methods,
+          };
 
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
     return { ok: true as const, path: filePath };

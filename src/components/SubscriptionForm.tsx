@@ -260,6 +260,18 @@ export function SubscriptionForm({
       </div>
 
       <div>
+        <label className="sk-label">{t("form.accountLabel")}</label>
+        <input
+          className="sk-input"
+          value={v.account_label}
+          onChange={(e) => setField("account_label", e.target.value)}
+          placeholder={t("form.accountLabelPlaceholder")}
+          autoComplete="off"
+        />
+        <p className="mt-1.5 text-xs text-cream-600">{t("form.accountLabelHint")}</p>
+      </div>
+
+      <div>
         <label className="sk-label">{t("form.tags")}</label>
         <input
           className="sk-input"
