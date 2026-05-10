@@ -86,6 +86,8 @@
   },
   "list": {
     "title": "الاشتراكات والدفعات",
+    "filtersSectionTitle": "تصفية وترتيب القائمة",
+    "filtersSectionHint": "يُحدَّث العرض تلقائيًا عند تغيير التصفية أو البحث؛ يمكنك أيضًا الضغط على «تحديث القائمة» لإعادة الجلب.",
     "filterCategory": "التصنيف",
     "filterCurrency": "العملة",
     "dueSoon": "مستحق خلال ٣٠ يومًا",
@@ -101,7 +103,9 @@
     "domain": "نطاق",
     "applyFilters": "تحديث القائمة",
     "searchPlaceholder": "العنوان أو الملاحظات أو الوسوم…",
+    "searchSlashHint": "اختصار لوحة المفاتيح: / للتركيز هنا",
     "sortBy": "ترتيب العرض",
+    "sortDirectionShort": "الاتجاه",
     "sort": {
       "nextDue": "تاريخ الاستحقاق",
       "title": "العنوان",

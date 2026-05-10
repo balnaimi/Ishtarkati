@@ -152,12 +152,20 @@ export function SubscriptionsListPage() {
         </Link>
       </div>
 
-      <div className="sk-card">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-3">
-            <label className="sk-label">{t("list.filterCategory")}</label>
+      <div className="sk-card space-y-5">
+        <header className="space-y-1 border-b border-cream-300/80 pb-3">
+          <h3 className="text-base font-semibold text-cream-900">{t("list.filtersSectionTitle")}</h3>
+          <p className="text-xs leading-relaxed text-cream-600">{t("list.filtersSectionHint")}</p>
+        </header>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="min-w-0 space-y-1.5">
+            <label className="sk-label mb-0" htmlFor="list-filter-category">
+              {t("list.filterCategory")}
+            </label>
             <select
-              className="sk-select"
+              id="list-filter-category"
+              className="sk-select w-full"
               value={catFilter}
               onChange={(e) => setCatFilter(e.target.value)}
             >
@@ -169,10 +177,13 @@ export function SubscriptionsListPage() {
               ))}
             </select>
           </div>
-          <div className="lg:col-span-2">
-            <label className="sk-label">{t("list.filterCurrency")}</label>
+          <div className="min-w-0 space-y-1.5">
+            <label className="sk-label mb-0" htmlFor="list-filter-currency">
+              {t("list.filterCurrency")}
+            </label>
             <select
-              className="sk-select"
+              id="list-filter-currency"
+              className="sk-select w-full"
               value={curFilter}
               onChange={(e) => setCurFilter(e.target.value)}
             >
@@ -184,42 +195,49 @@ export function SubscriptionsListPage() {
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2.5 lg:col-span-3">
-            <input
-              type="checkbox"
-              id="due-soon"
-              className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-              checked={dueSoon}
-              onChange={(e) => setDueSoon(e.target.checked)}
-            />
-            <label htmlFor="due-soon" className="cursor-pointer text-sm text-cream-800">
-              {t("list.dueSoon")}
-            </label>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="sk-label mb-0" htmlFor="list-search">
+            {t("common.search")}
+          </label>
+          <input
+            ref={searchRef}
+            id="list-search"
+            className="sk-input w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("list.searchPlaceholder")}
+            autoComplete="off"
+          />
+          <p className="text-[11px] text-cream-500">{t("list.searchSlashHint")}</p>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-xl border border-cream-400/80 bg-cream-100/45 px-3 py-3 sm:items-center sm:px-4">
+          <input
+            type="checkbox"
+            id="due-soon"
+            className="mt-0.5 size-4 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500 sm:mt-0"
+            checked={dueSoon}
+            onChange={(e) => setDueSoon(e.target.checked)}
+          />
+          <label htmlFor="due-soon" className="cursor-pointer text-sm leading-snug text-cream-800">
+            {t("list.dueSoon")}
+          </label>
+        </div>
+
+        <div className="space-y-3 border-t border-cream-300/80 pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-cream-800">{t("list.sortBy")}</span>
           </div>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <label className="sk-label">{t("common.search")}</label>
-            <input
-              ref={searchRef}
-              id="list-search"
-              className="sk-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("list.searchPlaceholder")}
-              autoComplete="off"
-            />
-          </div>
-          <div className="flex lg:col-span-1">
-            <button type="button" className="sk-btn-secondary w-full lg:w-auto" onClick={() => void reload()}>
-              {t("list.applyFilters")}
-            </button>
-          </div>
-          <div className="lg:col-span-4">
-            <label className="sk-label">{t("list.sortBy")}</label>
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:gap-3">
               <select
-                className="sk-select min-w-0 flex-1 sm:max-w-[14rem]"
+                id="list-sort-key"
+                className="sk-select min-h-11 min-w-0 flex-1 sm:max-w-xs"
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
+                aria-label={t("list.sortBy")}
               >
                 <option value="next_due">{t("list.sort.nextDue")}</option>
                 <option value="title">{t("list.sort.title")}</option>
@@ -228,14 +246,23 @@ export function SubscriptionsListPage() {
                 <option value="primary">{t("list.sort.primary")}</option>
               </select>
               <select
-                className="sk-select w-full sm:w-36"
+                id="list-sort-dir"
+                className="sk-select min-h-11 w-full sm:w-40 lg:w-44"
                 value={sortDir}
                 onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                aria-label={t("list.sortDirectionShort")}
               >
                 <option value="asc">{t("list.sort.asc")}</option>
                 <option value="desc">{t("list.sort.desc")}</option>
               </select>
             </div>
+            <button
+              type="button"
+              className="sk-btn-secondary w-full shrink-0 lg:w-auto lg:min-w-[11rem]"
+              onClick={() => void reload()}
+            >
+              {t("list.applyFilters")}
+            </button>
           </div>
         </div>
       </div>
