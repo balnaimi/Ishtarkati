@@ -7,7 +7,6 @@ import {
   getPrimaryCurrencyCode,
   getSubscription,
   loadCategories,
-  loadSubscriptionTagStats,
   updateSubscription,
 } from "../db/repo";
 import {
@@ -27,8 +26,6 @@ export function EditSubscriptionPage() {
   const [initial, setInitial] = useState<SubscriptionFormValues | null>(null);
   const [existingId, setExistingId] = useState<number | null>(null);
   const [cancelledAt, setCancelledAt] = useState<string | null>(null);
-  const [knownTags, setKnownTags] = useState<string[]>([]);
-
   const reloadMeta = useCallback(async () => {
     const cats = await loadCategories();
     setCategories(cats);
@@ -38,7 +35,6 @@ export function EditSubscriptionPage() {
     void hydrate();
     void reloadMeta();
     void getPrimaryCurrencyCode().then(setPrimaryCode);
-    void loadSubscriptionTagStats().then((rows) => setKnownTags(rows.map((r) => r.tag)));
   }, [hydrate, reloadMeta]);
 
   useEffect(() => {
@@ -86,7 +82,6 @@ export function EditSubscriptionPage() {
         key={id}
         initial={initial}
         categories={categories}
-        knownTags={knownTags}
         primaryCurrencyCode={primaryCode}
         fx={fx}
         onFetchFx={() => refresh()}

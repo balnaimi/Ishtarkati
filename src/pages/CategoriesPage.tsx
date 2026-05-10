@@ -2,21 +2,28 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   addCategory,
+  countActiveSubscriptionsUncategorized,
   deleteCategory,
-  loadCategories,
+  loadCategoriesWithActiveCounts,
   updateCategory,
+  type CategoryWithActiveCount,
 } from "../db/repo";
-import type { Category } from "../types";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<Category[]>([]);
+  const [items, setItems] = useState<CategoryWithActiveCount[]>([]);
+  const [uncategorized, setUncategorized] = useState(0);
   const [name, setName] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CategoryWithActiveCount | null>(null);
 
   const reload = useCallback(async () => {
-    setItems(await loadCategories());
+    const [cats, uncat] = await Promise.all([
+      loadCategoriesWithActiveCounts(),
+      countActiveSubscriptionsUncategorized(),
+    ]);
+    setItems(cats);
+    setUncategorized(uncat);
   }, []);
 
   useEffect(() => {
@@ -38,7 +45,7 @@ export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
     void reload();
   }
 
-  async function handleDelete(c: Category) {
+  async function handleDelete(c: CategoryWithActiveCount) {
     setDeleteTarget(c);
   }
 
@@ -57,6 +64,34 @@ export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
         <h2 className="text-xl font-semibold text-cream-900">{t("categories.title")}</h2>
       )}
 
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-cream-900">{t("categories.statsOverview")}</h3>
+          <p className="mt-1 text-sm leading-relaxed text-cream-700">{t("categories.statsOverviewHint")}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="sk-card flex flex-col gap-1 p-4">
+            <p className="text-sm font-medium text-cream-700">{t("categories.totalCategories")}</p>
+            <p className="text-3xl font-semibold tabular-nums text-cream-950">{items.length}</p>
+          </div>
+          <div className="sk-card flex flex-col gap-1 p-4">
+            <p className="text-sm font-medium text-cream-700">{t("categories.uncategorizedTitle")}</p>
+            <p className="text-3xl font-semibold tabular-nums text-cream-950">{uncategorized}</p>
+            <p className="text-xs text-cream-600">{t("categories.uncategorizedHint")}</p>
+          </div>
+          {items.map((c) => {
+            const n = Number(c.activeSubscriptionCount) || 0;
+            return (
+              <div key={c.id} className="sk-card flex flex-col gap-1 p-4">
+                <p className="text-sm font-medium text-cream-800">{c.name}</p>
+                <p className="text-3xl font-semibold tabular-nums text-cream-950">{n}</p>
+                <p className="text-xs text-cream-600">{t("categories.activeCount", { count: n })}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <form
         onSubmit={handleAdd}
         className="sk-card flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end"
@@ -70,11 +105,14 @@ export function CategoriesPage({ omitTitle }: { omitTitle?: boolean } = {}) {
         </button>
       </form>
 
-      <ul className="space-y-3">
-        {items.map((c) => (
-          <CategoryRow key={c.id} c={c} onSaved={reload} onDelete={() => void handleDelete(c)} />
-        ))}
-      </ul>
+      <div>
+        <h3 className="mb-3 text-base font-semibold text-cream-900">{t("categories.manageSection")}</h3>
+        <ul className="space-y-3">
+          {items.map((c) => (
+            <CategoryRow key={c.id} c={c} onSaved={reload} onDelete={() => void handleDelete(c)} />
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -84,12 +122,13 @@ function CategoryRow({
   onSaved,
   onDelete,
 }: {
-  c: Category;
+  c: CategoryWithActiveCount;
   onSaved: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(c.name);
+  const n = Number(c.activeSubscriptionCount) || 0;
 
   useEffect(() => {
     setName(c.name);
@@ -102,11 +141,14 @@ function CategoryRow({
 
   return (
     <li className="sk-card flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center">
-      <input
-        className="sk-input min-w-0 flex-1 sm:min-w-[12rem]"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="min-w-0 flex-1 space-y-2">
+        <input
+          className="sk-input w-full sm:min-w-[12rem]"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <p className="text-xs text-cream-600">{t("categories.activeCount", { count: n })}</p>
+      </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" className="sk-btn-secondary text-sm" onClick={() => void save()}>
           {t("common.save")}

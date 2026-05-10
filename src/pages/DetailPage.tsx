@@ -26,7 +26,6 @@ import type { IntervalUnit } from "../types";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
-import { tagTokens } from "../lib/tags";
 import { displayUrlForUi } from "../lib/siteFavicon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { effectiveRenewalSteps } from "../lib/paymentRenewal";
@@ -352,18 +351,6 @@ export function DetailPage() {
           </div>
           {needsPaid ? (
             <p className="sk-callout-warning text-sm">{t("detail.needsPaidHint")}</p>
-          ) : null}
-          {tagTokens(sub.tags).length ? (
-            <div className="space-y-1.5 pt-1">
-              <p className="text-xs font-medium text-cream-600">{t("detail.tagsLabel")}</p>
-              <div className="flex flex-wrap gap-1">
-                {tagTokens(sub.tags).map((tag) => (
-                  <span key={tag} className="sk-chip text-[11px]">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">

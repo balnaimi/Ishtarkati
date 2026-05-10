@@ -20,7 +20,6 @@ import {
   type DueProgressInput,
   type DueTone,
 } from "../lib/dueProgress";
-import { tagTokens } from "../lib/tags";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
 
 function toneTextClass(tone: DueTone): string {
@@ -342,15 +341,6 @@ export function SubscriptionsListPage() {
                           ) : null}
                         </div>
                       </div>
-                      {tagTokens(s.tags).length ? (
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {tagTokens(s.tags).map((tag) => (
-                            <span key={`${s.id}-${tag}`} className="inline-block sk-chip text-[10px] leading-tight">
-                              {tag}
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
                       {s.next_due_date ? (
                         <div className="mt-2">
                           <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />

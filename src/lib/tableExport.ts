@@ -26,7 +26,6 @@ export function downloadSubscriptionsCsv(rows: SubscriptionListRow[], t: TFuncti
     t("list.nextDue"),
     t("form.startDate"),
     t("list.qar"),
-    t("form.tags"),
     t("form.notes"),
     t("form.accountLabel"),
     t("form.website"),
@@ -42,7 +41,6 @@ export function downloadSubscriptionsCsv(rows: SubscriptionListRow[], t: TFuncti
         s.next_due_date ?? "",
         s.start_date ?? "",
         s.amount_qar_snapshot != null ? String(s.amount_qar_snapshot) : "",
-        s.tags ?? "",
         s.notes ?? "",
         s.account_label ?? "",
         s.website_url ?? "",
@@ -89,7 +87,7 @@ export function downloadSubscriptionsIcs(rows: SubscriptionListRow[], t: TFuncti
     const due = s.next_due_date!.slice(0, 10);
     const sum = icsTextEscape(`${s.title} — ${t("list.nextDue")}`);
     const desc = icsTextEscape(
-      [s.notes, s.website_url, s.tags].filter(Boolean).join(" — ") || t("app.title"),
+      [s.notes, s.website_url].filter(Boolean).join(" — ") || t("app.title"),
     );
     lines.push(
       "BEGIN:VEVENT",

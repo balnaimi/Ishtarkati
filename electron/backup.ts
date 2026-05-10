@@ -194,7 +194,6 @@ type NormalizedImportSubscription = {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
-  tags: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
   account_label: string | null;
@@ -216,8 +215,6 @@ type NormalizedImportPayment = {
 };
 
 function normalizeImportedSubscription(row: Record<string, unknown>): NormalizedImportSubscription {
-  const tags =
-    "tags" in row && row.tags != null && String(row.tags).length > 0 ? String(row.tags) : null;
   let billing_model = String(row.billing_model ?? "one_time");
   if (billing_model === "pay_as_needed") billing_model = "one_time";
   if (billing_model !== "recurring" && billing_model !== "one_time") billing_model = "one_time";
@@ -253,7 +250,6 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
     next_due_date: row.next_due_date == null ? null : String(row.next_due_date),
     end_date: row.end_date == null ? null : String(row.end_date),
     is_domain: Number(row.is_domain ?? 0),
-    tags,
     credit_card_id:
       "credit_card_id" in row && row.credit_card_id != null && row.credit_card_id !== ""
         ? Number(row.credit_card_id)
@@ -479,7 +475,7 @@ function subscriptionRowParams(
     r.next_due_date,
     r.end_date,
     r.is_domain,
-    r.tags,
+    null,
     r.credit_card_id,
     r.wallet_method_id,
     r.account_label,
@@ -828,7 +824,7 @@ function mergeImportIntoDb(
           imp.next_due_date,
           imp.end_date,
           imp.is_domain,
-          imp.tags,
+          null,
           imp.credit_card_id,
           imp.wallet_method_id,
           imp.account_label,

@@ -219,7 +219,7 @@ function insertSubscriptionsFromLegacyV4Rows(
       next_due_date: r.next_due_date,
       end_date: r.end_date,
       is_domain: r.is_domain,
-      tags: r.tags,
+      tags: null,
       credit_card_id: null,
       wallet_method_id: null,
       created_at: r.created_at,
@@ -444,6 +444,16 @@ function runMigrations(database: Database.Database): void {
       }
     }
     database.prepare("UPDATE schema_version SET version = 9").run();
+  }
+
+  if (version < 10) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      if (cols.some((c) => c.name === "tags")) {
+        database.exec("UPDATE subscriptions SET tags = NULL WHERE tags IS NOT NULL");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 10").run();
   }
 }
 

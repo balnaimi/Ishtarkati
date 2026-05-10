@@ -8,7 +8,6 @@ import {
   insertSubscription,
   loadCategories,
   loadCreditCards,
-  loadSubscriptionTagStats,
   loadWalletMethods,
 } from "../db/repo";
 import { defaultFormValues, formToRow } from "../lib/formMappers";
@@ -24,7 +23,6 @@ export function NewSubscriptionPage() {
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [primaryCode, setPrimaryCode] = useState("QAR");
   const [paymentMethodCount, setPaymentMethodCount] = useState<number | null>(null);
-  const [knownTags, setKnownTags] = useState<string[]>([]);
   const initial = useMemo(() => defaultFormValues(), []);
 
   const reloadMeta = useCallback(async () => {
@@ -46,10 +44,6 @@ export function NewSubscriptionPage() {
   useEffect(() => {
     void reloadPaymentMethods();
   }, [reloadPaymentMethods, location.pathname, location.key]);
-
-  useEffect(() => {
-    void loadSubscriptionTagStats().then((rows) => setKnownTags(rows.map((r) => r.tag)));
-  }, [location.pathname, location.key]);
 
   async function onSubmit(
     values: SubscriptionFormValues,
@@ -84,7 +78,6 @@ export function NewSubscriptionPage() {
           key="new-subscription"
           initial={initial}
           categories={categories}
-          knownTags={knownTags}
           primaryCurrencyCode={primaryCode}
           fx={fx}
           onFetchFx={() => refresh()}

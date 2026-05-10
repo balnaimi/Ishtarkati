@@ -4,7 +4,6 @@ import {
   formatDateInput,
   parseDateInput,
 } from "../lib/schedule";
-import { tagTokens } from "../lib/tags";
 import {
   cashflowByCategoryInRange,
   countAndSumCashflowInRange,
@@ -12,11 +11,7 @@ import {
 } from "../lib/cashflowProjection";
 import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
 
-/** Distinct tag strings derived from all subscriptions (for settings + form suggestions). */
-export interface SubscriptionTagStat {
-  tag: string;
-  count: number;
-}
+export type CategoryWithActiveCount = Category & { activeSubscriptionCount: number };
 
 export async function loadCategories(): Promise<Category[]> {
   const db = await getDb();
@@ -58,20 +53,22 @@ export async function deleteCategory(id: number): Promise<void> {
   await db.execute("DELETE FROM categories WHERE id = $1", [id]);
 }
 
-export async function loadSubscriptionTagStats(): Promise<SubscriptionTagStat[]> {
+export async function loadCategoriesWithActiveCounts(): Promise<CategoryWithActiveCount[]> {
   const db = await getDb();
-  const rows = await db.select<{ tags: string | null }>(
-    "SELECT tags FROM subscriptions WHERE tags IS NOT NULL AND TRIM(tags) != ''",
+  return db.select<CategoryWithActiveCount>(
+    `SELECT c.id, c.name, c.sort_order,
+      (SELECT COUNT(*) FROM subscriptions s WHERE s.category_id = c.id AND s.cancelled_at IS NULL) AS activeSubscriptionCount
+     FROM categories c
+     ORDER BY c.sort_order ASC, c.id ASC`,
   );
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    for (const tok of tagTokens(r.tags)) {
-      counts.set(tok, (counts.get(tok) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => a.tag.localeCompare(b.tag, "ar", { sensitivity: "base" }));
+}
+
+export async function countActiveSubscriptionsUncategorized(): Promise<number> {
+  const db = await getDb();
+  const r = await db.select<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM subscriptions WHERE category_id IS NULL AND cancelled_at IS NULL",
+  );
+  return r[0]?.n ?? 0;
 }
 
 /** @deprecated Legacy table; UI uses built-in ISO list. */
@@ -258,7 +255,7 @@ function buildSubscriptionQuery(filters: {
   if (filters.search?.trim()) {
     const pat = `%${filters.search.trim()}%`;
     const p1 = next(pat);
-    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.tags,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1})`);
+    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1})`);
   }
 
   const orderBy =
@@ -349,7 +346,6 @@ export async function insertSubscription(row: {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
-  tags: string | null;
   account_label: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
@@ -383,7 +379,7 @@ export async function insertSubscription(row: {
       row.next_due_date,
       row.end_date,
       row.is_domain,
-      row.tags,
+      null,
       row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
@@ -422,7 +418,6 @@ export async function updateSubscription(
     next_due_date: string | null;
     end_date: string | null;
     is_domain: number;
-    tags: string | null;
     account_label: string | null;
     credit_card_id: number | null;
     wallet_method_id: number | null;
@@ -457,7 +452,7 @@ export async function updateSubscription(
       row.next_due_date,
       row.end_date,
       row.is_domain,
-      row.tags,
+      null,
       row.account_label,
       row.credit_card_id,
       row.wallet_method_id,

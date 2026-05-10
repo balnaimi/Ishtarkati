@@ -52,7 +52,6 @@ export interface Subscription {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
-  tags: string | null;
   /** User-defined label for the logged-in / family account (optional). */
   account_label: string | null;
   /** When set (YYYY-MM-DD), subscription is treated as cancelled / inactive (history). */
@@ -91,7 +90,6 @@ export interface SubscriptionFormValues {
   start_date: string;
   next_due_date: string;
   end_date: string;
-  tags: string;
   account_label: string;
   wallet_method_id: string;
   credit_card_id: string;

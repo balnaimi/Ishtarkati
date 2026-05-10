@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
@@ -9,13 +9,10 @@ import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 import { SiteFavicon } from "./SiteFavicon";
-import { tagMatchesQuery, tagTokens, tagsLeadingAndToken } from "../lib/tags";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
   categories: { id: number; name: string }[];
-  /** Distinct tags from existing subscriptions (for suggestions while typing). */
-  knownTags?: string[];
   primaryCurrencyCode: string;
   fx: FxState;
   onFetchFx: () => Promise<void>;
@@ -38,7 +35,6 @@ export function SubscriptionForm({
   onSubmit,
   onCancel,
   submitLabel,
-  knownTags = [],
 }: SubscriptionFormProps) {
   const { t } = useTranslation();
   const [v, setV] = useState<SubscriptionFormValues>(initial);
@@ -49,9 +45,6 @@ export function SubscriptionForm({
   const [addCatBusy, setAddCatBusy] = useState(false);
   const [wallets, setWallets] = useState<WalletMethod[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [tagMenuOpen, setTagMenuOpen] = useState(false);
-  const [tagHighlight, setTagHighlight] = useState(0);
-  const tagInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setV(initial);
@@ -130,56 +123,6 @@ export function SubscriptionForm({
       };
     }
   }, [v.amount_original, cur, isPrimary, primary, fx.usdRates, fx.overrides, t]);
-
-  const { token: tagsEditToken } = tagsLeadingAndToken(v.tags);
-
-  const tagSuggestions = useMemo(() => {
-    if (!knownTags.length) return [];
-    const selected = new Set(tagTokens(v.tags).map((x) => x.toLocaleLowerCase("und")));
-    let pool = knownTags.filter((k) => !selected.has(k.toLocaleLowerCase("und")));
-    const q = tagsEditToken.trim();
-    if (q.length > 0) {
-      pool = pool.filter((k) => tagMatchesQuery(k, q));
-    } else {
-      pool = [...pool].sort((a, b) => a.localeCompare(b, "ar", { sensitivity: "base" }));
-      return pool.slice(0, 14);
-    }
-    pool.sort((a, b) => a.localeCompare(b, "ar", { sensitivity: "base" }));
-    return pool.slice(0, 14);
-  }, [knownTags, v.tags, tagsEditToken]);
-
-  useEffect(() => {
-    setTagHighlight((h) =>
-      tagSuggestions.length === 0 ? 0 : Math.min(h, tagSuggestions.length - 1),
-    );
-  }, [tagSuggestions.length]);
-
-  function applyTagPick(pick: string) {
-    setV((prev) => {
-      const { leading } = tagsLeadingAndToken(prev.tags);
-      return { ...prev, tags: `${leading}${pick}, ` };
-    });
-    setTagHighlight(0);
-    setTagMenuOpen(true);
-    window.requestAnimationFrame(() => tagInputRef.current?.focus());
-  }
-
-  function handleTagsKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (!tagMenuOpen || tagSuggestions.length === 0) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setTagHighlight((h) => Math.min(h + 1, tagSuggestions.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setTagHighlight((h) => Math.max(h - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const pick = tagSuggestions[tagHighlight];
-      if (pick) applyTagPick(pick);
-    } else if (e.key === "Escape") {
-      setTagMenuOpen(false);
-    }
-  }
 
   const setField = useCallback(
     <K extends keyof SubscriptionFormValues>(key: K, val: SubscriptionFormValues[K]) => {
@@ -326,54 +269,6 @@ export function SubscriptionForm({
           autoComplete="off"
         />
         <p className="mt-1.5 text-xs text-cream-600">{t("form.accountLabelHint")}</p>
-      </div>
-
-      <div className="relative">
-        <label className="sk-label">{t("form.tags")}</label>
-        <input
-          ref={tagInputRef}
-          className="sk-input"
-          value={v.tags}
-          onChange={(e) => {
-            setField("tags", e.target.value);
-            if (knownTags.length) {
-              setTagMenuOpen(true);
-              setTagHighlight(0);
-            }
-          }}
-          onFocus={() => knownTags.length > 0 && setTagMenuOpen(true)}
-          onBlur={() => window.setTimeout(() => setTagMenuOpen(false), 180)}
-          onKeyDown={handleTagsKeyDown}
-          placeholder={t("form.tagsPlaceholder")}
-          autoComplete="off"
-        />
-        {tagMenuOpen && tagSuggestions.length > 0 ? (
-          <ul
-            className="sk-card absolute z-20 mt-1 max-h-52 w-full overflow-y-auto border border-cream-400/90 py-1 shadow-lg"
-            role="listbox"
-          >
-            {tagSuggestions.map((sug, i) => (
-              <li key={sug}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={i === tagHighlight}
-                  className={`w-full px-3 py-2 text-right text-sm hover:bg-cream-200/80 ${
-                    i === tagHighlight ? "bg-cream-200/70" : ""
-                  }`}
-                  onMouseDown={(ev) => ev.preventDefault()}
-                  onMouseEnter={() => setTagHighlight(i)}
-                  onClick={() => applyTagPick(sug)}
-                >
-                  {sug}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <p className="mt-1.5 text-xs text-cream-600">
-          {knownTags.length ? t("form.tagsAutocompleteHint") : t("form.tagsHint")}
-        </p>
       </div>
 
       <div className="space-y-3">
