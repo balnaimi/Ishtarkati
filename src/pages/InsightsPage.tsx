@@ -341,9 +341,9 @@ export function InsightsPage() {
           </div>
 
           {calMode === "year" ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {monthTotals.map((tot, i) => {
-                const label = format(new Date(calYear, i, 1), "MMM", { locale: arSA });
+                const label = format(new Date(calYear, i, 1), "MMMM", { locale: arSA });
                 return (
                   <button
                     key={i}
@@ -354,7 +354,7 @@ export function InsightsPage() {
                       setCalMode("month");
                     }}
                   >
-                    <p className="text-sm font-medium text-cream-800">{label}</p>
+                    <p className="text-sm font-medium leading-snug text-cream-800">{label}</p>
                     <p className="mt-2 text-lg font-semibold text-sage-800">
                       {tot.toFixed(2)} {primaryCode}
                     </p>
