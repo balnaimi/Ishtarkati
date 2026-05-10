@@ -134,28 +134,63 @@ export function HomePage() {
         <p className="sk-text-hint">{t("common.loading")}</p>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
+          <div className="sk-card md:col-span-2">
+            <p className="sk-text-hint text-sm">{t("home.statsCashflowHint")}</p>
+            <Link to="/insights" className="mt-2 inline-block text-sm font-medium text-sage-800 underline">
+              {t("home.openInsights")}
+            </Link>
+          </div>
           <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("stats.monthlyEstimate")}</p>
+            <p className="sk-text-hint text-sm font-medium">{t("insights.dueThisMonth")}</p>
+            <p className="mt-1 text-xs text-cream-600">
+              {t("insights.monthNumbered", { month: summary.currentMonth.month, year: summary.currentMonth.year })}
+            </p>
             <p className="mt-2 text-2xl font-semibold text-sage-800">
-              {summary.monthlyEstimate.toFixed(2)} {primary}
+              {summary.currentMonth.totalPrimary.toFixed(2)} {primary}
             </p>
-            <p className="sk-text-hint mt-4 text-sm font-medium">{t("stats.yearlyEstimate")}</p>
-            <p className="mt-1.5 text-xl font-semibold text-sage-800">
-              {summary.yearlyEstimate.toFixed(2)} {primary}
-            </p>
-            <p className="sk-text-hint mt-2 text-xs">{t("stats.yearlyFromMonthlyHint")}</p>
-            <p className="sk-text-hint mt-3 text-sm">
-              {t("stats.subscriptions")}: {summary.recurringCount}
+            <p className="sk-text-hint mt-2 text-xs">
+              {t("insights.dueEvents", { count: summary.currentMonth.dueCount })}
             </p>
           </div>
           <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("stats.due30")}</p>
+            <p className="sk-text-hint text-sm font-medium">{t("insights.dueNextMonth")}</p>
+            <p className="mt-1 text-xs text-cream-600">
+              {t("insights.monthNumbered", { month: summary.nextMonth.month, year: summary.nextMonth.year })}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-sage-800">
+              {summary.nextMonth.totalPrimary.toFixed(2)} {primary}
+            </p>
+            <p className="sk-text-hint mt-2 text-xs">
+              {t("insights.dueEvents", { count: summary.nextMonth.dueCount })}
+            </p>
+          </div>
+          <div className="sk-card">
+            <p className="sk-text-hint text-sm font-medium">{t("insights.projectedYear")}</p>
+            <p className="mt-1 text-xs text-cream-600">
+              {t("insights.yearLabel", { year: summary.currentYearProjected.year })}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-sage-800">
+              {summary.currentYearProjected.totalPrimary.toFixed(2)} {primary}
+            </p>
+            <p className="sk-text-hint mt-2 text-xs">
+              {t("insights.dueEvents", { count: summary.currentYearProjected.dueCount })}
+            </p>
+          </div>
+          <div className="sk-card">
+            <p className="sk-text-hint text-sm font-medium">{t("insights.due30")}</p>
             <p className="mt-2 text-2xl font-semibold text-walnut-600">
-              {summary.due30Total.toFixed(2)} {primary}
+              {summary.due30Projected.totalPrimary.toFixed(2)} {primary}
+            </p>
+            <p className="sk-text-hint mt-2 text-xs">
+              {t("insights.dueEvents", { count: summary.due30Projected.dueCount })}
             </p>
           </div>
           <div className="md:col-span-2 sk-card">
-            <p className="sk-text-hint mb-3 text-sm font-medium">{t("stats.byCategory")}</p>
+            <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.subscriptions")}</p>
+            <p className="text-sm text-cream-800">{summary.recurringCount}</p>
+          </div>
+          <div className="md:col-span-2 sk-card">
+            <p className="sk-text-hint mb-3 text-sm font-medium">{t("insights.byCategoryThisMonth")}</p>
             <ul className="space-y-2">
               {summary.byCategory.length === 0 ? (
                 <li className="sk-text-hint">{t("common.none")}</li>
@@ -167,7 +202,7 @@ export function HomePage() {
                   >
                     <span>{row.name}</span>
                     <span className="font-medium text-sage-800">
-                      {row.monthlyPrimary.toFixed(2)} {primary} / {t("stats.perMonth")}
+                      {row.amountPrimary.toFixed(2)} {primary}
                     </span>
                   </li>
                 ))

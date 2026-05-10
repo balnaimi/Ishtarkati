@@ -29,6 +29,7 @@ export function Layout() {
     { to: "/", label: t("nav.home") },
     { to: "/list", label: t("nav.subscriptions") },
     { to: "/cancelled", label: t("nav.cancelled") },
+    { to: "/insights", label: t("nav.insights") },
     { to: "/settings", label: t("nav.settings") },
   ];
 
@@ -67,11 +68,17 @@ export function Layout() {
                 to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
               const listMatch = to === "/list" && loc.pathname === "/list";
               const cancelledMatch = to === "/cancelled" && loc.pathname === "/cancelled";
+              const insightsMatch = to === "/insights" && loc.pathname === "/insights";
               const active =
                 listMatch ||
                 cancelledMatch ||
+                insightsMatch ||
                 loc.pathname === to ||
-                (to !== "/" && to !== "/list" && to !== "/cancelled" && loc.pathname.startsWith(to)) ||
+                (to !== "/" &&
+                  to !== "/list" &&
+                  to !== "/cancelled" &&
+                  to !== "/insights" &&
+                  loc.pathname.startsWith(to)) ||
                 homeMatch;
               return (
                 <Link key={to} to={to} className={linkCls(active)}>

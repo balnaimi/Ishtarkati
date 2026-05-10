@@ -2,10 +2,14 @@ import { getDb } from "./database";
 import {
   addBillingSteps,
   formatDateInput,
-  intervalToApproxMonths,
   parseDateInput,
 } from "../lib/schedule";
 import { tagTokens } from "../lib/tags";
+import {
+  cashflowByCategoryInRange,
+  countAndSumCashflowInRange,
+  isoCalendarMonthBounds,
+} from "../lib/cashflowProjection";
 import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
 
 /** Distinct tag strings derived from all subscriptions (for settings + form suggestions). */
@@ -589,67 +593,91 @@ export async function getPrimaryCurrencyCode(): Promise<string> {
   return c && c.length >= 3 ? c : "QAR";
 }
 
-/** Monthly-equivalent in stored primary snapshot for recurring rows. */
-export function monthlyEquivalentPrimary(s: Subscription): number | null {
-  if (s.billing_model !== "recurring" || s.amount_qar_snapshot == null) {
-    return null;
-  }
-  const months = intervalToApproxMonths(
-    s.interval_unit as IntervalUnit | null,
-    s.interval_count ?? 1,
-  );
-  if (months <= 0) return null;
-  return s.amount_qar_snapshot / months;
-}
-
 export async function statsSummary(): Promise<{
-  monthlyEstimate: number;
-  yearlyEstimate: number;
-  byCategory: { name: string; monthlyPrimary: number }[];
-  due30Total: number;
-  recurringCount: number;
   primaryCode: string;
+  currentMonth: { year: number; month: number; totalPrimary: number; dueCount: number };
+  nextMonth: { year: number; month: number; totalPrimary: number; dueCount: number };
+  currentYearProjected: { year: number; totalPrimary: number; dueCount: number };
+  due30Projected: { totalPrimary: number; dueCount: number };
+  recurringCount: number;
+  byCategory: { name: string; amountPrimary: number }[];
 }> {
   const rows = await loadSubscriptions({});
   const primaryCode = await getPrimaryCurrencyCode();
-  let monthlyEstimate = 0;
-  let due30Total = 0;
+  const now = new Date();
+  const cy = now.getFullYear();
+  const cm = now.getMonth();
+
+  const cur = isoCalendarMonthBounds(cy, cm);
+  const nextM = cm === 11 ? 0 : cm + 1;
+  const nextY = cm === 11 ? cy + 1 : cy;
+  const nxt = isoCalendarMonthBounds(nextY, nextM);
+
+  const yStart = `${cy}-01-01`;
+  const yEnd = `${cy}-12-31`;
+
+  const curSum = countAndSumCashflowInRange(rows, cur.start, cur.end);
+  const nxSum = countAndSumCashflowInRange(rows, nxt.start, nxt.end);
+  const yrSum = countAndSumCashflowInRange(rows, yStart, yEnd);
+
+  const today = now.toISOString().slice(0, 10);
+  const in30 = new Date(now);
+  in30.setDate(in30.getDate() + 30);
+  const d30 = in30.toISOString().slice(0, 10);
+  const d30Sum = countAndSumCashflowInRange(rows, today, d30);
+
+  const byCategory = cashflowByCategoryInRange(rows, cur.start, cur.end);
+
   let recurringCount = 0;
-  const limit = new Date();
-  limit.setDate(limit.getDate() + 30);
-  const lim = limit.toISOString().slice(0, 10);
-
-  const catMap = new Map<string, number>();
-
   for (const s of rows) {
-    if (s.billing_model === "recurring" && s.amount_qar_snapshot != null) {
-      recurringCount++;
-      const m = monthlyEquivalentPrimary(s);
-      if (m != null) {
-        monthlyEstimate += m;
-        const cname = s.category_name ?? "—";
-        catMap.set(cname, (catMap.get(cname) ?? 0) + m);
-      }
-    }
-    if (
-      s.next_due_date &&
-      s.next_due_date <= lim &&
-      s.amount_qar_snapshot != null
-    ) {
-      due30Total += s.amount_qar_snapshot;
-    }
+    if (s.cancelled_at) continue;
+    if (s.billing_model === "recurring" && s.amount_qar_snapshot != null) recurringCount++;
   }
 
-  const byCategory = [...catMap.entries()]
-    .map(([name, monthlyPrimary]) => ({ name, monthlyPrimary }))
-    .sort((a, b) => b.monthlyPrimary - a.monthlyPrimary);
-
   return {
-    monthlyEstimate,
-    yearlyEstimate: monthlyEstimate * 12,
-    byCategory,
-    due30Total,
-    recurringCount,
     primaryCode,
+    currentMonth: {
+      year: cy,
+      month: cm + 1,
+      totalPrimary: curSum.totalPrimary,
+      dueCount: curSum.dueCount,
+    },
+    nextMonth: {
+      year: nextY,
+      month: nextM + 1,
+      totalPrimary: nxSum.totalPrimary,
+      dueCount: nxSum.dueCount,
+    },
+    currentYearProjected: {
+      year: cy,
+      totalPrimary: yrSum.totalPrimary,
+      dueCount: yrSum.dueCount,
+    },
+    due30Projected: { totalPrimary: d30Sum.totalPrimary, dueCount: d30Sum.dueCount },
+    recurringCount,
+    byCategory,
   };
+}
+
+const HISTORY_MONTH_CAP = 120;
+
+export async function loadPaymentHistoryByMonth(): Promise<{ ym: string; total: number }[]> {
+  const db = await getDb();
+  return db.select<{ ym: string; total: number }>(
+    `SELECT substr(paid_at, 1, 7) AS ym, SUM(COALESCE(amount_qar, 0)) AS total
+     FROM payment_events
+     GROUP BY ym
+     ORDER BY ym DESC
+     LIMIT ${HISTORY_MONTH_CAP}`,
+  );
+}
+
+export async function loadPaymentHistoryByYear(): Promise<{ year: string; total: number }[]> {
+  const db = await getDb();
+  return db.select<{ year: string; total: number }>(
+    `SELECT substr(paid_at, 1, 4) AS year, SUM(COALESCE(amount_qar, 0)) AS total
+     FROM payment_events
+     GROUP BY year
+     ORDER BY year DESC`,
+  );
 }
