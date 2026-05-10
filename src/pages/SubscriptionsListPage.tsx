@@ -47,6 +47,7 @@ export function SubscriptionsListPage() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
+  const filterDetailsRef = useRef<HTMLDetailsElement>(null);
   const [items, setItems] = useState<SubscriptionListRow[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [currencyOptions, setCurrencyOptions] = useState<AppCurrency[]>([]);
@@ -132,6 +133,7 @@ export function SubscriptionsListPage() {
         return;
       }
       e.preventDefault();
+      if (filterDetailsRef.current) filterDetailsRef.current.open = true;
       searchRef.current?.focus();
     }
     window.addEventListener("keydown", onKey);
@@ -152,92 +154,100 @@ export function SubscriptionsListPage() {
         </Link>
       </div>
 
-      <div className="sk-card space-y-5">
-        <header className="space-y-1 border-b border-cream-300/80 pb-3">
-          <h3 className="text-base font-semibold text-cream-900">{t("list.filtersSectionTitle")}</h3>
-          <p className="text-xs leading-relaxed text-cream-600">{t("list.filtersSectionHint")}</p>
-        </header>
+      <details ref={filterDetailsRef} className="sk-card overflow-hidden p-0 shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-cream-900 outline-none transition-colors hover:bg-cream-200/30 [&::-webkit-details-marker]:hidden">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-cream-500" aria-hidden>
+              ▾
+            </span>
+            <span className="truncate">{t("list.filtersToggle")}</span>
+          </span>
+          <span className="hidden shrink-0 text-[11px] font-normal text-cream-600 sm:inline">
+            {t("list.filtersToggleHint")}
+          </span>
+        </summary>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="min-w-0 space-y-1.5">
-            <label className="sk-label mb-0" htmlFor="list-filter-category">
-              {t("list.filterCategory")}
-            </label>
-            <select
-              id="list-filter-category"
-              className="sk-select w-full"
-              value={catFilter}
-              onChange={(e) => setCatFilter(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="min-w-0 space-y-1.5">
-            <label className="sk-label mb-0" htmlFor="list-filter-currency">
-              {t("list.filterCurrency")}
-            </label>
-            <select
-              id="list-filter-currency"
-              className="sk-select w-full"
-              value={curFilter}
-              onChange={(e) => setCurFilter(e.target.value)}
-            >
-              <option value="">{t("common.all")}</option>
-              {currencyOptions.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.code}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <div className="space-y-2 border-t border-cream-300/80 px-3 py-2.5">
+          <p className="text-[11px] leading-snug text-cream-600">{t("list.filtersPanelHint")}</p>
 
-        <div className="space-y-1.5">
-          <label className="sk-label mb-0" htmlFor="list-search">
-            {t("common.search")}
-          </label>
-          <input
-            ref={searchRef}
-            id="list-search"
-            className="sk-input w-full"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("list.searchPlaceholder")}
-            autoComplete="off"
-          />
-          <p className="text-[11px] text-cream-500">{t("list.searchSlashHint")}</p>
-        </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-6 md:gap-x-2 md:gap-y-2">
+            <div className="col-span-2 min-w-0 md:col-span-2">
+              <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-filter-category">
+                {t("list.filterCategory")}
+              </label>
+              <select
+                id="list-filter-category"
+                className="sk-select !min-h-9 w-full py-1.5 text-sm"
+                value={catFilter}
+                onChange={(e) => setCatFilter(e.target.value)}
+              >
+                <option value="">{t("common.all")}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2 min-w-0 md:col-span-2">
+              <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-filter-currency">
+                {t("list.filterCurrency")}
+              </label>
+              <select
+                id="list-filter-currency"
+                className="sk-select !min-h-9 w-full py-1.5 text-sm"
+                value={curFilter}
+                onChange={(e) => setCurFilter(e.target.value)}
+              >
+                <option value="">{t("common.all")}</option>
+                {currencyOptions.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2 flex items-end md:col-span-2">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-cream-400/70 bg-cream-100/35 px-2.5 py-2 text-xs text-cream-800">
+                <input
+                  type="checkbox"
+                  id="due-soon"
+                  className="size-3.5 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                  checked={dueSoon}
+                  onChange={(e) => setDueSoon(e.target.checked)}
+                />
+                <span className="leading-snug">{t("list.dueSoon")}</span>
+              </label>
+            </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-cream-400/80 bg-cream-100/45 px-3 py-3 sm:items-center sm:px-4">
-          <input
-            type="checkbox"
-            id="due-soon"
-            className="mt-0.5 size-4 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500 sm:mt-0"
-            checked={dueSoon}
-            onChange={(e) => setDueSoon(e.target.checked)}
-          />
-          <label htmlFor="due-soon" className="cursor-pointer text-sm leading-snug text-cream-800">
-            {t("list.dueSoon")}
-          </label>
-        </div>
+            <div className="col-span-2 min-w-0 md:col-span-6">
+              <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-search">
+                {t("common.search")}
+              </label>
+              <input
+                ref={searchRef}
+                id="list-search"
+                className="sk-input !min-h-9 w-full py-1.5 text-sm"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => {
+                  if (filterDetailsRef.current) filterDetailsRef.current.open = true;
+                }}
+                placeholder={t("list.searchPlaceholder")}
+                autoComplete="off"
+              />
+              <p className="mt-0.5 text-[10px] text-cream-500">{t("list.searchSlashHint")}</p>
+            </div>
 
-        <div className="space-y-3 border-t border-cream-300/80 pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-cream-800">{t("list.sortBy")}</span>
-          </div>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:gap-3">
+            <div className="col-span-2 min-w-0 md:col-span-3">
+              <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-sort-key">
+                {t("list.sortBy")}
+              </label>
               <select
                 id="list-sort-key"
-                className="sk-select min-h-11 min-w-0 flex-1 sm:max-w-xs"
+                className="sk-select !min-h-9 min-w-0 w-full py-1.5 text-sm"
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                aria-label={t("list.sortBy")}
               >
                 <option value="next_due">{t("list.sort.nextDue")}</option>
                 <option value="title">{t("list.sort.title")}</option>
@@ -245,27 +255,33 @@ export function SubscriptionsListPage() {
                 <option value="amount">{t("list.sort.amount")}</option>
                 <option value="primary">{t("list.sort.primary")}</option>
               </select>
+            </div>
+            <div className="col-span-2 min-w-0 md:col-span-2">
+              <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-sort-dir">
+                {t("list.sortDirectionShort")}
+              </label>
               <select
                 id="list-sort-dir"
-                className="sk-select min-h-11 w-full sm:w-40 lg:w-44"
+                className="sk-select !min-h-9 w-full py-1.5 text-sm"
                 value={sortDir}
                 onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                aria-label={t("list.sortDirectionShort")}
               >
                 <option value="asc">{t("list.sort.asc")}</option>
                 <option value="desc">{t("list.sort.desc")}</option>
               </select>
             </div>
-            <button
-              type="button"
-              className="sk-btn-secondary w-full shrink-0 lg:w-auto lg:min-w-[11rem]"
-              onClick={() => void reload()}
-            >
-              {t("list.applyFilters")}
-            </button>
+            <div className="col-span-2 flex items-end md:col-span-1 md:justify-end">
+              <button
+                type="button"
+                className="sk-btn-secondary !min-h-9 w-full px-3 py-1.5 text-xs md:w-auto"
+                onClick={() => void reload()}
+              >
+                {t("list.applyFilters")}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       {loading ? (
         <p className="sk-text-hint">{t("common.loading")}</p>
