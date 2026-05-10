@@ -5,7 +5,14 @@ import {
   intervalToApproxMonths,
   parseDateInput,
 } from "../lib/schedule";
+import { tagTokens } from "../lib/tags";
 import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
+
+/** Distinct tag strings derived from all subscriptions (for settings + form suggestions). */
+export interface SubscriptionTagStat {
+  tag: string;
+  count: number;
+}
 
 export async function loadCategories(): Promise<Category[]> {
   const db = await getDb();
@@ -45,6 +52,22 @@ export async function deleteCategory(id: number): Promise<void> {
     id,
   ]);
   await db.execute("DELETE FROM categories WHERE id = $1", [id]);
+}
+
+export async function loadSubscriptionTagStats(): Promise<SubscriptionTagStat[]> {
+  const db = await getDb();
+  const rows = await db.select<{ tags: string | null }>(
+    "SELECT tags FROM subscriptions WHERE tags IS NOT NULL AND TRIM(tags) != ''",
+  );
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    for (const tok of tagTokens(r.tags)) {
+      counts.set(tok, (counts.get(tok) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => a.tag.localeCompare(b.tag, "ar", { sensitivity: "base" }));
 }
 
 /** @deprecated Legacy table; UI uses built-in ISO list. */

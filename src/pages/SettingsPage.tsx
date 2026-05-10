@@ -14,6 +14,7 @@ import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 import { CategoriesPage } from "./CategoriesPage";
 import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
+import { TagsSettingsPanel } from "../components/TagsSettingsPanel";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
@@ -23,7 +24,7 @@ import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backup
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
-type TabId = "app" | "categories" | "payments" | "export" | "danger";
+type TabId = "app" | "categories" | "tags" | "payments" | "export" | "danger";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -121,7 +122,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     const raw = searchParams.get("tab");
-    if (raw === "categories" || raw === "payments" || raw === "export" || raw === "danger") {
+    if (raw === "categories" || raw === "tags" || raw === "payments" || raw === "export" || raw === "danger") {
       setTab(raw);
     } else {
       setTab("app");
@@ -433,6 +434,7 @@ export function SettingsPage() {
   const tabs: { id: TabId; label: string }[] = [
     { id: "app", label: t("settings.tabApp") },
     { id: "categories", label: t("settings.tabCategories") },
+    { id: "tags", label: t("settings.tabTags") },
     { id: "payments", label: t("settings.tabPayments") },
     { id: "export", label: t("settings.tabExport") },
     { id: "danger", label: t("settings.tabDanger") },
@@ -793,6 +795,7 @@ export function SettingsPage() {
       ) : null}
 
       {tab === "categories" ? <CategoriesPage omitTitle /> : null}
+      {tab === "tags" ? <TagsSettingsPanel /> : null}
       {tab === "payments" ? <PaymentMethodsPanel /> : null}
 
       {tab === "export" ? (
