@@ -5,9 +5,11 @@ import localeAr from "../src/locales/ar.json";
 
 export const BACKUP_EXPORT_VERSION = 6;
 
+export type BackupExportScope = "full" | "without_settings";
+
 interface BackupPayload {
   exportVersion: number;
-  exportScope?: "full" | "subscriptions_only";
+  exportScope?: BackupExportScope;
   exportedAt: string;
   appVersion: string;
   categories: unknown[];
@@ -22,7 +24,7 @@ interface BackupPayload {
 export interface ImportPreviewDTO {
   filePath: string;
   exportVersion: number;
-  exportScope: "full" | "subscriptions_only";
+  exportScope: BackupExportScope;
   exportedAt: string;
   backupAppVersion: string;
   counts: {
@@ -72,43 +74,15 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return x != null && typeof x === "object" && !Array.isArray(x);
 }
 
-/** Subscriptions-only backups omit payment rows unless arrays are populated (newer app builds). */
-function subscriptionsOnlyBackupIncludesPaymentMethods(data: BackupPayload): boolean {
-  if (data.exportScope !== "subscriptions_only") return true;
-  return data.credit_cards.length > 0 || data.wallet_methods.length > 0;
+function normalizeBackupExportScope(raw: unknown): BackupExportScope {
+  if (raw === "without_settings" || raw === "subscriptions_only") return "without_settings";
+  return "full";
 }
 
-function collectPaymentRecordsForSubsExport(
-  database: Database.Database,
-  subscriptionRows: unknown[],
-): { credit_cards: unknown[]; wallet_methods: unknown[] } {
-  const cardIds = new Set<number>();
-  const walletIds = new Set<number>();
-  for (const r of subscriptionRows) {
-    if (!isRecord(r)) continue;
-    if (r.credit_card_id != null && r.credit_card_id !== "") cardIds.add(Number(r.credit_card_id));
-    if (r.wallet_method_id != null && r.wallet_method_id !== "")
-      walletIds.add(Number(r.wallet_method_id));
-  }
-  const allCards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
-  const allWallets = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const w of allWallets) {
-      if (!isRecord(w)) continue;
-      const wid = Number(w.id);
-      if (!walletIds.has(wid)) continue;
-      const lc = w.linked_card_id;
-      if (lc != null && lc !== "" && !cardIds.has(Number(lc))) {
-        cardIds.add(Number(lc));
-        changed = true;
-      }
-    }
-  }
-  const credit_cards = allCards.filter((c) => isRecord(c) && cardIds.has(Number(c.id)));
-  const wallet_methods = allWallets.filter((w) => isRecord(w) && walletIds.has(Number(w.id)));
-  return { credit_cards, wallet_methods };
+/** Legacy «بدون إعدادات»: ملفات قديمة بلا مصفوفات بطاقات/محافظ — نصفّر ربط الاشتراك بوسيلة الدفع عند الاستيراد. */
+function withoutSettingsNeedsStripPaymentLinks(data: BackupPayload): boolean {
+  if (data.exportScope !== "without_settings") return false;
+  return data.credit_cards.length === 0 && data.wallet_methods.length === 0;
 }
 
 function importCreditCardDescription(row: Record<string, unknown>): string | null {
@@ -130,8 +104,7 @@ function validatePayload(raw: unknown): BackupPayload {
   ) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
-  const exportScope: "full" | "subscriptions_only" =
-    raw.exportScope === "subscriptions_only" ? "subscriptions_only" : "full";
+  const exportScope = normalizeBackupExportScope(raw.exportScope);
   const categories = raw.categories;
   const subscriptions = raw.subscriptions;
   const payment_events = raw.payment_events;
@@ -516,63 +489,64 @@ function subscriptionRowParams(
   ];
 }
 
-function importIntoDb(database: Database.Database, data: BackupPayload): void {
-  const scope = data.exportScope ?? "full";
-  const tx = database.transaction(() => {
-    if (scope === "subscriptions_only") {
-      const payPresent = subscriptionsOnlyBackupIncludesPaymentMethods(data);
-      database.prepare("DELETE FROM payment_events").run();
-      database.prepare("DELETE FROM subscriptions").run();
-      if (payPresent) {
-        database.prepare("DELETE FROM wallet_methods").run();
-        database.prepare("DELETE FROM credit_cards").run();
-      }
-      database.prepare("DELETE FROM categories").run();
-
-      if (payPresent) {
-        const insCardOnly = database.prepare(`
+function insertBackupPayloadSnapshot(
+  database: Database.Database,
+  data: BackupPayload,
+  stripPayLinks: boolean,
+): void {
+  const insCard = database.prepare(`
       INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-        for (const row of data.credit_cards) {
-          if (!isRecord(row)) throw new Error("Invalid credit card row");
-          insCardOnly.run(
-            row.id,
-            row.brand,
-            row.last4,
-            row.exp_month,
-            row.exp_year,
-            importCreditCardDescription(row),
-            row.created_at,
-            row.updated_at,
-          );
-        }
-        const insWalOnly = database.prepare(`
+  for (const row of data.credit_cards) {
+    if (!isRecord(row)) throw new Error("Invalid credit card row");
+    insCard.run(
+      row.id,
+      row.brand,
+      row.last4,
+      row.exp_month,
+      row.exp_year,
+      importCreditCardDescription(row),
+      row.created_at,
+      row.updated_at,
+    );
+  }
+
+  const insWallet = database.prepare(`
       INSERT INTO wallet_methods (id, service_code, account_text, linked_card_id, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-        for (const row of data.wallet_methods) {
-          if (!isRecord(row)) throw new Error("Invalid wallet row");
-          insWalOnly.run(
-            row.id,
-            row.service_code,
-            row.account_text,
-            row.linked_card_id ?? null,
-            row.created_at,
-            row.updated_at,
-          );
-        }
-      }
+  for (const row of data.wallet_methods) {
+    if (!isRecord(row)) throw new Error("Invalid wallet row");
+    insWallet.run(
+      row.id,
+      row.service_code,
+      row.account_text,
+      row.linked_card_id ?? null,
+      row.created_at,
+      row.updated_at,
+    );
+  }
 
-      const insCatOnly = database.prepare(
-        "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
-      );
-      for (const row of data.categories) {
-        if (!isRecord(row)) throw new Error("Invalid category row");
-        insCatOnly.run(row.id, row.name, row.sort_order);
-      }
+  const insCurPrefer = database.prepare(`
+      INSERT INTO currencies (code, sort_order)
+      VALUES (?, ?)
+      ON CONFLICT(code) DO UPDATE SET sort_order = excluded.sort_order
+    `);
+  for (const row of data.currencies) {
+    if (!isRecord(row)) throw new Error("Invalid currency row");
+    insCurPrefer.run(String(row.code).trim().toUpperCase(), Number(row.sort_order) || 0);
+  }
 
-      const insSubOnly = database.prepare(`
+  const insCat = database.prepare(
+    "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
+  );
+  for (const row of data.categories) {
+    if (!isRecord(row)) throw new Error("Invalid category row");
+    insCat.run(row.id, row.name, row.sort_order);
+  }
+
+  const insSub = database.prepare(`
       INSERT INTO subscriptions (
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
@@ -580,43 +554,58 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
         account_label, cancelled_at, created_at, updated_at
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
-      for (const row of data.subscriptions) {
-        if (!isRecord(row)) throw new Error("Invalid subscription row");
-        const raw = normalizeImportedSubscription(row);
-        const r = payPresent
-          ? raw
-          : { ...raw, credit_card_id: null as number | null, wallet_method_id: null as number | null };
-        insSubOnly.run(...subscriptionRowParams(r, r.sourceId));
-      }
+  for (const row of data.subscriptions) {
+    if (!isRecord(row)) throw new Error("Invalid subscription row");
+    const raw = normalizeImportedSubscription(row);
+    const r = stripPayLinks
+      ? { ...raw, credit_card_id: null as number | null, wallet_method_id: null as number | null }
+      : raw;
+    insSub.run(...subscriptionRowParams(r, r.sourceId));
+  }
 
-      const insPayOnly = database.prepare(`
+  const insPay = database.prepare(`
       INSERT INTO payment_events (
         id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note
       ) VALUES (?,?,?,?,?,?,?,?,?)
     `);
-      for (const row of data.payment_events) {
-        if (!isRecord(row)) throw new Error("Invalid payment row");
-        const pv = normalizeImportedPayment(row);
-        insPayOnly.run(
-          pv.sourceId,
-          pv.subscriptionSourceId,
-          pv.paid_at,
-          pv.amount_original,
-          pv.currency,
-          pv.amount_qar,
-          pv.renewal_years,
-          pv.renewal_step_count,
-          pv.note,
-        );
-      }
+  for (const row of data.payment_events) {
+    if (!isRecord(row)) throw new Error("Invalid payment row");
+    const pv = normalizeImportedPayment(row);
+    insPay.run(
+      pv.sourceId,
+      pv.subscriptionSourceId,
+      pv.paid_at,
+      pv.amount_original,
+      pv.currency,
+      pv.amount_qar,
+      pv.renewal_years,
+      pv.renewal_step_count,
+      pv.note,
+    );
+  }
+}
 
-      resetAutoincrement(database, "categories");
-      resetAutoincrement(database, "subscriptions");
-      resetAutoincrement(database, "payment_events");
-      if (payPresent) {
-        resetAutoincrement(database, "credit_cards");
-        resetAutoincrement(database, "wallet_methods");
-      }
+function resetBackupTableSequences(database: Database.Database): void {
+  resetAutoincrement(database, "categories");
+  resetAutoincrement(database, "subscriptions");
+  resetAutoincrement(database, "payment_events");
+  resetAutoincrement(database, "credit_cards");
+  resetAutoincrement(database, "wallet_methods");
+}
+
+function importIntoDb(database: Database.Database, data: BackupPayload): void {
+  const scope = data.exportScope ?? "full";
+  const tx = database.transaction(() => {
+    if (scope === "without_settings") {
+      const stripPayLinks = withoutSettingsNeedsStripPaymentLinks(data);
+      database.prepare("DELETE FROM payment_events").run();
+      database.prepare("DELETE FROM subscriptions").run();
+      database.prepare("DELETE FROM wallet_methods").run();
+      database.prepare("DELETE FROM credit_cards").run();
+      database.prepare("DELETE FROM categories").run();
+      database.prepare("DELETE FROM currencies").run();
+      insertBackupPayloadSnapshot(database, data, stripPayLinks);
+      resetBackupTableSequences(database);
       return;
     }
 
@@ -628,92 +617,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
     database.prepare("DELETE FROM currencies").run();
     database.prepare("DELETE FROM settings").run();
 
-    const insCard = database.prepare(`
-      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    for (const row of data.credit_cards) {
-      if (!isRecord(row)) throw new Error("Invalid credit card row");
-      insCard.run(
-        row.id,
-        row.brand,
-        row.last4,
-        row.exp_month,
-        row.exp_year,
-        importCreditCardDescription(row),
-        row.created_at,
-        row.updated_at,
-      );
-    }
-
-    const insWallet = database.prepare(`
-      INSERT INTO wallet_methods (id, service_code, account_text, linked_card_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    for (const row of data.wallet_methods) {
-      if (!isRecord(row)) throw new Error("Invalid wallet row");
-      insWallet.run(
-        row.id,
-        row.service_code,
-        row.account_text,
-        row.linked_card_id ?? null,
-        row.created_at,
-        row.updated_at,
-      );
-    }
-
-    const insCurPrefer = database.prepare(`
-      INSERT INTO currencies (code, sort_order)
-      VALUES (?, ?)
-      ON CONFLICT(code) DO UPDATE SET sort_order = excluded.sort_order
-    `);
-    for (const row of data.currencies) {
-      if (!isRecord(row)) throw new Error("Invalid currency row");
-      insCurPrefer.run(String(row.code).trim().toUpperCase(), Number(row.sort_order) || 0);
-    }
-
-    const insCat = database.prepare(
-      "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
-    );
-    for (const row of data.categories) {
-      if (!isRecord(row)) throw new Error("Invalid category row");
-      insCat.run(row.id, row.name, row.sort_order);
-    }
-
-    const insSub = database.prepare(`
-      INSERT INTO subscriptions (
-        id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
-        interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-        start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, cancelled_at, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `);
-    for (const row of data.subscriptions) {
-      if (!isRecord(row)) throw new Error("Invalid subscription row");
-      const r = normalizeImportedSubscription(row);
-      insSub.run(...subscriptionRowParams(r, r.sourceId));
-    }
-
-    const insPay = database.prepare(`
-      INSERT INTO payment_events (
-        id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note
-      ) VALUES (?,?,?,?,?,?,?,?,?)
-    `);
-    for (const row of data.payment_events) {
-      if (!isRecord(row)) throw new Error("Invalid payment row");
-      const pv = normalizeImportedPayment(row);
-      insPay.run(
-        pv.sourceId,
-        pv.subscriptionSourceId,
-        pv.paid_at,
-        pv.amount_original,
-        pv.currency,
-        pv.amount_qar,
-        pv.renewal_years,
-        pv.renewal_step_count,
-        pv.note,
-      );
-    }
+    insertBackupPayloadSnapshot(database, data, false);
 
     const insSet = database.prepare(
       "INSERT INTO settings (key, value) VALUES (?, ?)",
@@ -723,11 +627,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
       insSet.run(row.key, row.value);
     }
 
-    resetAutoincrement(database, "categories");
-    resetAutoincrement(database, "subscriptions");
-    resetAutoincrement(database, "payment_events");
-    resetAutoincrement(database, "credit_cards");
-    resetAutoincrement(database, "wallet_methods");
+    resetBackupTableSequences(database);
   });
   tx();
 }
@@ -739,7 +639,7 @@ function mergeImportIntoDb(
 ): void {
   const { onDuplicateId, onSimilarSubscription } = opts;
   const preferDup = onDuplicateId === "prefer_import";
-  const stripPay = data.exportScope === "subscriptions_only" && !subscriptionsOnlyBackupIncludesPaymentMethods(data);
+  const stripPay = withoutSettingsNeedsStripPaymentLinks(data);
 
   const tx = database.transaction(() => {
     const insCurPrefer = database.prepare(`
@@ -1040,14 +940,13 @@ export function registerBackupIpc(
   getWin: () => BrowserWindow | null,
 ): void {
   ipcMain.handle("backup:export", async (_evt, raw?: unknown) => {
-    let scope: "full" | "subscriptions_only" = "full";
-    if (
-      raw != null &&
-      typeof raw === "object" &&
-      !Array.isArray(raw) &&
-      (raw as { scope?: string }).scope === "subscriptions_only"
-    ) {
-      scope = "subscriptions_only";
+    let scope: BackupExportScope = "full";
+    const reqScope =
+      raw != null && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as { scope?: string }).scope
+        : undefined;
+    if (reqScope === "without_settings" || reqScope === "subscriptions_only") {
+      scope = "without_settings";
     }
     const database = getDb();
     const w = getWin();
@@ -1056,8 +955,8 @@ export function registerBackupIpc(
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const defaultPath =
-      scope === "subscriptions_only"
-        ? `ishtarkati-subs-${stamp}.json`
+      scope === "without_settings"
+        ? `ishtarkati-data-${stamp}.json`
         : `ishtarkati-backup-${stamp}.json`;
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
       title: localeAr.electron.backupSaveTitle,
@@ -1074,51 +973,28 @@ export function registerBackupIpc(
       .prepare("SELECT * FROM payment_events ORDER BY id")
       .all();
     const settings =
-      scope === "subscriptions_only"
+      scope === "without_settings"
         ? []
         : database.prepare("SELECT * FROM settings ORDER BY key").all();
-    const currencies =
-      scope === "subscriptions_only"
-        ? []
-        : database.prepare("SELECT * FROM currencies ORDER BY sort_order, code").all();
-    const paySubs = collectPaymentRecordsForSubsExport(database, subscriptions);
-    const credit_cards =
-      scope === "subscriptions_only"
-        ? paySubs.credit_cards
-        : database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
-    const wallet_methods =
-      scope === "subscriptions_only"
-        ? paySubs.wallet_methods
-        : database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
+    const currencies = database
+      .prepare("SELECT * FROM currencies ORDER BY sort_order, code")
+      .all();
+    const credit_cards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
+    const wallet_methods = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
 
-    const payload: BackupPayload =
-      scope === "subscriptions_only"
-        ? {
-            exportVersion: BACKUP_EXPORT_VERSION,
-            exportScope: "subscriptions_only",
-            exportedAt: new Date().toISOString(),
-            appVersion: app.getVersion(),
-            categories,
-            subscriptions,
-            payment_events,
-            settings,
-            currencies,
-            credit_cards,
-            wallet_methods,
-          }
-        : {
-            exportVersion: BACKUP_EXPORT_VERSION,
-            exportScope: "full",
-            exportedAt: new Date().toISOString(),
-            appVersion: app.getVersion(),
-            categories,
-            subscriptions,
-            payment_events,
-            settings,
-            currencies,
-            credit_cards,
-            wallet_methods,
-          };
+    const payload: BackupPayload = {
+      exportVersion: BACKUP_EXPORT_VERSION,
+      exportScope: scope,
+      exportedAt: new Date().toISOString(),
+      appVersion: app.getVersion(),
+      categories,
+      subscriptions,
+      payment_events,
+      settings,
+      currencies,
+      credit_cards,
+      wallet_methods,
+    };
 
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
     return { ok: true as const, path: filePath };

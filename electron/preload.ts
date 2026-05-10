@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     ipcRenderer.invoke("db:execute", sql, params),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke("shell:openExternal", url),
-  backupExport: (opts?: { scope?: "full" | "subscriptions_only" }) =>
+  backupExport: (opts?: { scope?: "full" | "without_settings" }) =>
     ipcRenderer.invoke("backup:export", opts ?? {}),
   backupPrepareImport: () => ipcRenderer.invoke("backup:prepareImport"),
   backupApplyImport: (payload: {

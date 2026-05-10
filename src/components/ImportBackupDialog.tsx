@@ -77,8 +77,8 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
             })}
           </li>
           <li>
-            {preview.exportScope === "subscriptions_only"
-              ? t("backup.previewScopeSubs")
+            {preview.exportScope === "without_settings"
+              ? t("backup.previewScopeWithoutSettings")
               : t("backup.previewScopeFull")}
           </li>
         </ul>
@@ -150,8 +150,8 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
             <span>
               <span className="font-medium">{t("backup.strategyReplaceTitle")}</span>
               <span className="mt-1 block text-sm leading-relaxed opacity-95">
-                {preview.exportScope === "subscriptions_only"
-                  ? t("backup.strategyReplaceBodySubs")
+                {preview.exportScope === "without_settings"
+                  ? t("backup.strategyReplaceBodyWithoutSettings")
                   : t("backup.strategyReplaceBody")}
               </span>
             </span>

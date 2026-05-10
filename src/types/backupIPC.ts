@@ -2,7 +2,7 @@
 export interface BackupImportPreview {
   filePath: string;
   exportVersion: number;
-  exportScope: "full" | "subscriptions_only";
+  exportScope: "full" | "without_settings";
   exportedAt: string;
   backupAppVersion: string;
   counts: {

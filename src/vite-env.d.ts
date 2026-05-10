@@ -11,7 +11,7 @@ declare global {
         params: unknown[],
       ) => Promise<{ changes: number; lastInsertRowid: number }>;
       openExternal: (url: string) => Promise<void>;
-      backupExport: (opts?: { scope?: "full" | "subscriptions_only" }) => Promise<
+      backupExport: (opts?: { scope?: "full" | "without_settings" }) => Promise<
         | { ok: true; path: string }
         | { ok: false; canceled?: boolean; error?: string }
       >;

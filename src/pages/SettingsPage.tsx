@@ -196,13 +196,13 @@ export function SettingsPage() {
     }
   }
 
-  async function handleExportSubsOnly() {
+  async function handleExportWithoutSettings() {
     setBackupMsg(null);
     setBackupBusy(true);
     try {
-      const r = await window.ishtarkati.backupExport({ scope: "subscriptions_only" });
+      const r = await window.ishtarkati.backupExport({ scope: "without_settings" });
       if (r.ok) {
-        setBackupMsg(`${t("backup.exportOkSubs")}: ${r.path}`);
+        setBackupMsg(`${t("backup.exportOkWithoutSettings")}: ${r.path}`);
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
@@ -843,9 +843,9 @@ export function SettingsPage() {
                 type="button"
                 className="sk-btn-secondary"
                 disabled={backupBusy}
-                onClick={() => void handleExportSubsOnly()}
+                onClick={() => void handleExportWithoutSettings()}
               >
-                {t("backup.exportSubsOnly")}
+                {t("backup.exportWithoutSettings")}
               </button>
               <button
                 type="button"
