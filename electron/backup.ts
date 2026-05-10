@@ -72,6 +72,45 @@ function isRecord(x: unknown): x is Record<string, unknown> {
   return x != null && typeof x === "object" && !Array.isArray(x);
 }
 
+/** Subscriptions-only backups omit payment rows unless arrays are populated (newer app builds). */
+function subscriptionsOnlyBackupIncludesPaymentMethods(data: BackupPayload): boolean {
+  if (data.exportScope !== "subscriptions_only") return true;
+  return data.credit_cards.length > 0 || data.wallet_methods.length > 0;
+}
+
+function collectPaymentRecordsForSubsExport(
+  database: Database.Database,
+  subscriptionRows: unknown[],
+): { credit_cards: unknown[]; wallet_methods: unknown[] } {
+  const cardIds = new Set<number>();
+  const walletIds = new Set<number>();
+  for (const r of subscriptionRows) {
+    if (!isRecord(r)) continue;
+    if (r.credit_card_id != null && r.credit_card_id !== "") cardIds.add(Number(r.credit_card_id));
+    if (r.wallet_method_id != null && r.wallet_method_id !== "")
+      walletIds.add(Number(r.wallet_method_id));
+  }
+  const allCards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
+  const allWallets = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const w of allWallets) {
+      if (!isRecord(w)) continue;
+      const wid = Number(w.id);
+      if (!walletIds.has(wid)) continue;
+      const lc = w.linked_card_id;
+      if (lc != null && lc !== "" && !cardIds.has(Number(lc))) {
+        cardIds.add(Number(lc));
+        changed = true;
+      }
+    }
+  }
+  const credit_cards = allCards.filter((c) => isRecord(c) && cardIds.has(Number(c.id)));
+  const wallet_methods = allWallets.filter((w) => isRecord(w) && walletIds.has(Number(w.id)));
+  return { credit_cards, wallet_methods };
+}
+
 function importCreditCardDescription(row: Record<string, unknown>): string | null {
   if (!("description" in row) || row.description == null) return null;
   const s = String(row.description).trim();
@@ -481,9 +520,49 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
   const scope = data.exportScope ?? "full";
   const tx = database.transaction(() => {
     if (scope === "subscriptions_only") {
+      const payPresent = subscriptionsOnlyBackupIncludesPaymentMethods(data);
       database.prepare("DELETE FROM payment_events").run();
       database.prepare("DELETE FROM subscriptions").run();
+      if (payPresent) {
+        database.prepare("DELETE FROM wallet_methods").run();
+        database.prepare("DELETE FROM credit_cards").run();
+      }
       database.prepare("DELETE FROM categories").run();
+
+      if (payPresent) {
+        const insCardOnly = database.prepare(`
+      INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+        for (const row of data.credit_cards) {
+          if (!isRecord(row)) throw new Error("Invalid credit card row");
+          insCardOnly.run(
+            row.id,
+            row.brand,
+            row.last4,
+            row.exp_month,
+            row.exp_year,
+            importCreditCardDescription(row),
+            row.created_at,
+            row.updated_at,
+          );
+        }
+        const insWalOnly = database.prepare(`
+      INSERT INTO wallet_methods (id, service_code, account_text, linked_card_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+        for (const row of data.wallet_methods) {
+          if (!isRecord(row)) throw new Error("Invalid wallet row");
+          insWalOnly.run(
+            row.id,
+            row.service_code,
+            row.account_text,
+            row.linked_card_id ?? null,
+            row.created_at,
+            row.updated_at,
+          );
+        }
+      }
 
       const insCatOnly = database.prepare(
         "INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)",
@@ -504,7 +583,9 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
       for (const row of data.subscriptions) {
         if (!isRecord(row)) throw new Error("Invalid subscription row");
         const raw = normalizeImportedSubscription(row);
-        const r = { ...raw, credit_card_id: null, wallet_method_id: null };
+        const r = payPresent
+          ? raw
+          : { ...raw, credit_card_id: null as number | null, wallet_method_id: null as number | null };
         insSubOnly.run(...subscriptionRowParams(r, r.sourceId));
       }
 
@@ -532,6 +613,10 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
       resetAutoincrement(database, "categories");
       resetAutoincrement(database, "subscriptions");
       resetAutoincrement(database, "payment_events");
+      if (payPresent) {
+        resetAutoincrement(database, "credit_cards");
+        resetAutoincrement(database, "wallet_methods");
+      }
       return;
     }
 
@@ -654,7 +739,7 @@ function mergeImportIntoDb(
 ): void {
   const { onDuplicateId, onSimilarSubscription } = opts;
   const preferDup = onDuplicateId === "prefer_import";
-  const stripPay = data.exportScope === "subscriptions_only";
+  const stripPay = data.exportScope === "subscriptions_only" && !subscriptionsOnlyBackupIncludesPaymentMethods(data);
 
   const tx = database.transaction(() => {
     const insCurPrefer = database.prepare(`
@@ -996,13 +1081,14 @@ export function registerBackupIpc(
       scope === "subscriptions_only"
         ? []
         : database.prepare("SELECT * FROM currencies ORDER BY sort_order, code").all();
+    const paySubs = collectPaymentRecordsForSubsExport(database, subscriptions);
     const credit_cards =
       scope === "subscriptions_only"
-        ? []
+        ? paySubs.credit_cards
         : database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
     const wallet_methods =
       scope === "subscriptions_only"
-        ? []
+        ? paySubs.wallet_methods
         : database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
 
     const payload: BackupPayload =
