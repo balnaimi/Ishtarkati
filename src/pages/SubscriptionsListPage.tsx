@@ -21,6 +21,7 @@ import {
   type DueTone,
 } from "../lib/dueProgress";
 import { tagTokens } from "../lib/tags";
+import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
 
 function toneTextClass(tone: DueTone): string {
   if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
@@ -143,6 +144,16 @@ export function SubscriptionsListPage() {
   function billingLabel(model: string) {
     if (model === "one_time") return t("billing.one_time");
     return t("billing.recurring");
+  }
+
+  function billingCell(s: SubscriptionListRow) {
+    const period = subscriptionBillingPeriodLine(s, t);
+    return (
+      <div className="space-y-0.5">
+        <span className="block">{billingLabel(s.billing_model)}</span>
+        {period ? <span className="block text-xs text-cream-600">{period}</span> : null}
+      </div>
+    );
   }
 
   return (
@@ -294,7 +305,7 @@ export function SubscriptionsListPage() {
               <tr>
                 <th className="px-3 py-3 font-semibold">{t("list.name")}</th>
                 <th className="px-3 py-3 font-semibold">{t("list.category")}</th>
-                <th className="px-3 py-3 font-semibold">{t("list.billing")}</th>
+                <th className="px-3 py-3 font-semibold">{t("list.billingAndPeriod")}</th>
                 <th className="px-3 py-3 font-semibold">{t("list.nextDue")}</th>
                 <th className="px-3 py-3 font-semibold">
                   {t("list.amountAndApprox", { code: primaryCode })}
@@ -349,7 +360,7 @@ export function SubscriptionsListPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
-                    <td className="px-3 py-3 text-cream-800">{billingLabel(s.billing_model)}</td>
+                    <td className="px-3 py-3 text-cream-800">{billingCell(s)}</td>
                     <td className="px-3 py-3 text-cream-800">
                       {s.next_due_date ?? "—"}
                       {prog && tone ? (

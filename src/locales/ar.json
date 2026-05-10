@@ -102,6 +102,14 @@
     "qar": "بالعملة الأساسية (تقريبًا)",
     "primaryApprox": "تقريبًا ({{code}})",
     "billing": "نوع الفوترة",
+    "billingAndPeriod": "الفوترة والفترة",
+    "period": {
+      "day": "يومي",
+      "everyDays": "يومي — كل {{count}} يومًا",
+      "everyWeeks": "أسبوعي — كل {{count}} أسابيع",
+      "everyMonths": "شهري — كل {{count}} أشهر",
+      "everyYears": "سنوي — كل {{count}} سنوات"
+    },
     "category": "التصنيف",
     "empty": "لا توجد اشتراكات بعد. أضف من «إضافة» أو من لوحة التحكم.",
     "domain": "نطاق",
