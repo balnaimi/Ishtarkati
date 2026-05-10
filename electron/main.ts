@@ -147,6 +147,130 @@ function recoverSubscriptionsRenameIfNeeded(database: Database.Database): void {
   }
 }
 
+function insertSubscriptionsFromLegacyV4Rows(
+  database: Database.Database,
+  legacyRows: LegacySubV4Migration[],
+): void {
+  const ins = database.prepare(`
+      INSERT INTO subscriptions (
+        id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
+        interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used,
+        fx_quote_at, start_date, next_due_date, end_date, is_domain, tags, credit_card_id,
+        wallet_method_id, created_at, updated_at
+      ) VALUES (
+        @id, @title, @notes, @website_url, @category_id, @billing_model, @interval_unit, @interval_months,
+        @interval_count, @auto_renew, @amount_original, @currency_code, @amount_qar_snapshot, @fx_rate_used,
+        @fx_quote_at, @start_date, @next_due_date, @end_date, @is_domain, @tags, @credit_card_id,
+        @wallet_method_id, @created_at, @updated_at
+      )
+    `);
+  for (const r of legacyRows) {
+    let billing_model: string =
+      r.billing_model === "pay_as_needed" ? "one_time" : r.billing_model;
+    if (billing_model !== "recurring" && billing_model !== "one_time") {
+      billing_model = "one_time";
+    }
+    let interval_unit = r.interval_unit ?? null;
+    let interval_months: number | null = r.interval_months;
+    let interval_count = 1;
+    if (billing_model === "recurring") {
+      let u = interval_unit ?? "month";
+      if (u === "quarter") {
+        u = "month";
+        interval_count = 3;
+        interval_months = null;
+      } else if (u === "custom_months") {
+        u = "month";
+        interval_count = Math.max(1, r.interval_months ?? 1);
+        interval_months = null;
+      } else if (u === "month" || u === "year") {
+        interval_count = 1;
+      } else if (u === "day" || u === "week") {
+        interval_count = Math.max(1, r.interval_months ?? 1);
+        interval_months = null;
+      } else {
+        u = "month";
+        interval_count = 1;
+        interval_months = null;
+      }
+      interval_unit = u;
+    } else {
+      interval_unit = null;
+      interval_months = null;
+      interval_count = 1;
+    }
+    ins.run({
+      id: r.id,
+      title: r.title,
+      notes: r.notes,
+      website_url: r.website_url,
+      category_id: r.category_id,
+      billing_model,
+      interval_unit,
+      interval_months,
+      interval_count,
+      auto_renew: r.auto_renew,
+      amount_original: r.amount_original,
+      currency_code: r.currency_code,
+      amount_qar_snapshot: r.amount_qar_snapshot,
+      fx_rate_used: r.fx_rate_used,
+      fx_quote_at: r.fx_quote_at,
+      start_date: r.start_date,
+      next_due_date: r.next_due_date,
+      end_date: r.end_date,
+      is_domain: r.is_domain,
+      tags: r.tags,
+      credit_card_id: null,
+      wallet_method_id: null,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    });
+  }
+}
+
+function completeV4MigrationCleanup(database: Database.Database): void {
+  if (sqliteTableExists(database, "subscriptions_legacy_v4")) {
+    database.exec("DROP TABLE subscriptions_legacy_v4");
+  }
+  const maxRow = database.prepare("SELECT MAX(id) AS m FROM subscriptions").get() as {
+    m: number | null;
+  };
+  const maxId = maxRow.m ?? 0;
+  database.prepare("DELETE FROM sqlite_sequence WHERE name = 'subscriptions'").run();
+  if (maxId > 0) {
+    database
+      .prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('subscriptions', ?)")
+      .run(maxId);
+  }
+  database.prepare("UPDATE schema_version SET version = 4").run();
+}
+
+/**
+ * Interrupted migration can leave an empty v4 `subscriptions` shell plus legacy rows —
+ * finish without dropping data.
+ */
+function resumeV4IfEmptySubsWithLegacy(database: Database.Database): boolean {
+  if (!sqliteTableExists(database, "subscriptions_legacy_v4")) return false;
+  if (!subscriptionsTableIsV4Schema(database)) return false;
+  const nSubs =
+    (database.prepare("SELECT COUNT(*) AS n FROM subscriptions").get() as { n: number }).n ?? 0;
+  if (nSubs > 0) return false;
+  const nLeg =
+    (
+      database
+        .prepare("SELECT COUNT(*) AS n FROM subscriptions_legacy_v4")
+        .get() as { n: number }
+    ).n ?? 0;
+  if (nLeg === 0) return false;
+  database.exec(V4_PAYMENT_SIDE_TABLES_DDL);
+  const legacyRows = database
+    .prepare("SELECT * FROM subscriptions_legacy_v4")
+    .all() as LegacySubV4Migration[];
+  insertSubscriptionsFromLegacyV4Rows(database, legacyRows);
+  completeV4MigrationCleanup(database);
+  return true;
+}
+
 function runMigrations(database: Database.Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
@@ -186,31 +310,30 @@ function runMigrations(database: Database.Database): void {
     try {
       recoverSubscriptionsRenameIfNeeded(database);
 
-      if (subscriptionsTableIsV4Schema(database)) {
+      if (resumeV4IfEmptySubsWithLegacy(database)) {
+        /* schema_version set to 4 inside */
+      } else if (subscriptionsTableIsV4Schema(database)) {
         database.exec(V4_PAYMENT_SIDE_TABLES_DDL);
-        if (sqliteTableExists(database, "subscriptions_legacy_v4")) {
-          database.exec("DROP TABLE subscriptions_legacy_v4");
-        }
-        database.prepare("UPDATE schema_version SET version = 4").run();
+        completeV4MigrationCleanup(database);
       } else {
         const migrate = database.transaction(() => {
           database.exec(V4_PAYMENT_SIDE_TABLES_DDL);
 
           if (subscriptionsTableIsV4Schema(database)) {
-            if (sqliteTableExists(database, "subscriptions_legacy_v4")) {
-              database.exec("DROP TABLE subscriptions_legacy_v4");
-            }
-            database.prepare("UPDATE schema_version SET version = 4").run();
+            completeV4MigrationCleanup(database);
             return;
           }
 
           if (!sqliteTableExists(database, "subscriptions")) {
             throw new Error("subscriptions table missing — cannot migrate to v4");
           }
-          database.exec(`ALTER TABLE subscriptions RENAME TO subscriptions_legacy_v4`);
-          if (!sqliteTableExists(database, "subscriptions_legacy_v4")) {
-            throw new Error("Migration v4 failed — expected subscriptions_legacy_v4 after rename");
+
+          if (sqliteTableExists(database, "subscriptions_legacy_v4")) {
+            database.exec("DROP TABLE IF EXISTS subscriptions_legacy_v4");
           }
+
+          database.exec(`CREATE TABLE subscriptions_legacy_v4 AS SELECT * FROM subscriptions`);
+          database.exec(`DROP TABLE subscriptions`);
 
           database.exec(`
       CREATE TABLE subscriptions (
@@ -245,93 +368,8 @@ function runMigrations(database: Database.Database): void {
           const legacyRows = database
             .prepare("SELECT * FROM subscriptions_legacy_v4")
             .all() as LegacySubV4Migration[];
-          const ins = database.prepare(`
-      INSERT INTO subscriptions (
-        id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
-        interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used,
-        fx_quote_at, start_date, next_due_date, end_date, is_domain, tags, credit_card_id,
-        wallet_method_id, created_at, updated_at
-      ) VALUES (
-        @id, @title, @notes, @website_url, @category_id, @billing_model, @interval_unit, @interval_months,
-        @interval_count, @auto_renew, @amount_original, @currency_code, @amount_qar_snapshot, @fx_rate_used,
-        @fx_quote_at, @start_date, @next_due_date, @end_date, @is_domain, @tags, @credit_card_id,
-        @wallet_method_id, @created_at, @updated_at
-      )
-    `);
-          for (const r of legacyRows) {
-            let billing_model: string =
-              r.billing_model === "pay_as_needed" ? "one_time" : r.billing_model;
-            if (billing_model !== "recurring" && billing_model !== "one_time") {
-              billing_model = "one_time";
-            }
-            let interval_unit = r.interval_unit ?? null;
-            let interval_months: number | null = r.interval_months;
-            let interval_count = 1;
-            if (billing_model === "recurring") {
-              let u = interval_unit ?? "month";
-              if (u === "quarter") {
-                u = "month";
-                interval_count = 3;
-                interval_months = null;
-              } else if (u === "custom_months") {
-                u = "month";
-                interval_count = Math.max(1, r.interval_months ?? 1);
-                interval_months = null;
-              } else if (u === "month" || u === "year") {
-                interval_count = 1;
-              } else if (u === "day" || u === "week") {
-                interval_count = Math.max(1, r.interval_months ?? 1);
-                interval_months = null;
-              } else {
-                u = "month";
-                interval_count = 1;
-                interval_months = null;
-              }
-              interval_unit = u;
-            } else {
-              interval_unit = null;
-              interval_months = null;
-              interval_count = 1;
-            }
-            ins.run({
-              id: r.id,
-              title: r.title,
-              notes: r.notes,
-              website_url: r.website_url,
-              category_id: r.category_id,
-              billing_model,
-              interval_unit,
-              interval_months,
-              interval_count,
-              auto_renew: r.auto_renew,
-              amount_original: r.amount_original,
-              currency_code: r.currency_code,
-              amount_qar_snapshot: r.amount_qar_snapshot,
-              fx_rate_used: r.fx_rate_used,
-              fx_quote_at: r.fx_quote_at,
-              start_date: r.start_date,
-              next_due_date: r.next_due_date,
-              end_date: r.end_date,
-              is_domain: r.is_domain,
-              tags: r.tags,
-              credit_card_id: null,
-              wallet_method_id: null,
-              created_at: r.created_at,
-              updated_at: r.updated_at,
-            });
-          }
-          database.exec("DROP TABLE subscriptions_legacy_v4");
-          const maxRow = database.prepare("SELECT MAX(id) AS m FROM subscriptions").get() as {
-            m: number | null;
-          };
-          const maxId = maxRow.m ?? 0;
-          database.prepare("DELETE FROM sqlite_sequence WHERE name = 'subscriptions'").run();
-          if (maxId > 0) {
-            database
-              .prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('subscriptions', ?)")
-              .run(maxId);
-          }
-          database.prepare("UPDATE schema_version SET version = 4").run();
+          insertSubscriptionsFromLegacyV4Rows(database, legacyRows);
+          completeV4MigrationCleanup(database);
         });
         migrate();
       }
