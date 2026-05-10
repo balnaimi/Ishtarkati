@@ -10,7 +10,7 @@
   "description": "Arabic subscription tracker — desktop only (Electron, Linux AppImage; not for mobile)",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/bump-patch-for-build.mjs && tsc && vite build && electron-builder --linux AppImage",
+    "build": "node scripts/bump-version-for-build.mjs && tsc && vite build && electron-builder --linux AppImage",
     "build:pack": "SKIP_VERSION_BUMP=1 tsc && vite build && electron-builder --linux AppImage",
     "watch:build": "chokidar \"src/**/*\" \"electron/**/*\" \"index.html\" \"vite.config.ts\" \"src/index.css\" -c \"npm run build:pack\" -d 2500 --initial",
     "preview": "vite preview",

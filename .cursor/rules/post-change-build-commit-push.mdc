@@ -9,7 +9,7 @@ alwaysApply: true
 
 1. **بناء إنتاج بإصدار جديد** — شغّل من جذر المشروع:
    - `npm run build`
-   - هذا يشغّل `bump-patch-for-build.mjs` فيرفع **PATCH** في `package.json` و`src/version.ts` ثم يبني الـ AppImage محليًا تحت `release/` (المجلد في `.gitignore` ولا يُرفع).
+   - يشغّل `scripts/bump-version-for-build.mjs` فيقدّر حجم التغيير (من git) ويرفع **major** أو **minor** أو **patch** في `package.json` و`src/version.ts`، ثم يبني الـ AppImage تحت `release/`. إن كان آخر commit من نوع `Release X.Y.Z` ويطابق الإصدار الحالي، يُتخطّى رفع الرقم (إعادة بناء). يمكن التحكم الصريح بـ `VERSION_BUMP=major|minor|patch`.
 
 2. **Git** — إن كان المستخدم يطلب إنهاء المهمة أو دمج التغييرات:
    - `git add -A` (مع احترام `.gitignore`)
