@@ -108,6 +108,11 @@ export function StatsPage() {
             <p className="mt-2 text-2xl font-semibold text-sage-800">
               {summary.monthlyEstimate.toFixed(2)} {summary.primaryCode}
             </p>
+            <p className="mt-4 text-sm font-medium text-cream-700">{t("stats.yearlyEstimate")}</p>
+            <p className="mt-2 text-xl font-semibold text-sage-800">
+              {summary.yearlyEstimate.toFixed(2)} {summary.primaryCode}
+            </p>
+            <p className="mt-2 text-xs text-cream-600">{t("stats.yearlyFromMonthlyHint")}</p>
             <p className="mt-3 text-sm text-cream-600">
               {t("stats.subscriptions")}: {summary.recurringCount}
             </p>

@@ -139,6 +139,11 @@ export function HomePage() {
             <p className="mt-2 text-2xl font-semibold text-sage-800">
               {summary.monthlyEstimate.toFixed(2)} {primary}
             </p>
+            <p className="sk-text-hint mt-4 text-sm font-medium">{t("stats.yearlyEstimate")}</p>
+            <p className="mt-1.5 text-xl font-semibold text-sage-800">
+              {summary.yearlyEstimate.toFixed(2)} {primary}
+            </p>
+            <p className="sk-text-hint mt-2 text-xs">{t("stats.yearlyFromMonthlyHint")}</p>
             <p className="sk-text-hint mt-3 text-sm">
               {t("stats.subscriptions")}: {summary.recurringCount}
             </p>

@@ -604,6 +604,7 @@ export function monthlyEquivalentPrimary(s: Subscription): number | null {
 
 export async function statsSummary(): Promise<{
   monthlyEstimate: number;
+  yearlyEstimate: number;
   byCategory: { name: string; monthlyPrimary: number }[];
   due30Total: number;
   recurringCount: number;
@@ -643,5 +644,12 @@ export async function statsSummary(): Promise<{
     .map(([name, monthlyPrimary]) => ({ name, monthlyPrimary }))
     .sort((a, b) => b.monthlyPrimary - a.monthlyPrimary);
 
-  return { monthlyEstimate, byCategory, due30Total, recurringCount, primaryCode };
+  return {
+    monthlyEstimate,
+    yearlyEstimate: monthlyEstimate * 12,
+    byCategory,
+    due30Total,
+    recurringCount,
+    primaryCode,
+  };
 }
