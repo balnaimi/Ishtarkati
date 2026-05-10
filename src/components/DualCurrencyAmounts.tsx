@@ -12,13 +12,14 @@ export function DualCurrencyAmounts({
   originalCode: string;
   approxAmount?: number | null;
   approxCode: string;
-  size?: "default" | "sm";
+  size?: "default" | "sm" | "xs";
   className?: string;
 }) {
-  const small = size === "sm";
+  const small = size === "sm" || size === "xs";
+  const xs = size === "xs";
   return (
     <div
-      className={`flex flex-col items-start gap-0.5 ${small ? "text-xs" : "text-sm"} ${className}`.trim()}
+      className={`flex flex-col items-start ${xs ? "gap-0 text-[11px] leading-tight" : "gap-0.5"} ${small && !xs ? "text-xs" : ""} ${!small ? "text-sm" : ""} ${className}`.trim()}
     >
       <span
         dir="ltr"

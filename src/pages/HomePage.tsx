@@ -22,6 +22,8 @@ import {
   type DueTone,
 } from "../lib/dueProgress";
 
+const HOME_PREVIEW_LIMIT = 6;
+
 function toneTextClass(tone: DueTone): string {
   if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
   if (tone === "urgent") return "sk-tone-due-urgent";
@@ -55,8 +57,8 @@ export function HomePage() {
     try {
       const [sum, d, r, all] = await Promise.all([
         statsSummary(),
-        loadSubscriptionsDueSoon(5),
-        loadSubscriptionsRecent(5),
+        loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
+        loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
         loadSubscriptions({}),
       ]);
       setSummary(sum);
@@ -170,112 +172,149 @@ export function HomePage() {
         </div>
       )}
 
-      <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-cream-900">{t("home.nearestDue")}</h3>
-        <ul className="space-y-3">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <section className="space-y-2.5">
+          <h3 className="text-base font-semibold tracking-tight text-cream-900">
+            {t("home.nearestDue")}
+          </h3>
           {dueSoon.length === 0 ? (
-            <li className="sk-text-hint">{t("home.noDueSoon")}</li>
+            <p className="sk-text-hint text-sm">{t("home.noDueSoon")}</p>
           ) : (
-            dueSoon.map((s) => {
-              const prog = s.next_due_date ? computeDueProgress(progressInput(s)) : null;
-              const tone = prog ? dueProgressTone(prog) : null;
-              const needsPaid = subscriptionNeedsPaidAttention(s);
-              return (
-                <li
-                  key={s.id}
-                  className={`sk-card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
-                    needsPaid ? "sk-ring-needs-pay" : ""
-                  } ${tone ? dueListRowHighlightClass(tone) : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-start"
-                    onClick={() => nav(`/sub/${s.id}`)}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {dueSoon.map((s) => {
+                const prog = s.next_due_date ? computeDueProgress(progressInput(s)) : null;
+                const tone = prog ? dueProgressTone(prog) : null;
+                const needsPaid = subscriptionNeedsPaidAttention(s);
+                const cardTone = tone ? dueListRowHighlightClass(tone) : "";
+                return (
+                  <article
+                    key={s.id}
+                    className={`flex flex-col rounded-xl border border-cream-400/90 bg-cream-50/95 p-2.5 shadow-sm transition hover:border-sage-500/40 hover:shadow ${
+                      needsPaid ? "sk-ring-needs-pay" : ""
+                    } ${cardTone}`.trim()}
                   >
-                    <span className="flex w-full items-start justify-start gap-2">
-                      {s.website_url?.trim() ? (
-                        <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
-                      ) : null}
-                      <span className="min-w-0 font-semibold text-cream-950">{s.title}</span>
-                    </span>
-                    <span className="mt-1 block text-sm sk-text-hint">
-                      {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
-                    </span>
-                    <div className="mt-2 text-xs">
-                      <DualCurrencyAmounts
-                        size="sm"
-                        originalAmount={s.amount_original}
-                        originalCode={s.currency_code}
-                        approxAmount={s.amount_qar_snapshot}
-                        approxCode={primary}
-                      />
-                    </div>
-                    {prog && tone ? (
-                      <span className={`mt-1 block text-xs font-medium ${toneTextClass(tone)}`}>
-                        {relativeDueCaption(t, prog)}
-                      </span>
-                    ) : null}
-                    {s.next_due_date ? (
-                      <div className="mt-2 max-w-md">
-                        <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+                    <div
+                      role="link"
+                      tabIndex={0}
+                      className="min-h-0 flex-1 cursor-pointer rounded-md outline-none hover:bg-cream-100/50 focus-visible:ring-2 focus-visible:ring-sage-500/50"
+                      onClick={() => nav(`/sub/${s.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          nav(`/sub/${s.id}`);
+                        }
+                      }}
+                    >
+                      <div className="flex gap-2">
+                        {s.website_url?.trim() ? (
+                          <SiteFavicon
+                            websiteUrl={s.website_url}
+                            size="xs"
+                            className="mt-0.5 shrink-0"
+                          />
+                        ) : null}
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-cream-950">
+                            {s.title}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-tight text-cream-600">
+                            {s.next_due_date ?? "—"} · {billingLabel(s.billing_model)}
+                          </p>
+                          <div className="mt-1">
+                            <DualCurrencyAmounts
+                              size="xs"
+                              originalAmount={s.amount_original}
+                              originalCode={s.currency_code}
+                              approxAmount={s.amount_qar_snapshot}
+                              approxCode={primary}
+                            />
+                          </div>
+                          {prog && tone ? (
+                            <span
+                              className={`mt-1 line-clamp-1 block text-[10px] font-medium leading-tight ${toneTextClass(tone)}`}
+                            >
+                              {relativeDueCaption(t, prog)}
+                            </span>
+                          ) : null}
+                          {s.next_due_date ? (
+                            <div className="mt-1.5 min-w-0">
+                              <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    ) : null}
-                  </button>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {needsPaid ? (
-                      <button
-                        type="button"
-                        className="sk-btn-primary text-sm"
-                        onClick={(e) => void onConfirmPaid(e, s.id)}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1 border-t border-cream-300/70 pt-2">
+                      {needsPaid ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-md bg-sage-600 px-2 py-1 text-[11px] font-medium text-cream-50 transition-colors hover:bg-sage-700"
+                          onClick={(e) => void onConfirmPaid(e, s.id)}
+                        >
+                          {t("home.markPaid")}
+                        </button>
+                      ) : null}
+                      <Link
+                        to={`/sub/${s.id}/edit`}
+                        className="inline-flex items-center justify-center rounded-md border border-cream-500 bg-cream-100 px-2 py-1 text-[11px] font-medium text-cream-900 no-underline transition-colors hover:bg-cream-200"
                       >
-                        {t("home.markPaid")}
-                      </button>
-                    ) : null}
-                    <Link to={`/sub/${s.id}/edit`} className="sk-btn-secondary text-sm">
-                      {t("common.edit")}
-                    </Link>
-                  </div>
-                </li>
-              );
-            })
+                        {t("common.edit")}
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           )}
-        </ul>
-      </section>
+        </section>
 
-      <section className="space-y-3">
-        <h3 className="text-lg font-semibold text-cream-900">{t("home.recentAdded")}</h3>
-        <ul className="space-y-2">
+        <section className="space-y-2.5">
+          <h3 className="text-base font-semibold tracking-tight text-cream-900">
+            {t("home.recentAdded")}
+          </h3>
           {recent.length === 0 ? (
-            <li className="sk-text-hint">{t("common.none")}</li>
+            <p className="sk-text-hint text-sm">{t("common.none")}</p>
           ) : (
-            recent.map((s) => (
-              <li key={s.id}>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {recent.map((s) => (
                 <button
+                  key={s.id}
                   type="button"
-                  className="sk-card sk-card-interactive flex w-full items-start gap-3 px-4 py-3 text-start shadow-sm"
+                  className="flex flex-col rounded-xl border border-cream-400/90 bg-cream-50/95 p-2.5 text-start shadow-sm transition hover:border-sage-500/40 hover:bg-cream-100/40 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-500/50"
                   onClick={() => nav(`/sub/${s.id}`)}
                 >
-                  {s.website_url?.trim() ? (
-                    <SiteFavicon websiteUrl={s.website_url} size="md" className="shrink-0" />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium text-cream-950">{s.title}</span>
-                    <div className="mt-1.5 text-xs">
-                      <DualCurrencyAmounts
-                        size="sm"
-                        originalAmount={s.amount_original}
-                        originalCode={s.currency_code}
-                        approxAmount={s.amount_qar_snapshot}
-                        approxCode={primary}
+                  <div className="flex gap-2">
+                    {s.website_url?.trim() ? (
+                      <SiteFavicon
+                        websiteUrl={s.website_url}
+                        size="xs"
+                        className="mt-0.5 shrink-0"
                       />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-cream-950">
+                        {s.title}
+                      </p>
+                      <p className="mt-1 text-[11px] text-cream-600">
+                        {s.created_at.slice(0, 10)} · {billingLabel(s.billing_model)}
+                      </p>
+                      <div className="mt-1">
+                        <DualCurrencyAmounts
+                          size="xs"
+                          originalAmount={s.amount_original}
+                          originalCode={s.currency_code}
+                          approxAmount={s.amount_qar_snapshot}
+                          approxCode={primary}
+                        />
+                      </div>
                     </div>
                   </div>
                 </button>
-              </li>
-            ))
+              ))}
+            </div>
           )}
-        </ul>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

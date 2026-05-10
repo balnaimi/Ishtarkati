@@ -74,7 +74,7 @@
   },
   "home": {
     "dashboardTitle": "لوحة التحكم",
-    "dashboardSubtitle": "ملخص سريع وأقرب الاستحقاقات وآخر ما أضفته",
+    "dashboardSubtitle": "ملخص سريع، وستة من أقرب الاستحقاقات وآخر ما أضفته في بطاقات مدمجة",
     "addSubscriptionCta": "+ إضافة اشتراك أو دفعة",
     "allSubscriptions": "عرض القائمة الكاملة",
     "attentionBannerTitle": "يحتاج تأكيد الدفع (وصل موعد الاستحقاق)",

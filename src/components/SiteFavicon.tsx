@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { faviconCandidateUrls, hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 
 const framePad = {
+  xs: "h-5 w-5 min-h-5 min-w-5 p-0.5",
   sm: "h-7 w-7 min-h-7 min-w-7 p-1",
   md: "h-10 w-10 min-h-10 min-w-10 p-1",
   lg: "h-12 w-12 min-h-12 min-w-12 p-1.5",
