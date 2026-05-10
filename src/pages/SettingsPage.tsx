@@ -783,9 +783,12 @@ export function SettingsPage() {
             </button>
           </section>
 
-          <p className="sk-text-hint text-sm">
-            {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
-          </p>
+          <div className="space-y-1">
+            <p className="sk-text-hint text-sm">
+              {t("settings.version")}: <span className="text-cream-900">{APP_VERSION}</span>
+            </p>
+            <p className="text-xs leading-relaxed text-cream-600">{t("settings.desktopOnly")}</p>
+          </div>
         </div>
       ) : null}
 

@@ -1,6 +1,6 @@
 # Ishtarkati
 
-Arabic desktop app to track online subscriptions, renewals, and multi-currency payments with QAR estimates. Built with **Electron**, **React**, **TypeScript**, and **SQLite** (local only, no backend). Linux distribution is **AppImage only** — no `.deb` bundle.
+Arabic **desktop-only** app to track online subscriptions, renewals, and multi-currency payments with QAR estimates. It does **not** run on phones or tablets; distribution is **Linux AppImage** (Electron + **React** + **TypeScript** + **SQLite**, local only, no backend). No `.deb` bundle.
 
 ## Prerequisites (build machine)
 
