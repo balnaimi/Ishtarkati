@@ -28,6 +28,98 @@ declare global {
       clearPin: () => Promise<{ ok: boolean }>;
       verifyPin: (pin: string) => Promise<boolean>;
       resetLocalDatabase: () => Promise<{ ok: true } | { ok: false; error?: string }>;
+      syncGetLocalConfig: () => Promise<
+        | {
+            ok: true;
+            baseUrl: string;
+            vaultId: string;
+            serverRevision: string;
+            sessionUnlocked: boolean;
+          }
+        | { ok: false; error?: string }
+      >;
+      syncSaveLocalConfig: (payload: {
+        baseUrl: string;
+        vaultId: string;
+      }) => Promise<{ ok: true } | { ok: false; error?: string }>;
+      syncUnlockSession: (payload: {
+        baseUrl: string;
+        vaultId: string;
+        password: string;
+      }) => Promise<
+        | { ok: true; status: Record<string, unknown> }
+        | { ok: false; error?: string }
+      >;
+      syncClearSession: () => Promise<{ ok: true }>;
+      syncCapabilities: (payload: { baseUrl: string }) => Promise<
+        | {
+            ok: true;
+            cap: {
+              api_version: number;
+              server_semver?: string;
+              min_client_semver: string;
+              max_backup_export_version: number;
+            };
+          }
+        | { ok: false; error?: string }
+      >;
+      syncCreateVault: (payload: { baseUrl: string; password: string }) => Promise<
+        | { ok: true; vaultId: string }
+        | { ok: false; error?: string }
+      >;
+      syncRemoteStatus: (payload: { baseUrl: string; vaultId: string }) => Promise<
+        | {
+            ok: true;
+            cap: {
+              api_version: number;
+              server_semver?: string;
+              min_client_semver: string;
+              max_backup_export_version: number;
+            };
+            status: {
+              vault_id: string;
+              revision: number;
+              updated_at: string;
+              has_snapshot: boolean;
+              salt_b64: string;
+              kdf: {
+                memory: number;
+                iterations: number;
+                parallelism: number;
+                keyLength: number;
+              };
+              min_client_semver: string;
+              max_backup_export_version: number;
+            };
+          }
+        | { ok: false; error?: string }
+      >;
+      syncPullPreview: (payload: {
+        baseUrl: string;
+        vaultId: string;
+        password: string;
+      }) => Promise<
+        | {
+            ok: true;
+            preview: BackupImportPreview;
+            backupJson: string;
+            serverRevision: number;
+          }
+        | { ok: false; error?: string }
+      >;
+      syncRecordPulledRevision: (payload: { revision: number }) => Promise<
+        { ok: true } | { ok: false; error?: string }
+      >;
+      syncPush: (payload: {
+        baseUrl: string;
+        vaultId: string;
+        password: string;
+        expectedRevision?: string | number;
+        scope?: "full" | "without_settings";
+      }) => Promise<
+        | { ok: true; revision?: number }
+        | { ok: false; error?: string; conflict?: true }
+      >;
     };
   }
 }

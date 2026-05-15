@@ -1,0 +1,13 @@
+services:
+  sync:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SYNC_LISTEN_ADDR: ":8080"
+      SYNC_DATA_DIR: /data
+      SYNC_MIN_CLIENT_SEMVER: "1.0.0"
+      SYNC_MAX_BACKUP_EXPORT_VERSION: "6"
+      SYNC_MAX_UPLOAD_BYTES: "52428800"
+    volumes:
+      - ./data:/data

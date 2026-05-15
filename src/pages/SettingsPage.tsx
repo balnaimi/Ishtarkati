@@ -23,7 +23,7 @@ import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backup
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
-type TabId = "app" | "categories" | "payments" | "export" | "danger";
+type TabId = "app" | "categories" | "payments" | "export" | "sync" | "danger";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -56,6 +56,23 @@ export function SettingsPage() {
   const [dangerTyped, setDangerTyped] = useState("");
   const [dangerBusy, setDangerBusy] = useState(false);
   const [dangerMsg, setDangerMsg] = useState<string | null>(null);
+  const [syncBaseUrl, setSyncBaseUrl] = useState("");
+  const [syncVaultId, setSyncVaultId] = useState("");
+  const [syncPassword, setSyncPassword] = useState("");
+  const [syncPasswordNew, setSyncPasswordNew] = useState("");
+  const [syncPasswordNew2, setSyncPasswordNew2] = useState("");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncSessionOpen, setSyncSessionOpen] = useState(false);
+  const [syncRemote, setSyncRemote] = useState<{
+    revision: number;
+    has_snapshot: boolean;
+    max_backup_export_version: number;
+    min_client_semver: string;
+  } | null>(null);
+  const [syncBackupJson, setSyncBackupJson] = useState<string | null>(null);
+  const [syncPullRevision, setSyncPullRevision] = useState<number | null>(null);
+  const [syncPushScope, setSyncPushScope] = useState<"full" | "without_settings">("full");
   const [importPreview, setImportPreview] = useState<BackupImportPreview | null>(null);
   const [importDlgOpen, setImportDlgOpen] = useState(false);
   const [importApplying, setImportApplying] = useState(false);
@@ -107,8 +124,15 @@ export function SettingsPage() {
   }, [syncFxAt, syncPinStateFromDb]);
 
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    void (async () => {
+      const r = await window.ishtarkati.syncGetLocalConfig();
+      if (r.ok) {
+        setSyncBaseUrl(r.baseUrl);
+        setSyncVaultId(r.vaultId);
+        setSyncSessionOpen(r.sessionUnlocked);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (tab !== "danger") {
@@ -125,6 +149,7 @@ export function SettingsPage() {
       raw === "categories" ||
       raw === "payments" ||
       raw === "export" ||
+      raw === "sync" ||
       raw === "danger"
     ) {
       setTab(raw);
@@ -222,6 +247,8 @@ export function SettingsPage() {
   }
 
   async function prepareImport() {
+    setSyncBackupJson(null);
+    setSyncPullRevision(null);
     setBackupMsg(null);
     setBackupBusy(true);
     try {
@@ -247,6 +274,11 @@ export function SettingsPage() {
       if (r.ok) {
         setImportDlgOpen(false);
         setImportPreview(null);
+        setSyncBackupJson(null);
+        if (syncPullRevision != null) {
+          await window.ishtarkati.syncRecordPulledRevision({ revision: syncPullRevision });
+          setSyncPullRevision(null);
+        }
         setBackupMsg(t("backup.importOk"));
         window.setTimeout(() => {
           window.location.reload();
@@ -438,11 +470,192 @@ export function SettingsPage() {
     setDangerMsg(null);
   }
 
+  function formatSyncError(err: string): string {
+    if (!err) return t("sync.errors.generic");
+    if (err.includes("sync_conflict")) return t("sync.conflictHint");
+    if (err.includes("need_app_update_capabilities")) return t("sync.errors.need_app_update_capabilities");
+    if (err.includes("need_app_update_vault")) return t("sync.errors.need_app_update_vault");
+    if (err.includes("export_version_too_new_vault")) return t("sync.errors.export_version_too_new_vault");
+    if (err.includes("export_version_too_new")) return t("sync.errors.export_version_too_new");
+    if (err.includes("sync_no_snapshot")) return t("sync.errors.sync_no_snapshot");
+    if (err.includes("sync_need_password_or_unlock")) return t("sync.errors.sync_need_password_or_unlock");
+    if (err.includes("sync_unauthorized")) return t("sync.errors.sync_unauthorized");
+    if (err.includes("sync_weak_password")) return t("sync.errors.sync_weak_password");
+    if (err.includes("sync_vault_not_found")) return t("sync.errors.sync_vault_not_found");
+    if (err.includes("sync_pull_required_first")) return t("sync.errors.sync_pull_required_first");
+    return t("sync.errors.generic");
+  }
+
+  async function handleSyncSaveConfig() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncSaveLocalConfig({
+        baseUrl: syncBaseUrl.trim(),
+        vaultId: syncVaultId.trim(),
+      });
+      if (!r.ok) {
+        setSyncMsg(t("sync.errors.generic"));
+        return;
+      }
+      const st = await window.ishtarkati.syncGetLocalConfig();
+      if (st.ok) setSyncSessionOpen(st.sessionUnlocked);
+      setSyncMsg(t("common.save"));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncUnlock() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncUnlockSession({
+        baseUrl: syncBaseUrl.trim(),
+        vaultId: syncVaultId.trim(),
+        password: syncPassword,
+      });
+      if (!r.ok) {
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setSyncSessionOpen(true);
+      setSyncMsg(t("sync.sessionUnlocked"));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncClearSession() {
+    await window.ishtarkati.syncClearSession();
+    setSyncSessionOpen(false);
+    setSyncMsg(null);
+  }
+
+  async function handleSyncTest() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncCapabilities({ baseUrl: syncBaseUrl.trim() });
+      if (!r.ok) {
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setSyncMsg(
+        `${t("sync.minAppVersion", { v: r.cap.min_client_semver })} — ${t("sync.exportVersionLimit", { v: r.cap.max_backup_export_version })}`,
+      );
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncCreateVault() {
+    setSyncMsg(null);
+    if (syncPasswordNew.length < 8) {
+      setSyncMsg(t("sync.errors.sync_weak_password"));
+      return;
+    }
+    if (syncPasswordNew !== syncPasswordNew2) {
+      setSyncMsg(t("sync.passwordMismatch"));
+      return;
+    }
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncCreateVault({
+        baseUrl: syncBaseUrl.trim(),
+        password: syncPasswordNew,
+      });
+      if (!r.ok) {
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setSyncVaultId(r.vaultId);
+      setSyncPasswordNew("");
+      setSyncPasswordNew2("");
+      setSyncSessionOpen(true);
+      setSyncMsg(t("sync.createOk"));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncCheckRemote() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncRemoteStatus({
+        baseUrl: syncBaseUrl.trim(),
+        vaultId: syncVaultId.trim(),
+      });
+      if (!r.ok) {
+        setSyncRemote(null);
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setSyncRemote({
+        revision: r.status.revision,
+        has_snapshot: r.status.has_snapshot,
+        max_backup_export_version: r.status.max_backup_export_version,
+        min_client_semver: r.status.min_client_semver,
+      });
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncPullPreview() {
+    setSyncMsg(null);
+    setBackupMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncPullPreview({
+        baseUrl: syncBaseUrl.trim(),
+        vaultId: syncVaultId.trim(),
+        password: syncPassword,
+      });
+      if (!r.ok) {
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setImportPreview(r.preview);
+      setSyncBackupJson(r.backupJson);
+      setSyncPullRevision(r.serverRevision);
+      setImportDlgOpen(true);
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handleSyncPush() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncPush({
+        baseUrl: syncBaseUrl.trim(),
+        vaultId: syncVaultId.trim(),
+        password: syncPassword,
+        scope: syncPushScope,
+      });
+      if (!r.ok) {
+        if (r.conflict) {
+          setSyncMsg(t("sync.conflictHint"));
+        } else {
+          setSyncMsg(formatSyncError(r.error ?? ""));
+        }
+        return;
+      }
+      setSyncMsg(t("sync.pushOk", { rev: String(r.revision ?? "—") }));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "app", label: t("settings.tabApp") },
     { id: "categories", label: t("settings.tabCategories") },
     { id: "payments", label: t("settings.tabPayments") },
     { id: "export", label: t("settings.tabExport") },
+    { id: "sync", label: t("settings.tabSync") },
     { id: "danger", label: t("settings.tabDanger") },
   ];
 
@@ -869,6 +1082,154 @@ export function SettingsPage() {
         </div>
       ) : null}
 
+      {tab === "sync" ? (
+        <div className="space-y-6">
+          <section className="sk-card space-y-3">
+            <h3 className="text-base font-semibold text-cream-900">{t("sync.introTitle")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("sync.introBody")}</p>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <div>
+              <label className="sk-label" htmlFor="sync-base">
+                {t("sync.baseUrl")}
+              </label>
+              <input
+                id="sync-base"
+                className="sk-input font-mono text-sm"
+                dir="ltr"
+                value={syncBaseUrl}
+                onChange={(e) => setSyncBaseUrl(e.target.value)}
+                placeholder="192.168.1.10:8080"
+              />
+              <p className="mt-1 text-xs text-cream-600">{t("sync.baseUrlHint")}</p>
+            </div>
+            <div>
+              <label className="sk-label" htmlFor="sync-vault">
+                {t("sync.vaultId")}
+              </label>
+              <input
+                id="sync-vault"
+                className="sk-input font-mono text-sm"
+                dir="ltr"
+                value={syncVaultId}
+                onChange={(e) => setSyncVaultId(e.target.value)}
+                placeholder="uuid"
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncSaveConfig()}>
+                {t("sync.btnSaveConfig")}
+              </button>
+              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncTest()}>
+                {t("sync.btnTestServer")}
+              </button>
+            </div>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h4 className="text-sm font-semibold text-cream-900">{t("sync.btnCreateVault")}</h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="sk-label">{t("sync.passwordCreate")}</label>
+                <input
+                  type="password"
+                  className="sk-input"
+                  autoComplete="new-password"
+                  value={syncPasswordNew}
+                  onChange={(e) => setSyncPasswordNew(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="sk-label">{t("sync.passwordCreate2")}</label>
+                <input
+                  type="password"
+                  className="sk-input"
+                  autoComplete="new-password"
+                  value={syncPasswordNew2}
+                  onChange={(e) => setSyncPasswordNew2(e.target.value)}
+                />
+              </div>
+            </div>
+            <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncCreateVault()}>
+              {t("sync.btnCreateVault")}
+            </button>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h4 className="text-sm font-semibold text-cream-900">{t("sync.password")}</h4>
+            <p className="text-xs text-cream-600">{t("settings.version")}: {APP_VERSION}</p>
+            <input
+              type="password"
+              className="sk-input max-w-md"
+              autoComplete="off"
+              value={syncPassword}
+              onChange={(e) => setSyncPassword(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncUnlock()}>
+                {t("sync.btnUnlock")}
+              </button>
+              <button type="button" className="sk-btn-muted text-sm" disabled={syncBusy} onClick={() => void handleSyncClearSession()}>
+                {t("sync.btnClearSession")}
+              </button>
+            </div>
+            {syncSessionOpen ? <p className="text-xs text-sage-700">{t("sync.sessionUnlocked")}</p> : null}
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h4 className="text-sm font-semibold text-cream-900">{t("sync.remoteHeading")}</h4>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncCheckRemote()}>
+                {t("sync.btnCheckRemote")}
+              </button>
+              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncPullPreview()}>
+                {t("sync.btnPullPreview")}
+              </button>
+            </div>
+            {syncRemote ? (
+              <ul className="list-inside list-disc space-y-1 text-sm text-cream-800">
+                <li>{t("sync.remoteRevision", { rev: syncRemote.revision })}</li>
+                <li>
+                  {syncRemote.has_snapshot ? t("sync.remoteHasSnapshot") : t("sync.remoteNoSnapshot")}
+                </li>
+                <li>{t("sync.minAppVersion", { v: syncRemote.min_client_semver })}</li>
+                <li>{t("sync.exportVersionLimit", { v: syncRemote.max_backup_export_version })}</li>
+              </ul>
+            ) : null}
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h4 className="text-sm font-semibold text-cream-900">{t("sync.btnPushNow")}</h4>
+            <div className="flex flex-col gap-2 text-sm">
+              <label className="flex cursor-pointer gap-2">
+                <input
+                  type="radio"
+                  name="sync-scope"
+                  checked={syncPushScope === "full"}
+                  onChange={() => setSyncPushScope("full")}
+                />
+                {t("sync.scopeFull")}
+              </label>
+              <label className="flex cursor-pointer gap-2">
+                <input
+                  type="radio"
+                  name="sync-scope"
+                  checked={syncPushScope === "without_settings"}
+                  onChange={() => setSyncPushScope("without_settings")}
+                />
+                {t("sync.scopeDataOnly")}
+              </label>
+            </div>
+            <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncPush()}>
+              {syncBusy ? t("sync.busy") : t("sync.btnPushNow")}
+            </button>
+          </section>
+
+          {syncMsg ? <p className="sk-callout-muted text-sm">{syncMsg}</p> : null}
+        </div>
+      ) : null}
+
       {tab === "danger" ? (
         <div className="space-y-6">
           <section className="sk-section-danger">
@@ -925,10 +1286,13 @@ export function SettingsPage() {
         open={importDlgOpen}
         preview={importPreview}
         applying={importApplying}
+        inlineBackupJson={syncBackupJson}
         onClose={() => {
           if (importApplying) return;
           setImportDlgOpen(false);
           setImportPreview(null);
+          setSyncBackupJson(null);
+          setSyncPullRevision(null);
         }}
         onApply={(args) => void applyImport(args)}
       />

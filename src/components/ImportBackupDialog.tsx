@@ -6,11 +6,20 @@ type Props = {
   open: boolean;
   preview: BackupImportPreview | null;
   applying: boolean;
+  /** When set, apply uses inline JSON (sync) instead of reading filePath from disk. */
+  inlineBackupJson?: string | null;
   onClose: () => void;
   onApply: (args: BackupImportApplyArgs) => void;
 };
 
-export function ImportBackupDialog({ open, preview, applying, onClose, onApply }: Props) {
+export function ImportBackupDialog({
+  open,
+  preview,
+  applying,
+  inlineBackupJson = null,
+  onClose,
+  onApply,
+}: Props) {
   const { t } = useTranslation();
 
   const [strategy, setStrategy] = useState<"merge" | "replace">("merge");
@@ -24,14 +33,15 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
     setStrategy("merge");
     setOnDuplicateId("keep_local");
     setOnSimilarSubscription("keep_both");
-  }, [preview?.filePath]);
+  }, [preview?.filePath, inlineBackupJson]);
 
   if (!open || !preview) return null;
 
   function submit() {
     if (!preview) return;
     onApply({
-      filePath: preview.filePath,
+      filePath: inlineBackupJson ? undefined : preview.filePath,
+      json: inlineBackupJson ?? undefined,
       strategy,
       onDuplicateId,
       onSimilarSubscription,
@@ -48,7 +58,7 @@ export function ImportBackupDialog({ open, preview, applying, onClose, onApply }
 
         <p className="text-xs text-cream-700">
           <span dir="ltr" className="font-mono break-all">
-            {preview.filePath}
+            {preview.filePath.startsWith("sync:") ? t("backup.previewFromSync") : preview.filePath}
           </span>
         </p>
         <p className="text-sm text-cream-800">{t("backup.importWizardStats")}</p>

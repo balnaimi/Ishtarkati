@@ -9,9 +9,13 @@ alwaysApply: true
 
 1. **بناء إنتاج بإصدار جديد** — شغّل من جذر المشروع:
    - `npm run build`
-   - يشغّل `scripts/bump-version-for-build.mjs` فيقدّر حجم التغيير (من git) ويرفع **major** أو **minor** أو **patch** في `package.json` و`src/version.ts`، ثم يبني الـ AppImage تحت `release/`. إن كان آخر commit من نوع `Release X.Y.Z` ويطابق الإصدار الحالي، يُتخطّى رفع الرقم (إعادة بناء). يمكن التحكم الصريح بـ `VERSION_BUMP=major|minor|patch`.
+   - يشغّل `scripts/bump-version-for-build.mjs` فيقدّر حجم التغيير (من git) ويرفع **major** أو **minor** أو **patch** في `package.json` و`src/version.ts` **و** [`sync-server/internal/version/VERSION`](/home/mrn/Ishtarkati/sync-server/internal/version/VERSION) (نفس رقم الإصدار للتطبيق وخادم المزامنة)، ثم يبني الـ AppImage تحت `release/`. إن كان آخر commit من نوع `Release X.Y.Z` ويطابق الإصدار الحالي، يُتخطّى رفع الرقم (إعادة بناء). يمكن التحكم الصريح بـ `VERSION_BUMP=major|minor|patch`.
 
-2. **Git** — إن كان المستخدم يطلب إنهاء المهمة أو دمج التغييرات:
+2. **Git push بعد الإصدار** — لدمج البناء مع رفع المستودع:
+   - `npm run build:release` — ينفّذ `build` ثم `scripts/git-ship.mjs` (`git add -A`، commit `Release X.Y.Z — workspace`، `git push origin HEAD`).
+   - أو بدون بناء AppImage كامل: `npm run ship` — يرفع الإصدار ثم نفس خطوات الـ push.
+
+3. **Git** — إن كان المستخدم يطلب إنهاء المهمة يدويًا:
    - `git add -A` (مع احترام `.gitignore`)
    - `git commit` برسالة واضحة تذكر **رقم الإصدار** بعد البناء (مثل `Release 1.0.3 — وصف مختصر`)
    - `git push origin` للفرع الحالي (غالبًا `main`)

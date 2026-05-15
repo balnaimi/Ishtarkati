@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
+import { registerSyncIpc, notifyLocalDataChanged } from "./sync";
 import localeAr from "../src/locales/ar.json";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -530,6 +531,7 @@ function registerIpc(): void {
       if (!db) throw new Error("Database not ready");
       const stmt = db.prepare(normalizeSql(sql));
       const info = stmt.run(...params);
+      notifyLocalDataChanged(() => db);
       return {
         changes: info.changes,
         lastInsertRowid: Number(info.lastInsertRowid),
@@ -606,6 +608,10 @@ function registerIpc(): void {
   registerBackupIpc(
     () => db,
     () => win,
+  );
+  registerSyncIpc(
+    () => db,
+    () => app.getVersion(),
   );
 }
 

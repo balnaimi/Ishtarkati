@@ -64,7 +64,9 @@ export type ImportDuplicatePolicy = "keep_local" | "prefer_import";
 export type ImportSimilarSubscriptionsPolicy = "keep_both" | "replace_local";
 
 export interface ImportApplyPayload {
-  filePath: string;
+  filePath?: string;
+  /** Raw backup JSON (e.g. from sync after decrypt). */
+  json?: string;
   strategy: ImportApplyStrategy;
   onDuplicateId: ImportDuplicatePolicy;
   onSimilarSubscription: ImportSimilarSubscriptionsPolicy;
@@ -133,8 +135,49 @@ function validatePayload(raw: unknown): BackupPayload {
 
 function readBackupFile(path: string): BackupPayload {
   const raw = fs.readFileSync(path, "utf8");
-  const parsed = JSON.parse(raw) as unknown;
+  return parseBackupJson(raw);
+}
+
+export function parseBackupJson(raw: string): BackupPayload {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error("Invalid backup JSON");
+  }
   return validatePayload(parsed);
+}
+
+export function buildBackupPayloadFromDatabase(
+  database: Database.Database,
+  scope: BackupExportScope,
+): BackupPayload {
+  const categories = database.prepare("SELECT * FROM categories ORDER BY id").all();
+  const subscriptions = database.prepare("SELECT * FROM subscriptions ORDER BY id").all();
+  const payment_events = database.prepare("SELECT * FROM payment_events ORDER BY id").all();
+  const settings =
+    scope === "without_settings"
+      ? []
+      : database.prepare("SELECT * FROM settings ORDER BY key").all();
+  const currencies = database
+    .prepare("SELECT * FROM currencies ORDER BY sort_order, code")
+    .all();
+  const credit_cards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
+  const wallet_methods = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
+
+  return {
+    exportVersion: BACKUP_EXPORT_VERSION,
+    exportScope: scope,
+    exportedAt: new Date().toISOString(),
+    appVersion: app.getVersion(),
+    categories,
+    subscriptions,
+    payment_events,
+    settings,
+    currencies,
+    credit_cards,
+    wallet_methods,
+  };
 }
 
 function hostnameNorm(raw: string | null | undefined): string {
@@ -313,7 +356,11 @@ function normalizeImportedPayment(row: Record<string, unknown>): NormalizedImpor
   };
 }
 
-function buildImportPreview(database: Database.Database, filePath: string, data: BackupPayload): ImportPreviewDTO {
+export function buildImportPreview(
+  database: Database.Database,
+  filePath: string,
+  data: BackupPayload,
+): ImportPreviewDTO {
   const localSubs = database
     .prepare("SELECT id, title, website_url, account_label FROM subscriptions ORDER BY id")
     .all() as LocalSubBrief[];
@@ -919,7 +966,9 @@ function mergeImportIntoDb(
 
 function isApplyPayload(raw: unknown): raw is ImportApplyPayload {
   if (!isRecord(raw)) return false;
-  if (typeof raw.filePath !== "string") return false;
+  const hasFile = typeof raw.filePath === "string" && String(raw.filePath).length > 0;
+  const hasJson = typeof raw.json === "string" && String(raw.json).length > 0;
+  if (!hasFile && !hasJson) return false;
   if (raw.strategy !== "replace" && raw.strategy !== "merge") return false;
   if (raw.onDuplicateId !== "keep_local" && raw.onDuplicateId !== "prefer_import") return false;
   if (
@@ -961,37 +1010,7 @@ export function registerBackupIpc(
     });
     if (canceled || !filePath) return { ok: false as const, canceled: true };
 
-    const categories = database.prepare("SELECT * FROM categories ORDER BY id").all();
-    const subscriptions = database
-      .prepare("SELECT * FROM subscriptions ORDER BY id")
-      .all();
-    const payment_events = database
-      .prepare("SELECT * FROM payment_events ORDER BY id")
-      .all();
-    const settings =
-      scope === "without_settings"
-        ? []
-        : database.prepare("SELECT * FROM settings ORDER BY key").all();
-    const currencies = database
-      .prepare("SELECT * FROM currencies ORDER BY sort_order, code")
-      .all();
-    const credit_cards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
-    const wallet_methods = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
-
-    const payload: BackupPayload = {
-      exportVersion: BACKUP_EXPORT_VERSION,
-      exportScope: scope,
-      exportedAt: new Date().toISOString(),
-      appVersion: app.getVersion(),
-      categories,
-      subscriptions,
-      payment_events,
-      settings,
-      currencies,
-      credit_cards,
-      wallet_methods,
-    };
-
+    const payload = buildBackupPayloadFromDatabase(database, scope);
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
     return { ok: true as const, path: filePath };
   });
@@ -1025,7 +1044,14 @@ export function registerBackupIpc(
     if (!isApplyPayload(raw)) return { ok: false as const, error: "invalid-import-options" };
 
     try {
-      const data = readBackupFile(raw.filePath);
+      let data: BackupPayload;
+      if (typeof raw.json === "string" && raw.json.length > 0) {
+        data = parseBackupJson(raw.json);
+      } else if (typeof raw.filePath === "string" && raw.filePath.length > 0) {
+        data = readBackupFile(raw.filePath);
+      } else {
+        return { ok: false as const, error: "missing-backup-source" };
+      }
       if (raw.strategy === "replace") {
         importIntoDb(database, data);
       } else {
