@@ -1247,7 +1247,7 @@ export function SettingsPage() {
                 dir="ltr"
                 value={syncBaseUrl}
                 onChange={(e) => setSyncBaseUrl(e.target.value)}
-                placeholder="192.168.1.10:8080"
+                placeholder="localhost:8080"
               />
               <p className="mt-1 text-xs text-cream-600">{t("sync.baseUrlHint")}</p>
             </div>
