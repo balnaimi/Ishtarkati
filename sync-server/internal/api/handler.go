@@ -140,6 +140,10 @@ func (h *Handler) createVault(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"invalid_display_name"}`, http.StatusBadRequest)
 			return
 		}
+		if errors.Is(err, store.ErrInvalidTokenHashHex) {
+			http.Error(w, `{"error":"invalid_token_hash"}`, http.StatusBadRequest)
+			return
+		}
 		http.Error(w, `{"error":"create_failed"}`, http.StatusInternalServerError)
 		return
 	}

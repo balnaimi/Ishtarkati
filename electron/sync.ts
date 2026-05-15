@@ -222,6 +222,36 @@ async function fetchVaultLookup(
   return (await res.json()) as { vault_id: string; display_name: string };
 }
 
+/** Map Go API `{"error":"code"}` to stable sync_* keys used by the renderer. */
+function normalizeSyncApiErrorCode(code: string): string {
+  const c = code.trim();
+  switch (c) {
+    case "name_taken":
+      return "sync_name_taken";
+    case "invalid_display_name":
+      return "sync_invalid_display_name";
+    case "create_failed":
+      return "sync_create_failed";
+    case "invalid_json":
+      return "sync_invalid_payload";
+    case "missing_fields":
+      return "sync_missing_fields";
+    case "missing_name":
+      return "sync_invalid_name";
+    case "name_not_found":
+      return "sync_name_not_found";
+    case "not_found":
+      return "sync_vault_not_found";
+    case "unauthorized":
+      return "sync_unauthorized";
+    case "invalid_token_hash":
+      return "sync_invalid_token_hash";
+    default:
+      if (c.startsWith("sync_")) return c;
+      return `sync_server_code:${c}`;
+  }
+}
+
 /** Parse JSON `{ "error": "code" }` from sync API failure responses. */
 async function syncErrorFromResponse(res: Response, fallback: string): Promise<string> {
   let text = "";
@@ -234,11 +264,9 @@ async function syncErrorFromResponse(res: Response, fallback: string): Promise<s
     const j = JSON.parse(text) as { error?: string };
     const code = typeof j.error === "string" ? j.error.trim() : "";
     if (!code) return fallback;
-    if (code === "name_taken") return "sync_name_taken";
-    if (code === "invalid_display_name") return "sync_invalid_display_name";
-    return code;
+    return normalizeSyncApiErrorCode(code);
   } catch {
-    return fallback;
+    return text.trim() ? `sync_server_body:${text.slice(0, 200)}` : fallback;
   }
 }
 

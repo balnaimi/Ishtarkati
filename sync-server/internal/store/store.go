@@ -20,6 +20,7 @@ var ErrNotFound = errors.New("vault not found")
 var ErrConflict = errors.New("revision conflict")
 var ErrUnauthorized = errors.New("unauthorized")
 var ErrNameTaken = errors.New("vault display name already in use")
+var ErrInvalidTokenHashHex = errors.New("invalid token_hash_hex")
 
 type KDFParams struct {
 	Memory      uint32 `json:"memory"`
@@ -110,7 +111,7 @@ func (s *FileStore) CreateVault(in CreateVaultInput) (*VaultMeta, error) {
 	tokenHash := strings.ToLower(strings.TrimSpace(in.TokenHashHex))
 	if len(tokenHash) != 64 {
 		_ = os.RemoveAll(dir)
-		return nil, fmt.Errorf("invalid token_hash_hex")
+		return nil, ErrInvalidTokenHashHex
 	}
 	meta := VaultMeta{
 		VaultID:                id,

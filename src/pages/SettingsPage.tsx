@@ -496,6 +496,7 @@ export function SettingsPage() {
     if (!err) return t("sync.errors.generic");
     if (err.includes("no-database")) return t("sync.errors.no_database");
     if (err === "invalid") return t("sync.errors.sync_invalid_payload");
+    if (err.includes("sync_invalid_payload")) return t("sync.errors.sync_invalid_payload");
     if (err.includes("sync_missing_base")) return t("sync.errors.sync_missing_base");
     if (err.includes("sync_network_unreachable")) return t("sync.errors.sync_network_unreachable");
     if (err.includes("sync_network_error")) return t("sync.errors.sync_network_unreachable");
@@ -522,7 +523,18 @@ export function SettingsPage() {
     if (err.includes("sync_invalid_display_name")) return t("sync.errors.sync_invalid_display_name");
     if (err.includes("sync_display_name_required")) return t("sync.errors.sync_display_name_required");
     if (err.includes("sync_missing_fields")) return t("sync.errors.sync_missing_fields");
-    return t("sync.errors.generic");
+    if (err.includes("sync_create_failed")) return t("sync.errors.sync_create_failed");
+    if (err.includes("sync_invalid_token_hash")) return t("sync.errors.sync_invalid_token_hash");
+    if (err.startsWith("sync_server_code:")) {
+      return t("sync.errors.sync_server_code", { code: err.slice("sync_server_code:".length) });
+    }
+    if (err.startsWith("sync_server_body:")) {
+      return t("sync.errors.sync_server_body", { detail: err.slice("sync_server_body:".length) });
+    }
+    if (err.includes("SQLITE") || err.toLowerCase().includes("sqlite")) {
+      return t("sync.errors.sync_local_db", { detail: err });
+    }
+    return t("sync.errors.sync_detail", { detail: err });
   }
 
   async function handleSyncSaveConfig() {
