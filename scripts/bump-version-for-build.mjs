@@ -94,17 +94,26 @@ function decideBumpKind() {
 
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
   const version = pkg.version;
-  const subject = git("log -1 --format=%s") || "";
-  const releaseMatch = /^Release (\d+\.\d+\.\d+)/.exec(subject);
-  if (releaseMatch && releaseMatch[1] === version) {
-    console.log(
-      `[version] الإصدار ${version} يطابق آخر commit إصدار — لم يُرفع الرقم (إعادة بناء نفس النسخة).`,
-    );
-    return "skip";
-  }
-
   const unstaged = changedFiles("HEAD");
   const dirtyNames = new Set([...unstaged]);
+  const hasUncommittedChanges = dirtyNames.size > 0;
+
+  /**
+   * تخطّي الرفع فقط عندما لا يوجد أي تغيير غير مُلتزم به.
+   * سابقًا كان الشرط يُنفَّذ قبل فحص الملفات المعدّلة فيطابق «Release X = الإصدار الحالي»
+   * ويُلغي الرفع حتى مع وجود تعديلات محلية — فلا يفرّق المستخدم بين البنيات.
+   */
+  if (!hasUncommittedChanges) {
+    const subject = git("log -1 --format=%s") || "";
+    const releaseMatch = /^Release (\d+\.\d+\.\d+)/.exec(subject);
+    if (releaseMatch && releaseMatch[1] === version) {
+      console.log(
+        `[version] الإصدار ${version} يطابق آخر commit إصدار والفرع نظيف — لم يُرفع الرقم (إعادة بناء نفس النسخة).`,
+      );
+      return "skip";
+    }
+  }
+
   const onlyMetaDirty =
     dirtyNames.size > 0 && [...dirtyNames].every((f) => VERSION_FILES.has(f));
   if (onlyMetaDirty) {
@@ -114,7 +123,7 @@ function decideBumpKind() {
 
   let lines;
   let files;
-  if (dirtyNames.size > 0) {
+  if (hasUncommittedChanges) {
     ({ lines, files } = diffStatsExcludingVersionFiles("HEAD"));
   } else if (gitOk("rev-parse --verify HEAD~1")) {
     ({ lines, files } = diffStatsExcludingVersionFiles("HEAD~1..HEAD"));
@@ -123,8 +132,8 @@ function decideBumpKind() {
     ({ lines, files } = numstatFromBlockExcludingVersion(show));
   }
 
-  const s = subject.trim();
-  if (/\bBREAKING\b|!:/.test(subject)) {
+  const s = (git("log -1 --format=%s") || "").trim();
+  if (/\bBREAKING\b|!:/.test(s)) {
     console.log("[version] قرار: major — breaking في رسالة الـ commit.");
     return "major";
   }

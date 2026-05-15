@@ -12,6 +12,7 @@ alwaysApply: true
 1. **بناء إنتاج ورفع المستودع** — من جذر المشروع شغّل مرة واحدة:
    - `npm run build:release`
    - يشغّل `npm run build` (يستدعي `scripts/bump-version-for-build.mjs` فيقدّر حجم التغيير من git ويرفع **major** أو **minor** أو **patch** في `package.json` و`src/version.ts` **و** [`sync-server/internal/version/VERSION`](/home/mrn/Ishtarkati/sync-server/internal/version/VERSION) عند الحاجة، ثم يبني الـ AppImage تحت `release/`).
+   - **تخطّي رفع الرقم** يحدث فقط إذا كان الفرع **نظيفًا** وآخر commit هو `Release X.Y.Z` والإصدار الحالي يطابق **نفس** X.Y.Z (إعادة بناء دون تعديل). عند وجود **تغييرات غير مُلتزَم بها** يُحسب الرفع من حجم الـ diff ولا يُلغى بسبب رسالة الـ Release السابقة.
    - ثم `scripts/git-ship.mjs`: `git add -A`، commit `Release X.Y.Z — workspace` إن وُجدت تغييرات، ثم `git push origin HEAD`.
 
 2. **بدائل** (عند الحاجة فقط):
