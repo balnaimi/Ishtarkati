@@ -19,6 +19,7 @@ import (
 var ErrNotFound = errors.New("vault not found")
 var ErrConflict = errors.New("revision conflict")
 var ErrUnauthorized = errors.New("unauthorized")
+var ErrNameTaken = errors.New("vault display name already in use")
 
 type KDFParams struct {
 	Memory      uint32 `json:"memory"`
@@ -30,6 +31,7 @@ type KDFParams struct {
 // VaultMeta is stored in plain JSON on disk (salt + token hash only; no password).
 type VaultMeta struct {
 	VaultID                string    `json:"vault_id"`
+	DisplayName            string    `json:"display_name,omitempty"`
 	Revision               int64     `json:"revision"`
 	UpdatedAt              time.Time `json:"updated_at"`
 	SaltB64                string    `json:"salt_b64"`
@@ -46,6 +48,8 @@ type CreateVaultInput struct {
 	TokenHashHex           string
 	MinClientSemver        string
 	MaxBackupExportVersion int
+	/** Optional friendly name; unique on this server (case-insensitive). */
+	DisplayName string
 }
 
 type FileStore struct {
@@ -62,10 +66,36 @@ func (s *FileStore) vaultDir(id string) string {
 }
 
 func (s *FileStore) CreateVault(in CreateVaultInput) (*VaultMeta, error) {
+	var displayStored string
+	var nameKey string
+	if strings.TrimSpace(in.DisplayName) != "" {
+		norm, err := NormalizeVaultDisplayName(in.DisplayName)
+		if err != nil {
+			return nil, err
+		}
+		k, err := NameIndexKey(in.DisplayName)
+		if err != nil {
+			return nil, err
+		}
+		displayStored = norm
+		nameKey = k
+	}
+
 	id := uuid.NewString()
 	dir := s.vaultDir(id)
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if nameKey != "" {
+		idx, err := s.loadIndexUnlocked()
+		if err != nil {
+			return nil, err
+		}
+		if _, taken := idx.Names[nameKey]; taken {
+			return nil, ErrNameTaken
+		}
+	}
+
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, err
 	}
@@ -84,6 +114,7 @@ func (s *FileStore) CreateVault(in CreateVaultInput) (*VaultMeta, error) {
 	}
 	meta := VaultMeta{
 		VaultID:                id,
+		DisplayName:            displayStored,
 		Revision:               0,
 		UpdatedAt:              time.Now().UTC(),
 		SaltB64:                in.SaltB64,
@@ -97,6 +128,24 @@ func (s *FileStore) CreateVault(in CreateVaultInput) (*VaultMeta, error) {
 		_ = os.RemoveAll(dir)
 		return nil, err
 	}
+
+	if nameKey != "" {
+		idx, err := s.loadIndexUnlocked()
+		if err != nil {
+			_ = os.RemoveAll(dir)
+			return nil, err
+		}
+		if _, taken := idx.Names[nameKey]; taken {
+			_ = os.RemoveAll(dir)
+			return nil, ErrNameTaken
+		}
+		idx.Names[nameKey] = id
+		if err := s.saveIndexUnlocked(idx); err != nil {
+			_ = os.RemoveAll(dir)
+			return nil, err
+		}
+	}
+
 	return &meta, nil
 }
 

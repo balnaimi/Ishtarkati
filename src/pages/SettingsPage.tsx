@@ -58,6 +58,10 @@ export function SettingsPage() {
   const [dangerMsg, setDangerMsg] = useState<string | null>(null);
   const [syncBaseUrl, setSyncBaseUrl] = useState("");
   const [syncVaultId, setSyncVaultId] = useState("");
+  const [syncDisplayName, setSyncDisplayName] = useState("");
+  const [syncSetupMode, setSyncSetupMode] = useState<"create" | "link">("link");
+  const [syncLinkBy, setSyncLinkBy] = useState<"name" | "id">("name");
+  const [syncLookupName, setSyncLookupName] = useState("");
   const [syncPassword, setSyncPassword] = useState("");
   const [syncPasswordNew, setSyncPasswordNew] = useState("");
   const [syncPasswordNew2, setSyncPasswordNew2] = useState("");
@@ -129,7 +133,9 @@ export function SettingsPage() {
       if (r.ok) {
         setSyncBaseUrl(r.baseUrl);
         setSyncVaultId(r.vaultId);
+        setSyncDisplayName(r.displayName);
         setSyncSessionOpen(r.sessionUnlocked);
+        setSyncSetupMode(r.vaultId ? "link" : "create");
       }
     })();
   }, []);
@@ -483,6 +489,12 @@ export function SettingsPage() {
     if (err.includes("sync_weak_password")) return t("sync.errors.sync_weak_password");
     if (err.includes("sync_vault_not_found")) return t("sync.errors.sync_vault_not_found");
     if (err.includes("sync_pull_required_first")) return t("sync.errors.sync_pull_required_first");
+    if (err.includes("sync_name_not_found")) return t("sync.errors.sync_name_not_found");
+    if (err.includes("sync_invalid_name")) return t("sync.errors.sync_invalid_name");
+    if (err.includes("sync_name_taken")) return t("sync.errors.sync_name_taken");
+    if (err.includes("sync_invalid_display_name")) return t("sync.errors.sync_invalid_display_name");
+    if (err.includes("sync_display_name_required")) return t("sync.errors.sync_display_name_required");
+    if (err.includes("sync_missing_fields")) return t("sync.errors.sync_missing_fields");
     return t("sync.errors.generic");
   }
 
@@ -493,6 +505,7 @@ export function SettingsPage() {
       const r = await window.ishtarkati.syncSaveLocalConfig({
         baseUrl: syncBaseUrl.trim(),
         vaultId: syncVaultId.trim(),
+        displayName: syncDisplayName.trim(),
       });
       if (!r.ok) {
         setSyncMsg(t("sync.errors.generic"));
@@ -549,8 +562,32 @@ export function SettingsPage() {
     }
   }
 
+  async function handleSyncLookupVaultByName() {
+    setSyncMsg(null);
+    setSyncBusy(true);
+    try {
+      const r = await window.ishtarkati.syncLookupVaultByName({
+        baseUrl: syncBaseUrl.trim(),
+        name: syncLookupName.trim(),
+      });
+      if (!r.ok) {
+        setSyncMsg(formatSyncError(r.error ?? ""));
+        return;
+      }
+      setSyncVaultId(r.vaultId);
+      setSyncDisplayName(r.displayName);
+      setSyncMsg(t("sync.lookupOk"));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
   async function handleSyncCreateVault() {
     setSyncMsg(null);
+    if (syncDisplayName.trim().length < 2) {
+      setSyncMsg(t("sync.errors.sync_display_name_required"));
+      return;
+    }
     if (syncPasswordNew.length < 8) {
       setSyncMsg(t("sync.errors.sync_weak_password"));
       return;
@@ -564,15 +601,18 @@ export function SettingsPage() {
       const r = await window.ishtarkati.syncCreateVault({
         baseUrl: syncBaseUrl.trim(),
         password: syncPasswordNew,
+        displayName: syncDisplayName.trim(),
       });
       if (!r.ok) {
         setSyncMsg(formatSyncError(r.error ?? ""));
         return;
       }
       setSyncVaultId(r.vaultId);
+      setSyncDisplayName(r.displayName);
       setSyncPasswordNew("");
       setSyncPasswordNew2("");
       setSyncSessionOpen(true);
+      setSyncSetupMode("link");
       setSyncMsg(t("sync.createOk"));
     } finally {
       setSyncBusy(false);
@@ -1104,56 +1144,186 @@ export function SettingsPage() {
               />
               <p className="mt-1 text-xs text-cream-600">{t("sync.baseUrlHint")}</p>
             </div>
-            <div>
-              <label className="sk-label" htmlFor="sync-vault">
-                {t("sync.vaultId")}
-              </label>
-              <input
-                id="sync-vault"
-                className="sk-input font-mono text-sm"
-                dir="ltr"
-                value={syncVaultId}
-                onChange={(e) => setSyncVaultId(e.target.value)}
-                placeholder="uuid"
-              />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncSaveConfig()}>
-                {t("sync.btnSaveConfig")}
+            <div className="flex flex-wrap gap-2 border-b border-cream-400/50 pb-3">
+              <button
+                type="button"
+                className={syncSetupMode === "create" ? "sk-btn-primary" : "sk-btn-secondary"}
+                disabled={syncBusy}
+                onClick={() => {
+                  setSyncSetupMode("create");
+                  setSyncMsg(null);
+                }}
+              >
+                {t("sync.modeCreate")}
               </button>
-              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncTest()}>
-                {t("sync.btnTestServer")}
+              <button
+                type="button"
+                className={syncSetupMode === "link" ? "sk-btn-primary" : "sk-btn-secondary"}
+                disabled={syncBusy}
+                onClick={() => {
+                  setSyncSetupMode("link");
+                  setSyncMsg(null);
+                }}
+              >
+                {t("sync.modeLink")}
               </button>
             </div>
-          </section>
 
-          <section className="sk-card space-y-4">
-            <h4 className="text-sm font-semibold text-cream-900">{t("sync.btnCreateVault")}</h4>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="sk-label">{t("sync.passwordCreate")}</label>
-                <input
-                  type="password"
-                  className="sk-input"
-                  autoComplete="new-password"
-                  value={syncPasswordNew}
-                  onChange={(e) => setSyncPasswordNew(e.target.value)}
-                />
+            {syncSetupMode === "create" ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="sk-label" htmlFor="sync-display-create">
+                    {t("sync.displayName")}
+                  </label>
+                  <input
+                    id="sync-display-create"
+                    className="sk-input"
+                    value={syncDisplayName}
+                    onChange={(e) => setSyncDisplayName(e.target.value)}
+                    placeholder={t("sync.displayNamePlaceholder")}
+                  />
+                  <p className="mt-1 text-xs text-cream-600">{t("sync.displayNameCreateHint")}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="sk-label">{t("sync.passwordCreate")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      autoComplete="new-password"
+                      value={syncPasswordNew}
+                      onChange={(e) => setSyncPasswordNew(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="sk-label">{t("sync.passwordCreate2")}</label>
+                    <input
+                      type="password"
+                      className="sk-input"
+                      autoComplete="new-password"
+                      value={syncPasswordNew2}
+                      onChange={(e) => setSyncPasswordNew2(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="sk-btn-primary"
+                    disabled={syncBusy}
+                    onClick={() => void handleSyncCreateVault()}
+                  >
+                    {t("sync.btnCreateVault")}
+                  </button>
+                  <button
+                    type="button"
+                    className="sk-btn-secondary"
+                    disabled={syncBusy}
+                    onClick={() => void handleSyncTest()}
+                  >
+                    {t("sync.btnTestServer")}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="sk-label">{t("sync.passwordCreate2")}</label>
-                <input
-                  type="password"
-                  className="sk-input"
-                  autoComplete="new-password"
-                  value={syncPasswordNew2}
-                  onChange={(e) => setSyncPasswordNew2(e.target.value)}
-                />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2 text-sm">
+                  <label className="flex cursor-pointer gap-2">
+                    <input
+                      type="radio"
+                      name="sync-link-by"
+                      checked={syncLinkBy === "name"}
+                      onChange={() => setSyncLinkBy("name")}
+                    />
+                    {t("sync.linkByName")}
+                  </label>
+                  <label className="flex cursor-pointer gap-2">
+                    <input
+                      type="radio"
+                      name="sync-link-by"
+                      checked={syncLinkBy === "id"}
+                      onChange={() => setSyncLinkBy("id")}
+                    />
+                    {t("sync.linkById")}
+                  </label>
+                </div>
+
+                {syncLinkBy === "name" ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1">
+                      <label className="sk-label" htmlFor="sync-lookup-name">
+                        {t("sync.lookupName")}
+                      </label>
+                      <input
+                        id="sync-lookup-name"
+                        className="sk-input"
+                        value={syncLookupName}
+                        onChange={(e) => setSyncLookupName(e.target.value)}
+                        placeholder={t("sync.lookupNamePlaceholder")}
+                      />
+                      <p className="mt-1 text-xs text-cream-600">{t("sync.lookupNameHint")}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="sk-btn-secondary shrink-0"
+                      disabled={syncBusy || !syncBaseUrl.trim() || !syncLookupName.trim()}
+                      onClick={() => void handleSyncLookupVaultByName()}
+                    >
+                      {t("sync.btnLookupVault")}
+                    </button>
+                  </div>
+                ) : null}
+
+                <div>
+                  <label className="sk-label" htmlFor="sync-vault">
+                    {t("sync.vaultId")}
+                  </label>
+                  <input
+                    id="sync-vault"
+                    className="sk-input font-mono text-sm"
+                    dir="ltr"
+                    value={syncVaultId}
+                    onChange={(e) => setSyncVaultId(e.target.value)}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    disabled={syncBusy}
+                  />
+                  <p className="mt-1 text-xs text-cream-600">{t("sync.vaultIdHint")}</p>
+                </div>
+
+                <div>
+                  <label className="sk-label" htmlFor="sync-display-link">
+                    {t("sync.displayNameLocal")}
+                  </label>
+                  <input
+                    id="sync-display-link"
+                    className="sk-input"
+                    value={syncDisplayName}
+                    onChange={(e) => setSyncDisplayName(e.target.value)}
+                    placeholder={t("sync.displayNameLocalPlaceholder")}
+                  />
+                  <p className="mt-1 text-xs text-cream-600">{t("sync.displayNameLocalHint")}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="sk-btn-primary"
+                    disabled={syncBusy}
+                    onClick={() => void handleSyncSaveConfig()}
+                  >
+                    {t("sync.btnSaveConfig")}
+                  </button>
+                  <button
+                    type="button"
+                    className="sk-btn-secondary"
+                    disabled={syncBusy}
+                    onClick={() => void handleSyncTest()}
+                  >
+                    {t("sync.btnTestServer")}
+                  </button>
+                </div>
               </div>
-            </div>
-            <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncCreateVault()}>
-              {t("sync.btnCreateVault")}
-            </button>
+            )}
           </section>
 
           <section className="sk-card space-y-4">

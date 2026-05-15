@@ -33,6 +33,7 @@ declare global {
             ok: true;
             baseUrl: string;
             vaultId: string;
+            displayName: string;
             serverRevision: string;
             sessionUnlocked: boolean;
           }
@@ -41,7 +42,12 @@ declare global {
       syncSaveLocalConfig: (payload: {
         baseUrl: string;
         vaultId: string;
+        displayName?: string;
       }) => Promise<{ ok: true } | { ok: false; error?: string }>;
+      syncLookupVaultByName: (payload: { baseUrl: string; name: string }) => Promise<
+        | { ok: true; vaultId: string; displayName: string }
+        | { ok: false; error?: string }
+      >;
       syncUnlockSession: (payload: {
         baseUrl: string;
         vaultId: string;
@@ -63,8 +69,12 @@ declare global {
           }
         | { ok: false; error?: string }
       >;
-      syncCreateVault: (payload: { baseUrl: string; password: string }) => Promise<
-        | { ok: true; vaultId: string }
+      syncCreateVault: (payload: {
+        baseUrl: string;
+        password: string;
+        displayName: string;
+      }) => Promise<
+        | { ok: true; vaultId: string; displayName: string }
         | { ok: false; error?: string }
       >;
       syncRemoteStatus: (payload: { baseUrl: string; vaultId: string }) => Promise<
@@ -78,6 +88,7 @@ declare global {
             };
             status: {
               vault_id: string;
+              display_name?: string;
               revision: number;
               updated_at: string;
               has_snapshot: boolean;

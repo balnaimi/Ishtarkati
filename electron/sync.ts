@@ -13,6 +13,7 @@ import {
 const SYNC_BASE_URL = "sync_base_url";
 const SYNC_VAULT_ID = "sync_vault_id";
 const SYNC_SERVER_REVISION = "sync_server_revision";
+const SYNC_VAULT_DISPLAY_NAME = "sync_vault_display_name";
 
 const DEFAULT_KDF = {
   memory: 65536,
@@ -23,6 +24,7 @@ const DEFAULT_KDF = {
 
 type VaultStatusDTO = {
   vault_id: string;
+  display_name?: string;
   revision: number;
   updated_at: string;
   has_snapshot: boolean;
@@ -184,6 +186,38 @@ async function fetchVaultStatus(baseUrl: string, vaultId: string): Promise<Vault
   return (await res.json()) as VaultStatusDTO;
 }
 
+async function fetchVaultLookup(
+  baseUrl: string,
+  name: string,
+): Promise<{ vault_id: string; display_name: string }> {
+  const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/lookup?name=${encodeURIComponent(name)}`;
+  const res = await fetch(u);
+  if (res.status === 404) throw new Error("sync_name_not_found");
+  if (res.status === 400) throw new Error("sync_invalid_name");
+  if (!res.ok) throw new Error(`sync_lookup_http_${res.status}`);
+  return (await res.json()) as { vault_id: string; display_name: string };
+}
+
+/** Parse JSON `{ "error": "code" }` from sync API failure responses. */
+async function syncErrorFromResponse(res: Response, fallback: string): Promise<string> {
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {
+    return fallback;
+  }
+  try {
+    const j = JSON.parse(text) as { error?: string };
+    const code = typeof j.error === "string" ? j.error.trim() : "";
+    if (!code) return fallback;
+    if (code === "name_taken") return "sync_name_taken";
+    if (code === "invalid_display_name") return "sync_invalid_display_name";
+    return code;
+  } catch {
+    return fallback;
+  }
+}
+
 function assertClientAllowed(appVersion: string, cap: CapabilitiesDTO, status: VaultStatusDTO): void {
   if (!semverGte(appVersion, cap.min_client_semver)) {
     throw new Error("sync_need_app_update_capabilities");
@@ -221,6 +255,7 @@ export function registerSyncIpc(
       ok: true as const,
       baseUrl: dbGet(database, SYNC_BASE_URL) ?? "",
       vaultId: dbGet(database, SYNC_VAULT_ID) ?? "",
+      displayName: dbGet(database, SYNC_VAULT_DISPLAY_NAME) ?? "",
       serverRevision: dbGet(database, SYNC_SERVER_REVISION) ?? "",
       sessionUnlocked: (() => {
         const vid = dbGet(database, SYNC_VAULT_ID);
@@ -234,13 +269,18 @@ export function registerSyncIpc(
     if (!database) return { ok: false as const, error: "no-database" };
     if (!raw || typeof raw !== "object" || Array.isArray(raw))
       return { ok: false as const, error: "invalid" };
-    const o = raw as { baseUrl?: string; vaultId?: string };
+    const o = raw as { baseUrl?: string; vaultId?: string; displayName?: string };
     const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
     const vaultId = typeof o.vaultId === "string" ? o.vaultId.trim() : "";
     if (baseUrl) dbSet(database, SYNC_BASE_URL, baseUrl);
     else dbDel(database, SYNC_BASE_URL);
     if (vaultId) dbSet(database, SYNC_VAULT_ID, vaultId);
     else dbDel(database, SYNC_VAULT_ID);
+    if ("displayName" in o) {
+      const d = typeof o.displayName === "string" ? o.displayName.trim() : "";
+      if (d) dbSet(database, SYNC_VAULT_DISPLAY_NAME, d);
+      else dbDel(database, SYNC_VAULT_DISPLAY_NAME);
+    }
     sessionByVault.clear();
     return { ok: true as const };
   });
@@ -260,6 +300,8 @@ export function registerSyncIpc(
       const status = await fetchVaultStatus(baseUrl, vaultId);
       assertClientAllowed(getAppVersion(), cap, status);
       setSession(vaultId, password, status);
+      const dn = typeof status.display_name === "string" ? status.display_name.trim() : "";
+      if (dn) dbSet(database, SYNC_VAULT_DISPLAY_NAME, dn);
       return { ok: true as const, status };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -287,14 +329,35 @@ export function registerSyncIpc(
     }
   });
 
+  ipcMain.handle("sync:lookupVaultByName", async (_evt, raw: unknown) => {
+    if (!raw || typeof raw !== "object") return { ok: false as const, error: "invalid" };
+    const o = raw as { baseUrl?: string; name?: string };
+    const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
+    const name = typeof o.name === "string" ? o.name : "";
+    if (!baseUrl || !name.trim()) return { ok: false as const, error: "sync_missing_fields" };
+    try {
+      const resolved = await fetchVaultLookup(baseUrl, name);
+      return {
+        ok: true as const,
+        vaultId: resolved.vault_id,
+        displayName: resolved.display_name,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { ok: false as const, error: msg };
+    }
+  });
+
   ipcMain.handle("sync:createVault", async (_evt, raw: unknown) => {
     const database = getDb();
     if (!database) return { ok: false as const, error: "no-database" };
     if (!raw || typeof raw !== "object") return { ok: false as const, error: "invalid" };
-    const o = raw as { baseUrl?: string; password?: string };
+    const o = raw as { baseUrl?: string; password?: string; displayName?: string };
     const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
     const password = typeof o.password === "string" ? o.password : "";
+    const displayName = typeof o.displayName === "string" ? o.displayName.trim() : "";
     if (!baseUrl || password.length < 8) return { ok: false as const, error: "sync_weak_password" };
+    if (displayName.length < 2) return { ok: false as const, error: "sync_display_name_required" };
 
     const salt = crypto.randomBytes(32);
     const saltB64 = Buffer.from(salt).toString("base64");
@@ -322,6 +385,7 @@ export function registerSyncIpc(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        display_name: displayName,
         salt_b64: saltB64,
         kdf: {
           memory: DEFAULT_KDF.memory,
@@ -335,17 +399,23 @@ export function registerSyncIpc(
       }),
     });
     if (!res.ok) {
-      return { ok: false as const, error: `sync_create_http_${res.status}` };
+      const fallback = `sync_create_http_${res.status}`;
+      return { ok: false as const, error: await syncErrorFromResponse(res, fallback) };
     }
-    const created = (await res.json()) as { vault_id: string };
+    const created = (await res.json()) as { vault_id: string; display_name?: string };
+    const resolvedName =
+      typeof created.display_name === "string" && created.display_name.trim()
+        ? created.display_name.trim()
+        : displayName;
     if (!created.vault_id) return { ok: false as const, error: "sync_create_bad_response" };
 
     dbSet(database, SYNC_BASE_URL, baseUrl.trim());
     dbSet(database, SYNC_VAULT_ID, created.vault_id);
+    dbSet(database, SYNC_VAULT_DISPLAY_NAME, resolvedName);
     dbSet(database, SYNC_SERVER_REVISION, "0");
     sessionByVault.set(created.vault_id, { masterKey, bearerHex });
 
-    return { ok: true as const, vaultId: created.vault_id };
+    return { ok: true as const, vaultId: created.vault_id, displayName: resolvedName };
   });
 
   ipcMain.handle("sync:remoteStatus", async (_evt, raw: unknown) => {

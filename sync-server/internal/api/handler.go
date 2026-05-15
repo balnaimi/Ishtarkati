@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -30,6 +31,7 @@ type capabilitiesResp struct {
 }
 
 type createVaultReq struct {
+	DisplayName            string          `json:"display_name"`
 	SaltB64                string          `json:"salt_b64"`
 	KDF                    store.KDFParams `json:"kdf"`
 	TokenHashHex           string          `json:"token_hash_hex"`
@@ -38,11 +40,13 @@ type createVaultReq struct {
 }
 
 type createVaultResp struct {
-	VaultID string `json:"vault_id"`
+	VaultID     string `json:"vault_id"`
+	DisplayName string `json:"display_name,omitempty"`
 }
 
 type statusResp struct {
 	VaultID                string          `json:"vault_id"`
+	DisplayName            string          `json:"display_name,omitempty"`
 	Revision               int64           `json:"revision"`
 	UpdatedAt              string          `json:"updated_at"`
 	HasSnapshot            bool            `json:"has_snapshot"`
@@ -56,6 +60,7 @@ func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/health", h.health)
 	r.Get("/v1/capabilities", h.capabilities)
+	r.Get("/v1/vaults/lookup", h.lookupVault)
 	r.Post("/v1/vaults", h.createVault)
 	r.Get("/v1/vaults/{vaultID}/status", h.status)
 	r.Put("/v1/vaults/{vaultID}/snapshot", h.putSnapshot)
@@ -81,6 +86,33 @@ func (h *Handler) capabilities(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+func (h *Handler) lookupVault(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("name"))
+	if q == "" {
+		http.Error(w, `{"error":"missing_name"}`, http.StatusBadRequest)
+		return
+	}
+	id, err := h.Store.LookupVaultIDByName(q)
+	if err == store.ErrNotFound {
+		http.Error(w, `{"error":"name_not_found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"invalid_name"}`, http.StatusBadRequest)
+		return
+	}
+	meta, _, err := h.Store.GetStatus(id)
+	if err != nil {
+		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"vault_id":     meta.VaultID,
+		"display_name": meta.DisplayName,
+	})
+}
+
 func (h *Handler) createVault(w http.ResponseWriter, r *http.Request) {
 	var req createVaultReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -92,19 +124,28 @@ func (h *Handler) createVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	meta, err := h.Store.CreateVault(store.CreateVaultInput{
+		DisplayName:            strings.TrimSpace(req.DisplayName),
 		SaltB64:                req.SaltB64,
 		KDF:                    req.KDF,
 		TokenHashHex:           req.TokenHashHex,
 		MinClientSemver:        req.MinClientSemver,
 		MaxBackupExportVersion: req.MaxBackupExportVersion,
 	})
+	if err == store.ErrNameTaken {
+		http.Error(w, `{"error":"name_taken"}`, http.StatusConflict)
+		return
+	}
 	if err != nil {
+		if errors.Is(err, store.ErrInvalidDisplayName) {
+			http.Error(w, `{"error":"invalid_display_name"}`, http.StatusBadRequest)
+			return
+		}
 		http.Error(w, `{"error":"create_failed"}`, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(createVaultResp{VaultID: meta.VaultID})
+	_ = json.NewEncoder(w).Encode(createVaultResp{VaultID: meta.VaultID, DisplayName: meta.DisplayName})
 }
 
 func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +162,7 @@ func (h *Handler) status(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(statusResp{
 		VaultID:                meta.VaultID,
+		DisplayName:            meta.DisplayName,
 		Revision:               meta.Revision,
 		UpdatedAt:              meta.UpdatedAt.Format("2006-01-02T15:04:05.000Z"),
 		HasSnapshot:            has,

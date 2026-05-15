@@ -32,13 +32,15 @@ contextBridge.exposeInMainWorld("ishtarkati", {
   resetLocalDatabase: (): Promise<{ ok: true } | { ok: false; error?: string }> =>
     ipcRenderer.invoke("app:resetLocalDatabase"),
   syncGetLocalConfig: () => ipcRenderer.invoke("sync:getLocalConfig"),
-  syncSaveLocalConfig: (payload: { baseUrl: string; vaultId: string }) =>
+  syncSaveLocalConfig: (payload: { baseUrl: string; vaultId: string; displayName?: string }) =>
     ipcRenderer.invoke("sync:saveLocalConfig", payload),
+  syncLookupVaultByName: (payload: { baseUrl: string; name: string }) =>
+    ipcRenderer.invoke("sync:lookupVaultByName", payload),
   syncUnlockSession: (payload: { baseUrl: string; vaultId: string; password: string }) =>
     ipcRenderer.invoke("sync:unlockSession", payload),
   syncClearSession: () => ipcRenderer.invoke("sync:clearSession"),
   syncCapabilities: (payload: { baseUrl: string }) => ipcRenderer.invoke("sync:capabilities", payload),
-  syncCreateVault: (payload: { baseUrl: string; password: string }) =>
+  syncCreateVault: (payload: { baseUrl: string; password: string; displayName: string }) =>
     ipcRenderer.invoke("sync:createVault", payload),
   syncRemoteStatus: (payload: { baseUrl: string; vaultId: string }) =>
     ipcRenderer.invoke("sync:remoteStatus", payload),
