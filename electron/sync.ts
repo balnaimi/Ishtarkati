@@ -80,6 +80,30 @@ export function normalizeSyncBaseUrl(raw: string): string {
   return `http://${t}`;
 }
 
+/** Wraps `fetch` so connection failures become stable `sync_*` codes for the UI. */
+async function syncFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    const cause =
+      e instanceof Error && e.cause instanceof Error
+        ? e.cause.message
+        : e instanceof Error && e.cause != null
+          ? String(e.cause)
+          : "";
+    const combined = `${raw} ${cause}`;
+    if (
+      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|fetch failed|NetworkError|getaddrinfo|UND_ERR_CONNECT/i.test(
+        combined,
+      )
+    ) {
+      throw new Error("sync_network_unreachable");
+    }
+    throw new Error(`sync_network_error:${raw}`);
+  }
+}
+
 function semverParts(v: string): [number, number, number] {
   const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.trim());
   if (!m) return [0, 0, 0];
@@ -173,14 +197,14 @@ function decryptBackupJson(envelopeJson: string, masterKey: Uint8Array, salt: Ui
 
 async function fetchCapabilities(baseUrl: string): Promise<CapabilitiesDTO> {
   const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/capabilities`;
-  const res = await fetch(u, { method: "GET" });
+  const res = await syncFetch(u, { method: "GET" });
   if (!res.ok) throw new Error(`sync_capabilities_http_${res.status}`);
   return (await res.json()) as CapabilitiesDTO;
 }
 
 async function fetchVaultStatus(baseUrl: string, vaultId: string): Promise<VaultStatusDTO> {
   const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/${encodeURIComponent(vaultId)}/status`;
-  const res = await fetch(u, { method: "GET" });
+  const res = await syncFetch(u, { method: "GET" });
   if (res.status === 404) throw new Error("sync_vault_not_found");
   if (!res.ok) throw new Error(`sync_status_http_${res.status}`);
   return (await res.json()) as VaultStatusDTO;
@@ -191,7 +215,7 @@ async function fetchVaultLookup(
   name: string,
 ): Promise<{ vault_id: string; display_name: string }> {
   const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/lookup?name=${encodeURIComponent(name)}`;
-  const res = await fetch(u);
+  const res = await syncFetch(u);
   if (res.status === 404) throw new Error("sync_name_not_found");
   if (res.status === 400) throw new Error("sync_invalid_name");
   if (!res.ok) throw new Error(`sync_lookup_http_${res.status}`);
@@ -356,66 +380,72 @@ export function registerSyncIpc(
     const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
     const password = typeof o.password === "string" ? o.password : "";
     const displayName = typeof o.displayName === "string" ? o.displayName.trim() : "";
-    if (!baseUrl || password.length < 8) return { ok: false as const, error: "sync_weak_password" };
+    if (!baseUrl) return { ok: false as const, error: "sync_missing_base" };
+    if (password.length < 8) return { ok: false as const, error: "sync_weak_password" };
     if (displayName.length < 2) return { ok: false as const, error: "sync_display_name_required" };
 
-    const salt = crypto.randomBytes(32);
-    const saltB64 = Buffer.from(salt).toString("base64");
-    const masterKeyU = argon2id(new TextEncoder().encode(password), salt, {
-      m: DEFAULT_KDF.memory,
-      t: DEFAULT_KDF.iterations,
-      p: DEFAULT_KDF.parallelism,
-      dkLen: DEFAULT_KDF.keyLength,
-    });
-    const masterKey = Buffer.from(masterKeyU);
-    const bearerHex = bearerTokenHex(masterKeyU, salt);
-    const tokenHashHex = tokenHashHexFromBearer(bearerHex);
+    try {
+      const salt = crypto.randomBytes(32);
+      const saltB64 = Buffer.from(salt).toString("base64");
+      const masterKeyU = argon2id(new TextEncoder().encode(password), salt, {
+        m: DEFAULT_KDF.memory,
+        t: DEFAULT_KDF.iterations,
+        p: DEFAULT_KDF.parallelism,
+        dkLen: DEFAULT_KDF.keyLength,
+      });
+      const masterKey = Buffer.from(masterKeyU);
+      const bearerHex = bearerTokenHex(masterKeyU, salt);
+      const tokenHashHex = tokenHashHexFromBearer(bearerHex);
 
-    const cap = await fetchCapabilities(baseUrl);
-    const appVersion = getAppVersion();
-    if (!semverGte(appVersion, cap.min_client_semver)) {
-      return { ok: false as const, error: "sync_need_app_update_capabilities" };
+      const cap = await fetchCapabilities(baseUrl);
+      const appVersion = getAppVersion();
+      if (!semverGte(appVersion, cap.min_client_semver)) {
+        return { ok: false as const, error: "sync_need_app_update_capabilities" };
+      }
+      if (BACKUP_EXPORT_VERSION > cap.max_backup_export_version) {
+        return { ok: false as const, error: "sync_export_version_too_new" };
+      }
+
+      const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults`;
+      const res = await syncFetch(u, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: displayName,
+          salt_b64: saltB64,
+          kdf: {
+            memory: DEFAULT_KDF.memory,
+            iterations: DEFAULT_KDF.iterations,
+            parallelism: DEFAULT_KDF.parallelism,
+            keyLength: DEFAULT_KDF.keyLength,
+          },
+          token_hash_hex: tokenHashHex,
+          min_client_semver: cap.min_client_semver,
+          max_backup_export_version: cap.max_backup_export_version,
+        }),
+      });
+      if (!res.ok) {
+        const fallback = `sync_create_http_${res.status}`;
+        return { ok: false as const, error: await syncErrorFromResponse(res, fallback) };
+      }
+      const created = (await res.json()) as { vault_id: string; display_name?: string };
+      const resolvedName =
+        typeof created.display_name === "string" && created.display_name.trim()
+          ? created.display_name.trim()
+          : displayName;
+      if (!created.vault_id) return { ok: false as const, error: "sync_create_bad_response" };
+
+      dbSet(database, SYNC_BASE_URL, baseUrl.trim());
+      dbSet(database, SYNC_VAULT_ID, created.vault_id);
+      dbSet(database, SYNC_VAULT_DISPLAY_NAME, resolvedName);
+      dbSet(database, SYNC_SERVER_REVISION, "0");
+      sessionByVault.set(created.vault_id, { masterKey, bearerHex });
+
+      return { ok: true as const, vaultId: created.vault_id, displayName: resolvedName };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { ok: false as const, error: msg };
     }
-    if (BACKUP_EXPORT_VERSION > cap.max_backup_export_version) {
-      return { ok: false as const, error: "sync_export_version_too_new" };
-    }
-
-    const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults`;
-    const res = await fetch(u, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name: displayName,
-        salt_b64: saltB64,
-        kdf: {
-          memory: DEFAULT_KDF.memory,
-          iterations: DEFAULT_KDF.iterations,
-          parallelism: DEFAULT_KDF.parallelism,
-          keyLength: DEFAULT_KDF.keyLength,
-        },
-        token_hash_hex: tokenHashHex,
-        min_client_semver: cap.min_client_semver,
-        max_backup_export_version: cap.max_backup_export_version,
-      }),
-    });
-    if (!res.ok) {
-      const fallback = `sync_create_http_${res.status}`;
-      return { ok: false as const, error: await syncErrorFromResponse(res, fallback) };
-    }
-    const created = (await res.json()) as { vault_id: string; display_name?: string };
-    const resolvedName =
-      typeof created.display_name === "string" && created.display_name.trim()
-        ? created.display_name.trim()
-        : displayName;
-    if (!created.vault_id) return { ok: false as const, error: "sync_create_bad_response" };
-
-    dbSet(database, SYNC_BASE_URL, baseUrl.trim());
-    dbSet(database, SYNC_VAULT_ID, created.vault_id);
-    dbSet(database, SYNC_VAULT_DISPLAY_NAME, resolvedName);
-    dbSet(database, SYNC_SERVER_REVISION, "0");
-    sessionByVault.set(created.vault_id, { masterKey, bearerHex });
-
-    return { ok: true as const, vaultId: created.vault_id, displayName: resolvedName };
   });
 
   ipcMain.handle("sync:remoteStatus", async (_evt, raw: unknown) => {
@@ -461,7 +491,7 @@ export function registerSyncIpc(
       if (!sess) return { ok: false as const, error: "sync_need_password_or_unlock" };
 
       const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/${encodeURIComponent(vaultId)}/snapshot`;
-      const res = await fetch(u, {
+      const res = await syncFetch(u, {
         headers: { Authorization: `Bearer ${sess.bearerHex}` },
       });
       if (res.status === 401) return { ok: false as const, error: "sync_unauthorized" };
@@ -554,7 +584,7 @@ export function registerSyncIpc(
       const body = encryptBackupJson(plain, mk, salt);
 
       const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/${encodeURIComponent(vaultId)}/snapshot`;
-      const res = await fetch(u, {
+      const res = await syncFetch(u, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -639,7 +669,7 @@ async function attemptAutoPush(
     const body = encryptBackupJson(plain, mk, salt);
 
     const u = `${normalizeSyncBaseUrl(baseUrl)}/v1/vaults/${encodeURIComponent(vaultId)}/snapshot`;
-    const res = await fetch(u, {
+    const res = await syncFetch(u, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

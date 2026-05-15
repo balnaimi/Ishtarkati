@@ -67,6 +67,7 @@ export function SettingsPage() {
   const [syncPasswordNew2, setSyncPasswordNew2] = useState("");
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncMsgIsError, setSyncMsgIsError] = useState(false);
   const [syncSessionOpen, setSyncSessionOpen] = useState(false);
   const [syncRemote, setSyncRemote] = useState<{
     revision: number;
@@ -476,8 +477,28 @@ export function SettingsPage() {
     setDangerMsg(null);
   }
 
+  function clearSyncFeedback() {
+    setSyncMsg(null);
+    setSyncMsgIsError(false);
+  }
+
+  function showSyncSuccess(message: string) {
+    setSyncMsgIsError(false);
+    setSyncMsg(message);
+  }
+
+  function showSyncFailure(message: string) {
+    setSyncMsgIsError(true);
+    setSyncMsg(message);
+  }
+
   function formatSyncError(err: string): string {
     if (!err) return t("sync.errors.generic");
+    if (err.includes("no-database")) return t("sync.errors.no_database");
+    if (err === "invalid") return t("sync.errors.sync_invalid_payload");
+    if (err.includes("sync_missing_base")) return t("sync.errors.sync_missing_base");
+    if (err.includes("sync_network_unreachable")) return t("sync.errors.sync_network_unreachable");
+    if (err.includes("sync_network_error")) return t("sync.errors.sync_network_unreachable");
     if (err.includes("sync_conflict")) return t("sync.conflictHint");
     if (err.includes("need_app_update_capabilities")) return t("sync.errors.need_app_update_capabilities");
     if (err.includes("need_app_update_vault")) return t("sync.errors.need_app_update_vault");
@@ -489,6 +510,12 @@ export function SettingsPage() {
     if (err.includes("sync_weak_password")) return t("sync.errors.sync_weak_password");
     if (err.includes("sync_vault_not_found")) return t("sync.errors.sync_vault_not_found");
     if (err.includes("sync_pull_required_first")) return t("sync.errors.sync_pull_required_first");
+    if (err.includes("sync_capabilities_http_")) return t("sync.errors.sync_server_http");
+    if (err.includes("sync_status_http_")) return t("sync.errors.sync_server_http");
+    if (err.includes("sync_create_http_")) return t("sync.errors.sync_server_http");
+    if (err.includes("sync_pull_http_")) return t("sync.errors.sync_server_http");
+    if (err.includes("sync_push_http_")) return t("sync.errors.sync_server_http");
+    if (err.includes("sync_lookup_http_")) return t("sync.errors.sync_server_http");
     if (err.includes("sync_name_not_found")) return t("sync.errors.sync_name_not_found");
     if (err.includes("sync_invalid_name")) return t("sync.errors.sync_invalid_name");
     if (err.includes("sync_name_taken")) return t("sync.errors.sync_name_taken");
@@ -499,7 +526,11 @@ export function SettingsPage() {
   }
 
   async function handleSyncSaveConfig() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncSaveLocalConfig({
@@ -508,19 +539,27 @@ export function SettingsPage() {
         displayName: syncDisplayName.trim(),
       });
       if (!r.ok) {
-        setSyncMsg(t("sync.errors.generic"));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       const st = await window.ishtarkati.syncGetLocalConfig();
       if (st.ok) setSyncSessionOpen(st.sessionUnlocked);
-      setSyncMsg(t("common.save"));
+      showSyncSuccess(t("common.save"));
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncUnlock() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncUnlockSession({
@@ -529,33 +568,53 @@ export function SettingsPage() {
         password: syncPassword,
       });
       if (!r.ok) {
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       setSyncSessionOpen(true);
-      setSyncMsg(t("sync.sessionUnlocked"));
+      showSyncSuccess(t("sync.sessionUnlocked"));
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncClearSession() {
-    await window.ishtarkati.syncClearSession();
+    try {
+      await window.ishtarkati?.syncClearSession();
+    } catch {
+      /* ignore */
+    }
     setSyncSessionOpen(false);
-    setSyncMsg(null);
+    clearSyncFeedback();
   }
 
   async function handleSyncTest() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
+    if (!syncBaseUrl.trim()) {
+      showSyncFailure(t("sync.errors.sync_missing_base"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncCapabilities({ baseUrl: syncBaseUrl.trim() });
       if (!r.ok) {
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
-      setSyncMsg(
+      showSyncSuccess(
         `${t("sync.minAppVersion", { v: r.cap.min_client_semver })} — ${t("sync.exportVersionLimit", { v: r.cap.max_backup_export_version })}`,
+      );
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
       );
     } finally {
       setSyncBusy(false);
@@ -563,7 +622,15 @@ export function SettingsPage() {
   }
 
   async function handleSyncLookupVaultByName() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
+    if (!syncBaseUrl.trim()) {
+      showSyncFailure(t("sync.errors.sync_missing_base"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncLookupVaultByName({
@@ -571,29 +638,41 @@ export function SettingsPage() {
         name: syncLookupName.trim(),
       });
       if (!r.ok) {
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       setSyncVaultId(r.vaultId);
       setSyncDisplayName(r.displayName);
-      setSyncMsg(t("sync.lookupOk"));
+      showSyncSuccess(t("sync.lookupOk"));
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncCreateVault() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
+    if (!syncBaseUrl.trim()) {
+      showSyncFailure(t("sync.errors.sync_missing_base"));
+      return;
+    }
     if (syncDisplayName.trim().length < 2) {
-      setSyncMsg(t("sync.errors.sync_display_name_required"));
+      showSyncFailure(t("sync.errors.sync_display_name_required"));
       return;
     }
     if (syncPasswordNew.length < 8) {
-      setSyncMsg(t("sync.errors.sync_weak_password"));
+      showSyncFailure(t("sync.errors.sync_weak_password"));
       return;
     }
     if (syncPasswordNew !== syncPasswordNew2) {
-      setSyncMsg(t("sync.passwordMismatch"));
+      showSyncFailure(t("sync.passwordMismatch"));
       return;
     }
     setSyncBusy(true);
@@ -604,7 +683,7 @@ export function SettingsPage() {
         displayName: syncDisplayName.trim(),
       });
       if (!r.ok) {
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       setSyncVaultId(r.vaultId);
@@ -613,14 +692,22 @@ export function SettingsPage() {
       setSyncPasswordNew2("");
       setSyncSessionOpen(true);
       setSyncSetupMode("link");
-      setSyncMsg(t("sync.createOk"));
+      showSyncSuccess(t("sync.createOk"));
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncCheckRemote() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncRemoteStatus({
@@ -629,7 +716,7 @@ export function SettingsPage() {
       });
       if (!r.ok) {
         setSyncRemote(null);
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       setSyncRemote({
@@ -638,13 +725,21 @@ export function SettingsPage() {
         max_backup_export_version: r.status.max_backup_export_version,
         min_client_semver: r.status.min_client_semver,
       });
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncPullPreview() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
     setBackupMsg(null);
     setSyncBusy(true);
     try {
@@ -654,20 +749,28 @@ export function SettingsPage() {
         password: syncPassword,
       });
       if (!r.ok) {
-        setSyncMsg(formatSyncError(r.error ?? ""));
+        showSyncFailure(formatSyncError(r.error ?? ""));
         return;
       }
       setImportPreview(r.preview);
       setSyncBackupJson(r.backupJson);
       setSyncPullRevision(r.serverRevision);
       setImportDlgOpen(true);
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
   }
 
   async function handleSyncPush() {
-    setSyncMsg(null);
+    clearSyncFeedback();
+    if (!window.ishtarkati) {
+      showSyncFailure(t("sync.errors.sync_not_electron"));
+      return;
+    }
     setSyncBusy(true);
     try {
       const r = await window.ishtarkati.syncPush({
@@ -678,13 +781,17 @@ export function SettingsPage() {
       });
       if (!r.ok) {
         if (r.conflict) {
-          setSyncMsg(t("sync.conflictHint"));
+          showSyncFailure(t("sync.conflictHint"));
         } else {
-          setSyncMsg(formatSyncError(r.error ?? ""));
+          showSyncFailure(formatSyncError(r.error ?? ""));
         }
         return;
       }
-      setSyncMsg(t("sync.pushOk", { rev: String(r.revision ?? "—") }));
+      showSyncSuccess(t("sync.pushOk", { rev: String(r.revision ?? "—") }));
+    } catch (e) {
+      showSyncFailure(
+        t("sync.errors.sync_unexpected", { detail: e instanceof Error ? e.message : String(e) }),
+      );
     } finally {
       setSyncBusy(false);
     }
@@ -1151,7 +1258,7 @@ export function SettingsPage() {
                 disabled={syncBusy}
                 onClick={() => {
                   setSyncSetupMode("create");
-                  setSyncMsg(null);
+                  clearSyncFeedback();
                 }}
               >
                 {t("sync.modeCreate")}
@@ -1162,7 +1269,7 @@ export function SettingsPage() {
                 disabled={syncBusy}
                 onClick={() => {
                   setSyncSetupMode("link");
-                  setSyncMsg(null);
+                  clearSyncFeedback();
                 }}
               >
                 {t("sync.modeLink")}
@@ -1324,6 +1431,24 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
+            {(syncBusy || syncMsg) ? (
+              <div
+                className={
+                  syncMsgIsError
+                    ? "sk-callout-danger"
+                    : syncBusy
+                      ? "sk-callout-muted"
+                      : "sk-callout-warning"
+                }
+                role="status"
+                aria-live="polite"
+              >
+                {syncBusy ? (
+                  <p className="text-sm font-medium text-cream-950">{t("sync.connecting")}</p>
+                ) : null}
+                {syncMsg && !syncBusy ? <p className="text-sm leading-relaxed">{syncMsg}</p> : null}
+              </div>
+            ) : null}
           </section>
 
           <section className="sk-card space-y-4">
@@ -1395,8 +1520,6 @@ export function SettingsPage() {
               {syncBusy ? t("sync.busy") : t("sync.btnPushNow")}
             </button>
           </section>
-
-          {syncMsg ? <p className="sk-callout-muted text-sm">{syncMsg}</p> : null}
         </div>
       ) : null}
 
