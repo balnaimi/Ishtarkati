@@ -35,6 +35,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Mount("/", h.Routes())
 	log.Printf("ishtarkati-sync %s listening on %s data=%s", srvVer, addr, dataDir)

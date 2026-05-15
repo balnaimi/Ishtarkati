@@ -1,4 +1,5 @@
 services:
+  # الصورة تعمل كـ root حتى يمكن الكتابة في ./data المربوط من المضيف. بعد التحديث: docker compose up --build
   sync:
     build: .
     ports:

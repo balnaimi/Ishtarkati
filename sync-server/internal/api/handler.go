@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -144,6 +145,7 @@ func (h *Handler) createVault(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"invalid_token_hash"}`, http.StatusBadRequest)
 			return
 		}
+		log.Printf("sync-server: CreateVault failed: %v", err)
 		http.Error(w, `{"error":"create_failed"}`, http.StatusInternalServerError)
 		return
 	}
