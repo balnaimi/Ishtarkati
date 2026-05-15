@@ -1,7 +1,7 @@
 {
   "name": "ishtarkati",
   "private": true,
-  "version": "1.2.2",
+  "version": "1.3.0",
   "engines": {
     "node": ">=24.0.0 <25"
   },
@@ -16,6 +16,7 @@
     "ship": "node scripts/bump-version-for-build.mjs && node scripts/git-ship.mjs",
     "watch:build": "chokidar \"src/**/*\" \"electron/**/*\" \"index.html\" \"vite.config.ts\" \"src/index.css\" -c \"npm run build:pack\" -d 2500 --initial",
     "preview": "vite preview",
+    "test:sync-server": "cd sync-server && go test ./... -count=1",
     "version:bump": "node scripts/bump-version.mjs",
     "postinstall": "electron-builder install-app-deps"
   },

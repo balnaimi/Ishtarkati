@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
-import { registerSyncIpc, notifyLocalDataChanged } from "./sync";
+import { registerSyncIpc, notifyLocalDataChanged, flushPendingAutoPush } from "./sync";
 import localeAr from "../src/locales/ar.json";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -608,6 +608,7 @@ function registerIpc(): void {
   registerBackupIpc(
     () => db,
     () => win,
+    () => notifyLocalDataChanged(() => db),
   );
   registerSyncIpc(
     () => db,
@@ -634,6 +635,10 @@ function createWindow(): void {
 
   win.once("ready-to-show", () => {
     win?.show();
+  });
+
+  win.on("blur", () => {
+    notifyLocalDataChanged(() => db);
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -664,6 +669,9 @@ function createWindow(): void {
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
+/** يتجاوز منع الخروج بعد اكتمال رفع المزامنة المؤجل. */
+let allowQuitAfterSyncFlush = false;
+
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
@@ -674,15 +682,27 @@ if (!gotSingleInstanceLock) {
     }
   });
 
-  app.on("before-quit", () => {
-    closeDatabase();
+  app.on("before-quit", (e) => {
+    if (allowQuitAfterSyncFlush) {
+      closeDatabase();
+      return;
+    }
+    e.preventDefault();
+    void (async () => {
+      try {
+        await flushPendingAutoPush(() => db);
+      } catch {
+        /* ignore */
+      }
+      allowQuitAfterSyncFlush = true;
+      app.quit();
+    })();
   });
 
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
-      closeDatabase();
-      app.quit();
       win = null;
+      app.quit();
     }
   });
 

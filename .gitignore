@@ -15,6 +15,9 @@ release
 *.local
 .tools/
 
+# خادم المزامنة المحلي (Docker bind mount)
+sync-server/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

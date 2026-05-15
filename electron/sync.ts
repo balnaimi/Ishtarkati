@@ -55,7 +55,8 @@ const sessionByVault = new Map<string, SessionPayload>();
 
 type GetAppVersion = () => string;
 let resolveAppVersion: GetAppVersion = () => "0.0.0";
-const AUTOPUSH_MS = 12_000;
+/** Debounce بعد آخر كتابة في القاعدة قبل الرفع التلقائي (ثوانٍ). */
+const AUTOPUSH_MS = 3_500;
 let autoPushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function dbGet(database: Database.Database, key: string): string | null {
@@ -656,6 +657,15 @@ export function notifyLocalDataChanged(getDb: () => Database.Database | null): v
     autoPushTimer = null;
     void attemptAutoPush(getDb, resolveAppVersion);
   }, AUTOPUSH_MS);
+}
+
+/** يلغي المؤقت ويجري محاولة رفع فورية (عند إغلاق التطبيق أو طلب صريح). */
+export function flushPendingAutoPush(getDb: () => Database.Database | null): Promise<void> {
+  if (autoPushTimer) {
+    clearTimeout(autoPushTimer);
+    autoPushTimer = null;
+  }
+  return attemptAutoPush(getDb, resolveAppVersion);
 }
 
 async function attemptAutoPush(

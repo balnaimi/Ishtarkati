@@ -142,6 +142,19 @@ export function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    if (tab !== "sync") return;
+    void (async () => {
+      const r = await window.ishtarkati.syncGetLocalConfig();
+      if (r.ok) {
+        setSyncBaseUrl(r.baseUrl);
+        setSyncVaultId(r.vaultId);
+        setSyncDisplayName(r.displayName);
+        setSyncSessionOpen(r.sessionUnlocked);
+      }
+    })();
+  }, [tab]);
+
+  useEffect(() => {
     if (tab !== "danger") {
       setDangerStep(0);
       setDangerCode("");
@@ -1246,6 +1259,18 @@ export function SettingsPage() {
           <section className="sk-card space-y-3">
             <h3 className="text-base font-semibold text-cream-900">{t("sync.introTitle")}</h3>
             <p className="text-sm leading-relaxed text-cream-700">{t("sync.introBody")}</p>
+            <p className="text-sm leading-relaxed text-cream-700">{t("sync.simpleAutoBody")}</p>
+            <div className="sk-callout-warning text-sm leading-relaxed">
+              {syncBaseUrl.trim() && syncVaultId.trim() ? (
+                syncSessionOpen ? (
+                  <p>{t("sync.simpleStatusOn")}</p>
+                ) : (
+                  <p>{t("sync.simpleStatusNeedUnlock")}</p>
+                )
+              ) : (
+                <p>{t("sync.simpleStatusNotLinked")}</p>
+              )}
+            </div>
           </section>
 
           <section className="sk-card space-y-4">
@@ -1465,7 +1490,7 @@ export function SettingsPage() {
 
           <section className="sk-card space-y-4">
             <h4 className="text-sm font-semibold text-cream-900">{t("sync.password")}</h4>
-            <p className="text-xs text-cream-600">{t("settings.version")}: {APP_VERSION}</p>
+            <p className="text-xs leading-relaxed text-cream-600">{t("sync.passwordHelp")}</p>
             <input
               type="password"
               className="sk-input max-w-md"
@@ -1484,54 +1509,65 @@ export function SettingsPage() {
             {syncSessionOpen ? <p className="text-xs text-sage-700">{t("sync.sessionUnlocked")}</p> : null}
           </section>
 
-          <section className="sk-card space-y-4">
-            <h4 className="text-sm font-semibold text-cream-900">{t("sync.remoteHeading")}</h4>
-            <div className="flex flex-wrap gap-3">
-              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncCheckRemote()}>
-                {t("sync.btnCheckRemote")}
-              </button>
-              <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncPullPreview()}>
-                {t("sync.btnPullPreview")}
-              </button>
-            </div>
-            {syncRemote ? (
-              <ul className="list-inside list-disc space-y-1 text-sm text-cream-800">
-                <li>{t("sync.remoteRevision", { rev: syncRemote.revision })}</li>
-                <li>
-                  {syncRemote.has_snapshot ? t("sync.remoteHasSnapshot") : t("sync.remoteNoSnapshot")}
-                </li>
-                <li>{t("sync.minAppVersion", { v: syncRemote.min_client_semver })}</li>
-                <li>{t("sync.exportVersionLimit", { v: syncRemote.max_backup_export_version })}</li>
-              </ul>
-            ) : null}
-          </section>
+          <details className="sk-card space-y-4 open:ring-1 open:ring-cream-400/40">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-cream-900 [&::-webkit-details-marker]:hidden">
+              {t("sync.advancedTitle")}
+            </summary>
+            <div className="mt-4 space-y-6 border-t border-cream-400/40 pt-4">
+              <p className="text-xs text-cream-600">
+                {t("settings.version")}: {APP_VERSION}
+              </p>
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-cream-900">{t("sync.remoteHeading")}</h4>
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncCheckRemote()}>
+                    {t("sync.btnCheckRemote")}
+                  </button>
+                  <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncPullPreview()}>
+                    {t("sync.btnPullPreview")}
+                  </button>
+                </div>
+                {syncRemote ? (
+                  <ul className="list-inside list-disc space-y-1 text-sm text-cream-800">
+                    <li>{t("sync.remoteRevision", { rev: syncRemote.revision })}</li>
+                    <li>
+                      {syncRemote.has_snapshot ? t("sync.remoteHasSnapshot") : t("sync.remoteNoSnapshot")}
+                    </li>
+                    <li>{t("sync.minAppVersion", { v: syncRemote.min_client_semver })}</li>
+                    <li>{t("sync.exportVersionLimit", { v: syncRemote.max_backup_export_version })}</li>
+                  </ul>
+                ) : null}
+              </div>
 
-          <section className="sk-card space-y-4">
-            <h4 className="text-sm font-semibold text-cream-900">{t("sync.btnPushNow")}</h4>
-            <div className="flex flex-col gap-2 text-sm">
-              <label className="flex cursor-pointer gap-2">
-                <input
-                  type="radio"
-                  name="sync-scope"
-                  checked={syncPushScope === "full"}
-                  onChange={() => setSyncPushScope("full")}
-                />
-                {t("sync.scopeFull")}
-              </label>
-              <label className="flex cursor-pointer gap-2">
-                <input
-                  type="radio"
-                  name="sync-scope"
-                  checked={syncPushScope === "without_settings"}
-                  onChange={() => setSyncPushScope("without_settings")}
-                />
-                {t("sync.scopeDataOnly")}
-              </label>
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-cream-900">{t("sync.btnPushNow")}</h4>
+                <p className="text-xs text-cream-600">{t("sync.manualPushHint")}</p>
+                <div className="flex flex-col gap-2 text-sm">
+                  <label className="flex cursor-pointer gap-2">
+                    <input
+                      type="radio"
+                      name="sync-scope"
+                      checked={syncPushScope === "full"}
+                      onChange={() => setSyncPushScope("full")}
+                    />
+                    {t("sync.scopeFull")}
+                  </label>
+                  <label className="flex cursor-pointer gap-2">
+                    <input
+                      type="radio"
+                      name="sync-scope"
+                      checked={syncPushScope === "without_settings"}
+                      onChange={() => setSyncPushScope("without_settings")}
+                    />
+                    {t("sync.scopeDataOnly")}
+                  </label>
+                </div>
+                <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncPush()}>
+                  {syncBusy ? t("sync.busy") : t("sync.btnPushNow")}
+                </button>
+              </div>
             </div>
-            <button type="button" className="sk-btn-primary" disabled={syncBusy} onClick={() => void handleSyncPush()}>
-              {syncBusy ? t("sync.busy") : t("sync.btnPushNow")}
-            </button>
-          </section>
+          </details>
         </div>
       ) : null}
 

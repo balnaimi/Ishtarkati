@@ -983,6 +983,7 @@ function isApplyPayload(raw: unknown): raw is ImportApplyPayload {
 export function registerBackupIpc(
   getDb: () => Database.Database | null,
   getWin: () => BrowserWindow | null,
+  onDataChanged?: () => void,
 ): void {
   ipcMain.handle("backup:export", async (_evt, raw?: unknown) => {
     let scope: BackupExportScope = "full";
@@ -1060,6 +1061,7 @@ export function registerBackupIpc(
           onSimilarSubscription: raw.onSimilarSubscription,
         });
       }
+      onDataChanged?.();
       return { ok: true as const };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
