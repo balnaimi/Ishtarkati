@@ -11,6 +11,9 @@ import {
 } from "../lib/cashflowProjection";
 import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
 
+/** Machine note stored for quick «mark paid»; UI shows `detail.paymentNoteMarkPaid`. */
+export const PAYMENT_NOTE_MARK_PAID = "__ishtarkati_mark_paid__";
+
 export type CategoryWithActiveCount = Category & { activeSubscriptionCount: number };
 
 export async function loadCategories(): Promise<Category[]> {
@@ -515,35 +518,60 @@ export async function setSubscriptionNextDue(
 export async function confirmSubscriptionPaid(id: number): Promise<void> {
   const sub = await getSubscription(id);
   if (!sub || sub.cancelled_at || !sub.next_due_date) return;
-  const paidAt = formatDateInput(new Date());
+  /** Record the billing cycle that was cleared (shown in ledger + Insights by this date). */
+  const paidAtCycle = sub.next_due_date;
   const amtOriginal = Number.isFinite(sub.amount_original) ? sub.amount_original : null;
+  const nowIso = new Date().toISOString();
+  const db = await getDb();
+  const insertSql =
+    `INSERT INTO payment_events (subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)` +
+    ` VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`;
 
   if (sub.billing_model === "recurring" && sub.interval_unit) {
     const cnt = Math.max(1, sub.interval_count ?? 1);
     const base = parseDateInput(sub.next_due_date) ?? new Date();
     const next = addBillingSteps(base, sub.interval_unit, cnt);
-    await insertPaymentEvent(
-      id,
-      paidAt,
-      amtOriginal,
-      sub.currency_code,
-      sub.amount_qar_snapshot,
-      cnt,
-      null,
-    );
-    await setSubscriptionNextDue(id, formatDateInput(next));
+    await db.executeTransaction([
+      {
+        sql: insertSql,
+        params: [
+          id,
+          paidAtCycle,
+          amtOriginal,
+          sub.currency_code,
+          sub.amount_qar_snapshot,
+          null,
+          cnt,
+          PAYMENT_NOTE_MARK_PAID,
+        ],
+      },
+      {
+        sql: `UPDATE subscriptions SET next_due_date = $1, updated_at = $2 WHERE id = $3`,
+        params: [formatDateInput(next), nowIso, id],
+      },
+    ]);
     return;
   }
-  await insertPaymentEvent(
-    id,
-    paidAt,
-    amtOriginal,
-    sub.currency_code,
-    sub.amount_qar_snapshot,
-    null,
-    null,
-  );
-  await setSubscriptionNextDue(id, null);
+
+  await db.executeTransaction([
+    {
+      sql: insertSql,
+      params: [
+        id,
+        paidAtCycle,
+        amtOriginal,
+        sub.currency_code,
+        sub.amount_qar_snapshot,
+        null,
+        null,
+        PAYMENT_NOTE_MARK_PAID,
+      ],
+    },
+    {
+      sql: `UPDATE subscriptions SET next_due_date = $1, updated_at = $2 WHERE id = $3`,
+      params: [null, nowIso, id],
+    },
+  ]);
 }
 
 export function subscriptionNeedsPaidAttention(sub: Subscription): boolean {

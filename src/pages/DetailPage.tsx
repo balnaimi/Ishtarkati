@@ -10,6 +10,7 @@ import {
   getSubscription,
   insertPaymentEvent,
   listPayments,
+  PAYMENT_NOTE_MARK_PAID,
   reactivateSubscription,
   setSubscriptionNextDue,
   subscriptionNeedsPaidAttention,
@@ -213,8 +214,20 @@ export function DetailPage() {
 
   async function handleMarkPaid() {
     if (!id) return;
-    await confirmSubscriptionPaid(parseInt(id, 10));
-    void reload();
+    try {
+      await confirmSubscriptionPaid(parseInt(id, 10));
+      void reload();
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      try {
+        await window.ishtarkati.showNotification({
+          title: t("home.markPaidErrorTitle"),
+          body: `${t("home.markPaidErrorBody")} ${detail}`,
+        });
+      } catch {
+        /* ignore notification failures */
+      }
+    }
   }
 
   async function handleReactivate() {
@@ -516,7 +529,12 @@ export function DetailPage() {
         <h3 className="mb-3 font-semibold text-cream-900">{t("detail.payments")}</h3>
         <ul className="space-y-3">
           {payments.length === 0 ? (
-            <li className="text-cream-600">{t("common.none")}</li>
+            <>
+              <li className="text-cream-600">{t("common.none")}</li>
+              <li className="list-none rounded-lg border border-cream-400/70 bg-cream-50/90 px-3 py-2.5 text-xs leading-relaxed text-cream-800">
+                {t("detail.paymentsLedgerEmptyExplain")}
+              </li>
+            </>
           ) : (
             payments.map((p) => (
               <li
@@ -551,7 +569,13 @@ export function DetailPage() {
                     </span>
                   ) : null;
                 })()}
-                {p.note ? <p className="mt-2 text-xs text-cream-600">{p.note}</p> : null}
+                {p.note ? (
+                  <p className="mt-2 text-xs text-cream-600">
+                    {p.note === PAYMENT_NOTE_MARK_PAID
+                      ? t("detail.paymentNoteMarkPaid")
+                      : p.note}
+                  </p>
+                ) : null}
               </li>
             ))
           )}

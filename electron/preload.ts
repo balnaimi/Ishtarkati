@@ -5,11 +5,18 @@ export interface DbExecuteResult {
   lastInsertRowid: number;
 }
 
+export interface DbTransactionOp {
+  sql: string;
+  params?: unknown[];
+}
+
 contextBridge.exposeInMainWorld("ishtarkati", {
   dbSelect: (sql: string, params: unknown[]): Promise<unknown[]> =>
     ipcRenderer.invoke("db:select", sql, params),
   dbExecute: (sql: string, params: unknown[]): Promise<DbExecuteResult> =>
     ipcRenderer.invoke("db:execute", sql, params),
+  dbExecuteTransaction: (ops: DbTransactionOp[]): Promise<void> =>
+    ipcRenderer.invoke("db:transaction", ops),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke("shell:openExternal", url),
   backupExport: (opts?: { scope?: "full" | "without_settings" }) =>

@@ -6,6 +6,8 @@ export interface DbApi {
     sql: string,
     params?: unknown[],
   ) => Promise<{ rowsAffected: number; lastInsertId?: number }>;
+  /** Atomic multi-statement commit (SQLite transaction in main process). */
+  executeTransaction: (ops: Array<{ sql: string; params?: unknown[] }>) => Promise<void>;
 }
 
 const api: DbApi = {
@@ -18,6 +20,9 @@ const api: DbApi = {
       rowsAffected: r.changes,
       lastInsertId: r.lastInsertRowid,
     };
+  },
+  executeTransaction: async (ops: Array<{ sql: string; params?: unknown[] }>) => {
+    await window.ishtarkati.dbExecuteTransaction(ops);
   },
 };
 

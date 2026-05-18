@@ -538,6 +538,35 @@ function registerIpc(): void {
       };
     },
   );
+  ipcMain.handle(
+    "db:transaction",
+    (_evt, raw: unknown) => {
+      if (!db) throw new Error("Database not ready");
+      if (!Array.isArray(raw) || raw.length === 0) {
+        throw new Error("db_transaction_invalid");
+      }
+      const txn = db.transaction(() => {
+        for (const item of raw) {
+          const rec =
+            item && typeof item === "object" && "sql" in item
+              ? (item as { sql: unknown; params?: unknown })
+              : null;
+          if (
+            rec == null ||
+            typeof rec.sql !== "string" ||
+            !(rec.params === undefined || Array.isArray(rec.params))
+          ) {
+            throw new Error("db_transaction_op_invalid");
+          }
+          const params = rec.params ?? [];
+          const stmt = db!.prepare(normalizeSql(rec.sql));
+          stmt.run(...params);
+        }
+      });
+      txn();
+      notifyLocalDataChanged(() => db);
+    },
+  );
   ipcMain.handle("shell:openExternal", (_evt, url: string) => {
     return shell.openExternal(url);
   });

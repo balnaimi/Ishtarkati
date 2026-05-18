@@ -10,6 +10,7 @@ declare global {
         sql: string,
         params: unknown[],
       ) => Promise<{ changes: number; lastInsertRowid: number }>;
+      dbExecuteTransaction: (ops: Array<{ sql: string; params?: unknown[] }>) => Promise<void>;
       openExternal: (url: string) => Promise<void>;
       backupExport: (opts?: { scope?: "full" | "without_settings" }) => Promise<
         | { ok: true; path: string }

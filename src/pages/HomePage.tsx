@@ -78,8 +78,20 @@ export function HomePage() {
 
   async function onConfirmPaid(e: React.MouseEvent, id: number) {
     e.stopPropagation();
-    await confirmSubscriptionPaid(id);
-    void reload();
+    try {
+      await confirmSubscriptionPaid(id);
+      void reload();
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      try {
+        await window.ishtarkati.showNotification({
+          title: t("home.markPaidErrorTitle"),
+          body: `${t("home.markPaidErrorBody")} ${detail}`,
+        });
+      } catch {
+        /* ignore notification failures */
+      }
+    }
   }
 
   function billingLabel(model: string) {
