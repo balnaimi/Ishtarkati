@@ -1,0 +1,25 @@
+---
+description: عند أي تعديل للتطبيق — التحقق من حاجة تعديل sync-server وعدم العبث بالسيرفر بلا ضرورة
+alwaysApply: true
+---
+
+# إشتراكاتي — توافق التطبيق مع `sync-server`
+
+## ما يفعله السيرفر
+
+`sync-server` يخزّن **نسخًا مشفّرة خام** (vault snapshot) مع إصدار وميتاداتا؛ لا يقرأ جداول SQLite ولا حقولًا مثل `payment_events`. التوافق مع العميل يمرّ عبر:
+
+- واجهة HTTP تحت `/v1/...` (انظر [`sync-server/internal/api/handler.go`](/home/mrn/Ishtarkati/sync-server/internal/api/handler.go)).
+- حقول **`max_backup_export_version`** و`**min_client_semver**` بين العميل والسيرفر (انظر [`electron/sync.ts`](/home/mrn/Ishtarkati/electron/sync.ts)، [`electron/backup.ts`](/home/mrn/Ishtarkati/electron/backup.ts)، [`sync-server/cmd/server/main.go`](/home/mrn/Ishtarkati/sync-server/cmd/server/main.go)).
+
+## لا تلمس السيرفر عندما
+
+- التعديل **منطق محلي فقط**: استعلامات/إدراج SQLite، شاشات، تجربة مستخدم، دون تغيير **نسخة التصدير** أو عقد المزامنة.
+
+## عدِّل السيرفر (أو مستندات النشر ذات المتغيرات) عندما
+
+- رفع **`BACKUP_EXPORT_VERSION`** في العميل — يجب أن يكون حدّ السيرفر (مثل `SYNC_MAX_BACKUP_EXPORT_VERSION` أو الافتراضي في `main.go`) **لا يقلّ** عمّا يعلنه العميل، واختبارات الوحدة التي تثبت الرقم القديم تحتاج تحديثًا إذا تغيّر العقد المعلن.
+- تغيير **مسارات أو أشكال JSON** لمزامنة الخزائن (create/status/snapshot)، أو أي سلوك جديد لا يعمل مع نسخة السيرفر الحالية.
+- المتطلب الأخير أيضًا عند ضبط **`SYNC_API_VERSION`** أو **`SYNC_MIN_CLIENT_SEMVER`** في السيرفر.
+
+**قاعدة:** بعد هذا التقييم؛ إذا لا حاجة — **لا تضف تعديلًا في `sync-server/`**.
