@@ -9,6 +9,19 @@ import {
   parseBackupJson,
   type ImportPreviewDTO,
 } from "./backup";
+import {
+  appendSyncActivityLog,
+  clearRememberedPassword,
+  computeSyncStatusState,
+  hasConflictPending,
+  isRememberSessionEnabled,
+  loadRememberedPassword,
+  readActivityLog,
+  saveRememberedPassword,
+} from "./syncMeta";
+import { normalizeSyncBaseUrl, semverGte } from "./syncUtil";
+
+export { normalizeSyncBaseUrl, semverGte } from "./syncUtil";
 
 const SYNC_BASE_URL = "sync_base_url";
 const SYNC_VAULT_ID = "sync_vault_id";
@@ -58,6 +71,7 @@ let resolveAppVersion: GetAppVersion = () => "0.0.0";
 /** Debounce بعد آخر كتابة في القاعدة قبل الرفع التلقائي (ثوانٍ). */
 const AUTOPUSH_MS = 3_500;
 let autoPushTimer: ReturnType<typeof setTimeout> | null = null;
+let autoPushInFlight = false;
 
 function dbGet(database: Database.Database, key: string): string | null {
   const row = database.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
@@ -72,13 +86,6 @@ function dbSet(database: Database.Database, key: string, value: string): void {
 
 function dbDel(database: Database.Database, key: string): void {
   database.prepare("DELETE FROM settings WHERE key = ?").run(key);
-}
-
-export function normalizeSyncBaseUrl(raw: string): string {
-  const t = raw.trim().replace(/\/+$/, "");
-  if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  return `http://${t}`;
 }
 
 /** Wraps `fetch` so connection failures become stable `sync_*` codes for the UI. */
@@ -103,23 +110,6 @@ async function syncFetch(url: string, init?: RequestInit): Promise<Response> {
     }
     throw new Error(`sync_network_error:${raw}`);
   }
-}
-
-function semverParts(v: string): [number, number, number] {
-  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(v.trim());
-  if (!m) return [0, 0, 0];
-  return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
-}
-
-/** True if clientSemver >= minSemver (naive major.minor.patch). */
-export function semverGte(clientSemver: string, minSemver: string): boolean {
-  const a = semverParts(clientSemver);
-  const b = semverParts(minSemver);
-  for (let i = 0; i < 3; i++) {
-    if (a[i] > b[i]) return true;
-    if (a[i] < b[i]) return false;
-  }
-  return true;
 }
 
 function saltFromB64(saltB64: string): Uint8Array {
@@ -296,6 +286,46 @@ function setSession(vaultId: string, password: string, status: VaultStatusDTO): 
   return p;
 }
 
+async function unlockSessionForVault(
+  database: Database.Database,
+  baseUrl: string,
+  vaultId: string,
+  password: string,
+  getAppVersion: GetAppVersion,
+): Promise<{ ok: true; status: VaultStatusDTO } | { ok: false; error: string }> {
+  try {
+    const cap = await fetchCapabilities(baseUrl);
+    const status = await fetchVaultStatus(baseUrl, vaultId);
+    assertClientAllowed(getAppVersion(), cap, status);
+    setSession(vaultId, password, status);
+    const dn = typeof status.display_name === "string" ? status.display_name.trim() : "";
+    if (dn) dbSet(database, SYNC_VAULT_DISPLAY_NAME, dn);
+    return { ok: true as const, status };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false as const, error: msg };
+  }
+}
+
+/** يفتح جلسة المزامنة من كلمة المرور المحفوظة (بعد تشغيل التطبيق). */
+export async function restoreRememberedSyncSession(
+  database: Database.Database,
+  getAppVersion: GetAppVersion,
+): Promise<{ ok: boolean }> {
+  const baseUrl = dbGet(database, SYNC_BASE_URL);
+  const vaultId = dbGet(database, SYNC_VAULT_ID);
+  if (!baseUrl || !vaultId) return { ok: false };
+  if (sessionByVault.has(vaultId)) return { ok: true };
+  const password = loadRememberedPassword(database);
+  if (!password) return { ok: false };
+  const r = await unlockSessionForVault(database, baseUrl, vaultId, password, getAppVersion);
+  if (r.ok) {
+    appendSyncActivityLog(database, "auto_unlock");
+    return { ok: true };
+  }
+  return { ok: false };
+}
+
 export function registerSyncIpc(
   getDb: () => Database.Database | null,
   getAppVersion: GetAppVersion,
@@ -314,6 +344,7 @@ export function registerSyncIpc(
         const vid = dbGet(database, SYNC_VAULT_ID);
         return vid ? sessionByVault.has(vid) : false;
       })(),
+      rememberEnabled: isRememberSessionEnabled(database),
     };
   });
 
@@ -343,28 +374,119 @@ export function registerSyncIpc(
     if (!database) return { ok: false as const, error: "no-database" };
     if (!raw || typeof raw !== "object")
       return { ok: false as const, error: "invalid" };
-    const o = raw as { baseUrl?: string; vaultId?: string; password?: string };
+    const o = raw as { baseUrl?: string; vaultId?: string; password?: string; remember?: boolean };
     const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
     const vaultId = typeof o.vaultId === "string" ? o.vaultId.trim() : "";
     const password = typeof o.password === "string" ? o.password : "";
+    const remember = o.remember === true;
     if (!baseUrl || !vaultId || !password) return { ok: false as const, error: "sync_missing_fields" };
-    try {
-      const cap = await fetchCapabilities(baseUrl);
-      const status = await fetchVaultStatus(baseUrl, vaultId);
-      assertClientAllowed(getAppVersion(), cap, status);
-      setSession(vaultId, password, status);
-      const dn = typeof status.display_name === "string" ? status.display_name.trim() : "";
-      if (dn) dbSet(database, SYNC_VAULT_DISPLAY_NAME, dn);
-      return { ok: true as const, status };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { ok: false as const, error: msg };
+    const r = await unlockSessionForVault(database, baseUrl, vaultId, password, getAppVersion);
+    if (!r.ok) return r;
+    appendSyncActivityLog(database, "unlock");
+    if (remember) {
+      if (!saveRememberedPassword(database, password)) {
+        return { ok: false as const, error: "sync_remember_unavailable" };
+      }
     }
+    return { ok: true as const, status: r.status };
   });
 
   ipcMain.handle("sync:clearSession", async () => {
     sessionByVault.clear();
     return { ok: true as const };
+  });
+
+  ipcMain.handle("sync:setRememberSession", async (_evt, raw: unknown) => {
+    const database = getDb();
+    if (!database) return { ok: false as const, error: "no-database" };
+    if (!raw || typeof raw !== "object") return { ok: false as const, error: "invalid" };
+    const o = raw as { enabled?: boolean; password?: string };
+    if (o.enabled === false) {
+      clearRememberedPassword(database);
+      return { ok: true as const, enabled: false };
+    }
+    if (o.enabled !== true) return { ok: false as const, error: "invalid" };
+    const password = typeof o.password === "string" ? o.password : "";
+    if (!password) return { ok: false as const, error: "sync_missing_fields" };
+    if (!saveRememberedPassword(database, password)) {
+      return { ok: false as const, error: "sync_remember_unavailable" };
+    }
+    return { ok: true as const, enabled: true };
+  });
+
+  ipcMain.handle("sync:tryAutoUnlock", async () => {
+    const database = getDb();
+    if (!database) return { ok: false as const, error: "no-database" };
+    const r = await restoreRememberedSyncSession(database, getAppVersion);
+    return r.ok ? { ok: true as const } : { ok: false as const, error: "sync_auto_unlock_failed" };
+  });
+
+  ipcMain.handle("sync:getActivityLog", async () => {
+    const database = getDb();
+    if (!database) return { ok: false as const, error: "no-database" };
+    return { ok: true as const, entries: readActivityLog(database) };
+  });
+
+  ipcMain.handle("sync:getStatusSummary", async () => {
+    const database = getDb();
+    if (!database) return { ok: false as const, error: "no-database" };
+    const baseUrl = dbGet(database, SYNC_BASE_URL) ?? "";
+    const vaultId = dbGet(database, SYNC_VAULT_ID) ?? "";
+    const configured = Boolean(baseUrl.trim() && vaultId.trim());
+    const vid = vaultId.trim();
+    const sessionUnlocked = vid ? sessionByVault.has(vid) : false;
+    const state = computeSyncStatusState({
+      configured,
+      sessionUnlocked,
+      autoPushPending: autoPushTimer != null || autoPushInFlight,
+      conflictPending: hasConflictPending(database),
+    });
+    const log = readActivityLog(database);
+    return {
+      ok: true as const,
+      state,
+      configured,
+      sessionUnlocked,
+      rememberEnabled: isRememberSessionEnabled(database),
+      localRevision: dbGet(database, SYNC_SERVER_REVISION) ?? "",
+      displayName: dbGet(database, SYNC_VAULT_DISPLAY_NAME) ?? "",
+      lastActivity: log[0] ?? null,
+    };
+  });
+
+  ipcMain.handle("sync:checkRemoteNewer", async () => {
+    const database = getDb();
+    if (!database) return { ok: false as const, error: "no-database" };
+    const baseUrl = dbGet(database, SYNC_BASE_URL);
+    const vaultId = dbGet(database, SYNC_VAULT_ID);
+    if (!baseUrl || !vaultId) return { ok: false as const, error: "sync_not_configured" };
+    try {
+      const status = await fetchVaultStatus(baseUrl, vaultId);
+      const localRaw = dbGet(database, SYNC_SERVER_REVISION);
+      const localRev =
+        localRaw != null && localRaw !== "" && Number.isFinite(parseInt(localRaw, 10))
+          ? parseInt(localRaw, 10)
+          : 0;
+      const newer =
+        status.has_snapshot && status.revision > 0 && status.revision > localRev;
+      if (newer) {
+        appendSyncActivityLog(
+          database,
+          "remote_newer",
+          `server=${status.revision},local=${localRev}`,
+        );
+      }
+      return {
+        ok: true as const,
+        newer,
+        serverRevision: status.revision,
+        localRevision: localRev,
+        hasSnapshot: status.has_snapshot,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { ok: false as const, error: msg };
+    }
   });
 
   ipcMain.handle("sync:capabilities", async (_evt, raw: unknown) => {
@@ -405,7 +527,7 @@ export function registerSyncIpc(
     const database = getDb();
     if (!database) return { ok: false as const, error: "no-database" };
     if (!raw || typeof raw !== "object") return { ok: false as const, error: "invalid" };
-    const o = raw as { baseUrl?: string; password?: string; displayName?: string };
+    const o = raw as { baseUrl?: string; password?: string; displayName?: string; remember?: boolean };
     const baseUrl = typeof o.baseUrl === "string" ? o.baseUrl.trim() : "";
     const password = typeof o.password === "string" ? o.password : "";
     const displayName = typeof o.displayName === "string" ? o.displayName.trim() : "";
@@ -469,6 +591,10 @@ export function registerSyncIpc(
       dbSet(database, SYNC_VAULT_DISPLAY_NAME, resolvedName);
       dbSet(database, SYNC_SERVER_REVISION, "0");
       sessionByVault.set(created.vault_id, { masterKey, bearerHex });
+      appendSyncActivityLog(database, "create_vault", resolvedName);
+      if (o.remember === true && !saveRememberedPassword(database, password)) {
+        return { ok: false as const, error: "sync_remember_unavailable" };
+      }
 
       return { ok: true as const, vaultId: created.vault_id, displayName: resolvedName };
     } catch (e) {
@@ -633,15 +759,20 @@ export function registerSyncIpc(
         } catch {
           /* ignore */
         }
+        appendSyncActivityLog(database, "push_conflict", detail || undefined);
         return { ok: false as const, error: `sync_conflict${detail}`, conflict: true as const };
       }
-      if (!res.ok) return { ok: false as const, error: `sync_push_http_${res.status}` };
+      if (!res.ok) {
+        appendSyncActivityLog(database, "push_fail", `http_${res.status}`);
+        return { ok: false as const, error: `sync_push_http_${res.status}` };
+      }
 
       const out = (await res.json()) as { revision?: number };
       const newRev = out.revision;
       if (newRev !== undefined) {
         dbSet(database, SYNC_SERVER_REVISION, String(newRev));
       }
+      appendSyncActivityLog(database, "push_ok", newRev !== undefined ? `rev=${newRev}` : undefined);
       return { ok: true as const, revision: newRev };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -679,7 +810,9 @@ async function attemptAutoPush(
   if (!baseUrl || !vaultId) return;
   const sess = sessionByVault.get(vaultId);
   if (!sess) return;
+  if (autoPushInFlight) return;
 
+  autoPushInFlight = true;
   try {
     const cap = await fetchCapabilities(baseUrl);
     const status = await fetchVaultStatus(baseUrl, vaultId);
@@ -722,16 +855,29 @@ async function attemptAutoPush(
       if (out.revision !== undefined) {
         dbSet(database, SYNC_SERVER_REVISION, String(out.revision));
       }
+      appendSyncActivityLog(
+        database,
+        "push_ok",
+        out.revision !== undefined ? `rev=${out.revision}` : undefined,
+      );
       return;
     }
 
-    if (res.status === 409 && Notification.isSupported()) {
-      new Notification({
-        title: "إشتراكاتي — المزامنة",
-        body: "تعارض في نسخة السيرفر. افتح الإعدادات › المزامنة لدمج التحديثات.",
-      }).show();
+    if (res.status === 409) {
+      appendSyncActivityLog(database, "push_conflict");
+      if (Notification.isSupported()) {
+        new Notification({
+          title: "إشتراكاتي — المزامنة",
+          body: "تعارض في نسخة السيرفر. افتح الإعدادات › المزامنة لدمج التحديثات.",
+        }).show();
+      }
+      return;
     }
+
+    appendSyncActivityLog(database, "push_fail", `http_${res.status}`);
   } catch {
-    /* ignore background errors */
+    appendSyncActivityLog(database, "push_fail", "network");
+  } finally {
+    autoPushInFlight = false;
   }
 }

@@ -69,6 +69,10 @@ export function SettingsPage() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncMsgIsError, setSyncMsgIsError] = useState(false);
   const [syncSessionOpen, setSyncSessionOpen] = useState(false);
+  const [syncRemember, setSyncRemember] = useState(false);
+  const [syncActivityLog, setSyncActivityLog] = useState<
+    Array<{ at: string; kind: string; detail?: string }>
+  >([]);
   const [syncRemote, setSyncRemote] = useState<{
     revision: number;
     has_snapshot: boolean;
@@ -136,6 +140,7 @@ export function SettingsPage() {
         setSyncVaultId(r.vaultId);
         setSyncDisplayName(r.displayName);
         setSyncSessionOpen(r.sessionUnlocked);
+        setSyncRemember(r.rememberEnabled);
         setSyncSetupMode(r.vaultId ? "link" : "create");
       }
     })();
@@ -150,7 +155,10 @@ export function SettingsPage() {
         setSyncVaultId(r.vaultId);
         setSyncDisplayName(r.displayName);
         setSyncSessionOpen(r.sessionUnlocked);
+        setSyncRemember(r.rememberEnabled);
       }
+      const log = await window.ishtarkati.syncGetActivityLog();
+      if (log.ok) setSyncActivityLog(log.entries);
     })();
   }, [tab]);
 
@@ -536,6 +544,7 @@ export function SettingsPage() {
     if (err.includes("sync_invalid_display_name")) return t("sync.errors.sync_invalid_display_name");
     if (err.includes("sync_display_name_required")) return t("sync.errors.sync_display_name_required");
     if (err.includes("sync_missing_fields")) return t("sync.errors.sync_missing_fields");
+    if (err.includes("sync_remember_unavailable")) return t("sync.errors.sync_remember_unavailable");
     if (err.includes("sync_create_failed")) return t("sync.errors.sync_create_failed");
     if (err.includes("sync_invalid_token_hash")) return t("sync.errors.sync_invalid_token_hash");
     if (err.startsWith("sync_server_code:")) {
@@ -548,6 +557,29 @@ export function SettingsPage() {
       return t("sync.errors.sync_local_db", { detail: err });
     }
     return t("sync.errors.sync_detail", { detail: err });
+  }
+
+  async function handleSyncRememberChange(checked: boolean) {
+    setSyncRemember(checked);
+    if (!window.ishtarkati) return;
+    if (!checked) {
+      await window.ishtarkati.syncSetRememberSession({ enabled: false });
+      return;
+    }
+    const pwd =
+      syncSetupMode === "create"
+        ? syncPasswordNew
+        : syncPassword;
+    if (pwd.length < 8) {
+      setSyncRemember(false);
+      showSyncFailure(t("sync.errors.sync_weak_password"));
+      return;
+    }
+    const r = await window.ishtarkati.syncSetRememberSession({ enabled: true, password: pwd });
+    if (!r.ok) {
+      setSyncRemember(false);
+      showSyncFailure(formatSyncError(r.error ?? ""));
+    }
   }
 
   async function handleSyncSaveConfig() {
@@ -591,6 +623,7 @@ export function SettingsPage() {
         baseUrl: syncBaseUrl.trim(),
         vaultId: syncVaultId.trim(),
         password: syncPassword,
+        remember: syncRemember,
       });
       if (!r.ok) {
         showSyncFailure(formatSyncError(r.error ?? ""));
@@ -706,6 +739,7 @@ export function SettingsPage() {
         baseUrl: syncBaseUrl.trim(),
         password: syncPasswordNew,
         displayName: syncDisplayName.trim(),
+        remember: syncRemember,
       });
       if (!r.ok) {
         showSyncFailure(formatSyncError(r.error ?? ""));
@@ -1350,6 +1384,14 @@ export function SettingsPage() {
                     />
                   </div>
                 </div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-cream-800">
+                  <input
+                    type="checkbox"
+                    checked={syncRemember}
+                    onChange={(e) => void handleSyncRememberChange(e.target.checked)}
+                  />
+                  {t("sync.rememberSession")}
+                </label>
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -1498,6 +1540,14 @@ export function SettingsPage() {
               value={syncPassword}
               onChange={(e) => setSyncPassword(e.target.value)}
             />
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                checked={syncRemember}
+                onChange={(e) => void handleSyncRememberChange(e.target.checked)}
+              />
+              {t("sync.rememberSession")}
+            </label>
             <div className="flex flex-wrap gap-3">
               <button type="button" className="sk-btn-secondary" disabled={syncBusy} onClick={() => void handleSyncUnlock()}>
                 {t("sync.btnUnlock")}
@@ -1517,6 +1567,23 @@ export function SettingsPage() {
               <p className="text-xs text-cream-600">
                 {t("settings.version")}: {APP_VERSION}
               </p>
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-cream-900">{t("sync.activityLog")}</h4>
+                {syncActivityLog.length === 0 ? (
+                  <p className="text-xs text-cream-600">{t("sync.activityLogEmpty")}</p>
+                ) : (
+                  <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-cream-800">
+                    {syncActivityLog.map((e, i) => (
+                      <li key={`${e.at}-${i}`} className="rounded-md bg-cream-200/50 px-2 py-1">
+                        <span className="text-cream-600">{new Date(e.at).toLocaleString("ar")}</span>
+                        {" — "}
+                        {t(`sync.activity.${e.kind}` as "sync.activity.push_ok")}
+                        {e.detail ? `: ${e.detail}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-cream-900">{t("sync.remoteHeading")}</h4>
                 <div className="flex flex-wrap gap-3">

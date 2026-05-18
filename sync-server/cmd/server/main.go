@@ -15,6 +15,16 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		addr := api.EnvString("SYNC_HEALTH_URL", "http://127.0.0.1:8080/health")
+		resp, err := http.Get(addr)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		_ = resp.Body.Close()
+		os.Exit(0)
+	}
+
 	dataDir := api.EnvString("SYNC_DATA_DIR", "/data")
 	if err := os.MkdirAll(dataDir, 0o750); err != nil {
 		log.Fatal(err)

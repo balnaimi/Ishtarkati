@@ -37,6 +37,7 @@ declare global {
             displayName: string;
             serverRevision: string;
             sessionUnlocked: boolean;
+            rememberEnabled: boolean;
           }
         | { ok: false; error?: string }
       >;
@@ -53,11 +54,50 @@ declare global {
         baseUrl: string;
         vaultId: string;
         password: string;
+        remember?: boolean;
       }) => Promise<
         | { ok: true; status: Record<string, unknown> }
         | { ok: false; error?: string }
       >;
       syncClearSession: () => Promise<{ ok: true }>;
+      syncSetRememberSession: (payload: {
+        enabled: boolean;
+        password?: string;
+      }) => Promise<
+        | { ok: true; enabled: boolean }
+        | { ok: false; error?: string }
+      >;
+      syncTryAutoUnlock: () => Promise<{ ok: true } | { ok: false; error?: string }>;
+      syncGetStatusSummary: () => Promise<
+        | {
+            ok: true;
+            state: "not_configured" | "locked" | "ready" | "pending" | "conflict";
+            configured: boolean;
+            sessionUnlocked: boolean;
+            rememberEnabled: boolean;
+            localRevision: string;
+            displayName: string;
+            lastActivity: { at: string; kind: string; detail?: string } | null;
+          }
+        | { ok: false; error?: string }
+      >;
+      syncCheckRemoteNewer: () => Promise<
+        | {
+            ok: true;
+            newer: boolean;
+            serverRevision: number;
+            localRevision: number;
+            hasSnapshot: boolean;
+          }
+        | { ok: false; error?: string }
+      >;
+      syncGetActivityLog: () => Promise<
+        | {
+            ok: true;
+            entries: Array<{ at: string; kind: string; detail?: string }>;
+          }
+        | { ok: false; error?: string }
+      >;
       syncCapabilities: (payload: { baseUrl: string }) => Promise<
         | {
             ok: true;
@@ -74,6 +114,7 @@ declare global {
         baseUrl: string;
         password: string;
         displayName: string;
+        remember?: boolean;
       }) => Promise<
         | { ok: true; vaultId: string; displayName: string }
         | { ok: false; error?: string }

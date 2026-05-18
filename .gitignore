@@ -17,6 +17,7 @@ release
 
 # خادم المزامنة المحلي (Docker bind mount)
 sync-server/data/
+sync-server/images/
 
 # Editor directories and files
 .vscode/*

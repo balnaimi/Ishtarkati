@@ -43,12 +43,26 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     ipcRenderer.invoke("sync:saveLocalConfig", payload),
   syncLookupVaultByName: (payload: { baseUrl: string; name: string }) =>
     ipcRenderer.invoke("sync:lookupVaultByName", payload),
-  syncUnlockSession: (payload: { baseUrl: string; vaultId: string; password: string }) =>
-    ipcRenderer.invoke("sync:unlockSession", payload),
+  syncUnlockSession: (payload: {
+    baseUrl: string;
+    vaultId: string;
+    password: string;
+    remember?: boolean;
+  }) => ipcRenderer.invoke("sync:unlockSession", payload),
   syncClearSession: () => ipcRenderer.invoke("sync:clearSession"),
+  syncSetRememberSession: (payload: { enabled: boolean; password?: string }) =>
+    ipcRenderer.invoke("sync:setRememberSession", payload),
+  syncTryAutoUnlock: () => ipcRenderer.invoke("sync:tryAutoUnlock"),
+  syncGetStatusSummary: () => ipcRenderer.invoke("sync:getStatusSummary"),
+  syncCheckRemoteNewer: () => ipcRenderer.invoke("sync:checkRemoteNewer"),
+  syncGetActivityLog: () => ipcRenderer.invoke("sync:getActivityLog"),
   syncCapabilities: (payload: { baseUrl: string }) => ipcRenderer.invoke("sync:capabilities", payload),
-  syncCreateVault: (payload: { baseUrl: string; password: string; displayName: string }) =>
-    ipcRenderer.invoke("sync:createVault", payload),
+  syncCreateVault: (payload: {
+    baseUrl: string;
+    password: string;
+    displayName: string;
+    remember?: boolean;
+  }) => ipcRenderer.invoke("sync:createVault", payload),
   syncRemoteStatus: (payload: { baseUrl: string; vaultId: string }) =>
     ipcRenderer.invoke("sync:remoteStatus", payload),
   syncPullPreview: (payload: { baseUrl: string; vaultId: string; password: string }) =>
