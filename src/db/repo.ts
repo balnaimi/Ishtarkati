@@ -515,13 +515,34 @@ export async function setSubscriptionNextDue(
 export async function confirmSubscriptionPaid(id: number): Promise<void> {
   const sub = await getSubscription(id);
   if (!sub || sub.cancelled_at || !sub.next_due_date) return;
+  const paidAt = formatDateInput(new Date());
+  const amtOriginal = Number.isFinite(sub.amount_original) ? sub.amount_original : null;
+
   if (sub.billing_model === "recurring" && sub.interval_unit) {
-    const base = parseDateInput(sub.next_due_date) ?? new Date();
     const cnt = Math.max(1, sub.interval_count ?? 1);
+    const base = parseDateInput(sub.next_due_date) ?? new Date();
     const next = addBillingSteps(base, sub.interval_unit, cnt);
+    await insertPaymentEvent(
+      id,
+      paidAt,
+      amtOriginal,
+      sub.currency_code,
+      sub.amount_qar_snapshot,
+      cnt,
+      null,
+    );
     await setSubscriptionNextDue(id, formatDateInput(next));
     return;
   }
+  await insertPaymentEvent(
+    id,
+    paidAt,
+    amtOriginal,
+    sub.currency_code,
+    sub.amount_qar_snapshot,
+    null,
+    null,
+  );
   await setSubscriptionNextDue(id, null);
 }
 
