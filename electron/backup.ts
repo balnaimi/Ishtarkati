@@ -7,7 +7,7 @@ export const BACKUP_EXPORT_VERSION = 6;
 
 export type BackupExportScope = "full" | "without_settings";
 
-interface BackupPayload {
+export interface BackupPayload {
   exportVersion: number;
   exportScope?: BackupExportScope;
   exportedAt: string;
@@ -65,7 +65,7 @@ export type ImportSimilarSubscriptionsPolicy = "keep_both" | "replace_local";
 
 export interface ImportApplyPayload {
   filePath?: string;
-  /** Raw backup JSON (e.g. from sync after decrypt). */
+  /** Raw backup JSON (inline import without reading a file from disk). */
   json?: string;
   strategy: ImportApplyStrategy;
   onDuplicateId: ImportDuplicatePolicy;
@@ -964,6 +964,25 @@ function mergeImportIntoDb(
   tx();
 }
 
+export function applyBackupImport(
+  database: Database.Database,
+  data: BackupPayload,
+  opts: {
+    strategy: ImportApplyStrategy;
+    onDuplicateId: ImportDuplicatePolicy;
+    onSimilarSubscription: ImportSimilarSubscriptionsPolicy;
+  },
+): void {
+  if (opts.strategy === "replace") {
+    importIntoDb(database, data);
+    return;
+  }
+  mergeImportIntoDb(database, data, {
+    onDuplicateId: opts.onDuplicateId,
+    onSimilarSubscription: opts.onSimilarSubscription,
+  });
+}
+
 function isApplyPayload(raw: unknown): raw is ImportApplyPayload {
   if (!isRecord(raw)) return false;
   const hasFile = typeof raw.filePath === "string" && String(raw.filePath).length > 0;
@@ -1053,14 +1072,11 @@ export function registerBackupIpc(
       } else {
         return { ok: false as const, error: "missing-backup-source" };
       }
-      if (raw.strategy === "replace") {
-        importIntoDb(database, data);
-      } else {
-        mergeImportIntoDb(database, data, {
-          onDuplicateId: raw.onDuplicateId,
-          onSimilarSubscription: raw.onSimilarSubscription,
-        });
-      }
+      applyBackupImport(database, data, {
+        strategy: raw.strategy,
+        onDuplicateId: raw.onDuplicateId,
+        onSimilarSubscription: raw.onSimilarSubscription,
+      });
       onDataChanged?.();
       return { ok: true as const };
     } catch (e) {
