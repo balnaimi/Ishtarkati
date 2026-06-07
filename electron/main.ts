@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, Notification, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
@@ -508,11 +508,26 @@ function closeDatabase(): void {
 function openDatabase(): void {
   const dir = app.getPath("userData");
   const fp = path.join(dir, "ishtarkati.db");
-  db = new Database(fp);
-  db.pragma("journal_mode = WAL");
-  db.pragma("busy_timeout = 5000");
-  db.pragma("foreign_keys = ON");
-  runMigrations(db);
+  try {
+    db = new Database(fp);
+    db.pragma("journal_mode = WAL");
+    db.pragma("busy_timeout = 5000");
+    db.pragma("foreign_keys = ON");
+    runMigrations(db);
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error(`[ishtarkati] فشل فتح قاعدة البيانات (${fp}): ${detail}`);
+    throw e;
+  }
+}
+
+function reportFatalStartup(title: string, detail: string): void {
+  console.error(`[ishtarkati] ${title}: ${detail}`);
+  try {
+    dialog.showErrorBox(title, detail);
+  } catch {
+    /* headless */
+  }
 }
 
 function registerIpc(): void {
@@ -684,6 +699,10 @@ function createWindow(): void {
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
+  console.error(
+    "[ishtarkati] نسخة أخرى تعمل بالفعل، أو بقيت قفل قديم. أغلق البرنامج أو احذف مجلد Singleton* من:",
+  );
+  console.error(`  ${app.getPath("userData")}`);
   app.quit();
 } else {
   app.on("second-instance", () => {
@@ -711,9 +730,19 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
-    Menu.setApplicationMenu(null);
-    openDatabase();
-    registerIpc();
-    createWindow();
+    try {
+      Menu.setApplicationMenu(null);
+      openDatabase();
+      registerIpc();
+      createWindow();
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      const userData = app.getPath("userData");
+      reportFatalStartup(
+        "تعذّر تشغيل إشتراكاتي",
+        `${detail}\n\nبياناتك محفوظة عادةً هنا (لا تُحذف بتحديث البرنامج):\n${path.join(userData, "ishtarkati.db")}`,
+      );
+      app.exit(1);
+    }
   });
 }

@@ -37,10 +37,17 @@ chmod +x release/Ishtarkati-*.AppImage
 ./release/Ishtarkati-*.AppImage
 ```
 
-If FUSE-related errors appear on some systems:
+If an **old** AppImage (before 4.0.1) prints `libfuse.so.2` / FUSE errors, use the latest build or:
 
 ```bash
-./release/Ishtarkati-*.AppImage --appimage-extract-and-run
+./scripts/run-appimage.sh
+# or: APPIMAGE_EXTRACT_AND_RUN=1 ./release/Ishtarkati-*.AppImage
+```
+
+Emergency copy of your local database (before experiments):
+
+```bash
+./scripts/backup-user-db.sh
 ```
 
 Machines that only **run** the AppImage do not need Node or a compiler toolchain.
