@@ -725,3 +725,29 @@ export async function loadPaymentHistoryByYear(): Promise<{ year: string; total:
      ORDER BY year DESC`,
   );
 }
+
+export type PaymentHistoryDetailRow = {
+  id: number;
+  subscription_id: number;
+  subscription_title: string;
+  paid_at: string;
+  amount_original: number | null;
+  currency: string | null;
+  amount_qar: number | null;
+  note: string | null;
+};
+
+const HISTORY_DETAIL_CAP = 500;
+
+/** Recent payments with subscription title for insights history tab. */
+export async function loadPaymentHistoryDetails(): Promise<PaymentHistoryDetailRow[]> {
+  const db = await getDb();
+  return db.select<PaymentHistoryDetailRow>(
+    `SELECT pe.id, pe.subscription_id, s.title AS subscription_title,
+            pe.paid_at, pe.amount_original, pe.currency, pe.amount_qar, pe.note
+     FROM payment_events pe
+     INNER JOIN subscriptions s ON s.id = pe.subscription_id
+     ORDER BY pe.paid_at DESC, pe.id DESC
+     LIMIT ${HISTORY_DETAIL_CAP}`,
+  );
+}

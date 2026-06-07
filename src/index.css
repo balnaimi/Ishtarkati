@@ -98,6 +98,23 @@ body {
     @apply inline-flex items-center rounded-md border border-cream-400 bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-800;
   }
 
+  /** Calendar day cell — base + due highlight (very subtle, light theme) */
+  .sk-cal-day {
+    @apply min-h-[4.5rem] rounded-md border p-1 text-[11px] border-cream-400 bg-cream-50/90;
+  }
+
+  .sk-cal-day-outside {
+    @apply border-cream-300/50 bg-cream-100/40 opacity-70;
+  }
+
+  .sk-cal-day-due {
+    @apply border-sage-400/35 bg-sage-400/14;
+  }
+
+  .sk-cal-day-outside.sk-cal-day-due {
+    @apply bg-sage-400/10 border-sage-400/25;
+  }
+
   /** Nested panels inside cards (PIN forms, etc.) — cream palette; `.dark` overrides below */
   .sk-panel-nested {
     @apply space-y-4 rounded-xl border border-cream-400/80 bg-cream-100/50 p-4;
@@ -456,6 +473,22 @@ body {
 
 .dark .sk-chip {
   @apply border-cream-500 bg-cream-300/30 text-cream-950;
+}
+
+.dark .sk-cal-day {
+  @apply border-cream-500/55 bg-cream-200/35;
+}
+
+.dark .sk-cal-day-outside {
+  @apply border-cream-600/40 bg-cream-300/15 opacity-60;
+}
+
+.dark .sk-cal-day-due {
+  @apply border-sage-400/30 bg-sage-400/16;
+}
+
+.dark .sk-cal-day-outside.sk-cal-day-due {
+  @apply bg-sage-400/12 border-sage-400/22;
 }
 
 .dark .sk-label {

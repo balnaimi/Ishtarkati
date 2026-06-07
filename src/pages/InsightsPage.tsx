@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,7 +16,9 @@ import {
   getSetting,
   loadPaymentHistoryByMonth,
   loadPaymentHistoryByYear,
+  loadPaymentHistoryDetails,
   loadSubscriptions,
+  type PaymentHistoryDetailRow,
   statsSummary,
   updateSubscriptionQarSnapshot,
   type SubscriptionListRow,
@@ -31,6 +33,7 @@ import { useFxManager } from "../hooks/useFx";
 
 type MainTab = "summary" | "calendar" | "history";
 type CalMode = "year" | "month";
+type HistFilter = "month" | "subscription";
 
 function weekdayHeaderKeys(): string[] {
   return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -47,6 +50,10 @@ export function InsightsPage() {
   const [calMonth0, setCalMonth0] = useState(() => new Date().getMonth());
   const [histYears, setHistYears] = useState<{ year: string; total: number }[]>([]);
   const [histMonths, setHistMonths] = useState<{ ym: string; total: number }[]>([]);
+  const [histPayments, setHistPayments] = useState<PaymentHistoryDetailRow[]>([]);
+  const [histFilter, setHistFilter] = useState<HistFilter>("month");
+  const [histMonth, setHistMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [histSubId, setHistSubId] = useState<number | "">("");
   const { hydrate, refresh } = useFxManager();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -63,9 +70,14 @@ export function InsightsPage() {
   }, []);
 
   const reloadHistory = useCallback(async () => {
-    const [y, m] = await Promise.all([loadPaymentHistoryByYear(), loadPaymentHistoryByMonth()]);
+    const [y, m, details] = await Promise.all([
+      loadPaymentHistoryByYear(),
+      loadPaymentHistoryByMonth(),
+      loadPaymentHistoryDetails(),
+    ]);
     setHistYears(y);
     setHistMonths(m);
+    setHistPayments(details);
   }, []);
 
   useEffect(() => {
@@ -142,6 +154,29 @@ export function InsightsPage() {
   const primary = summary?.primaryCode ?? primaryCode;
 
   const monthTitle = format(monthAnchor, "MMMM yyyy", { locale: arSA });
+
+  const histSubsWithPayments = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const p of histPayments) {
+      if (!seen.has(p.subscription_id)) seen.set(p.subscription_id, p.subscription_title);
+    }
+    return [...seen.entries()]
+      .map(([id, title]) => ({ id, title }))
+      .sort((a, b) => a.title.localeCompare(b.title, "ar"));
+  }, [histPayments]);
+
+  const filteredHistPayments = useMemo(() => {
+    if (histFilter === "month") {
+      return histPayments.filter((p) => p.paid_at.slice(0, 7) === histMonth);
+    }
+    if (histSubId === "") return histPayments;
+    return histPayments.filter((p) => p.subscription_id === histSubId);
+  }, [histPayments, histFilter, histMonth, histSubId]);
+
+  const filteredHistTotal = useMemo(
+    () => filteredHistPayments.reduce((s, p) => s + (p.amount_qar ?? 0), 0),
+    [filteredHistPayments],
+  );
 
   return (
     <div className="space-y-8">
@@ -379,14 +414,11 @@ export function InsightsPage() {
                     const iso = format(d, "yyyy-MM-dd");
                     const inMonth = isSameMonth(d, monthAnchor);
                     const entries = byDayMap.get(iso) ?? [];
+                    const hasDue = entries.length > 0;
                     return (
                       <div
                         key={iso}
-                        className={`min-h-[4.5rem] rounded-md border p-1 text-[11px] ${
-                          inMonth
-                            ? "border-cream-400 bg-cream-50/90"
-                            : "border-cream-300/50 bg-cream-100/40 opacity-70"
-                        }`}
+                        className={`sk-cal-day ${inMonth ? "" : "sk-cal-day-outside"} ${hasDue ? "sk-cal-day-due" : ""}`}
                       >
                         <div className="font-semibold text-cream-900">{format(d, "d")}</div>
                         <ul className="mt-0.5 space-y-0.5">
@@ -416,87 +448,176 @@ export function InsightsPage() {
       ) : null}
 
       {tab === "history" ? (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <p className="text-sm text-cream-700">{t("insights.historyExplain")}</p>
 
-          <section className="sk-card space-y-4">
-            <h3 className="text-base font-semibold text-cream-900">{t("insights.historyByYear")}</h3>
-            {histYears.length === 0 ? (
-              <p className="text-sm text-cream-600">{t("insights.historyEmpty")}</p>
-            ) : (
-              <ul className="space-y-3">
-                {histYears.map((row, idx) => {
-                  const older = histYears[idx + 1];
-                  let hint = "";
-                  if (older) {
-                    const d = row.total - older.total;
-                    const pct = older.total > 0 ? (d / older.total) * 100 : null;
-                    if (pct != null && Math.abs(pct) > 0.05) {
-                      hint =
-                        d >= 0
-                          ? t("insights.historyTrendUp", { pct: pct.toFixed(1) })
-                          : t("insights.historyTrendDown", { pct: Math.abs(pct).toFixed(1) });
-                    } else if (Math.abs(d) > 0.01) {
-                      hint = d >= 0 ? t("insights.historyTrendUpFlat") : t("insights.historyTrendDownFlat");
-                    }
-                  }
-                  return (
-                    <li
-                      key={row.year}
-                      className="flex flex-wrap items-baseline justify-between gap-2 border-b border-cream-300/60 pb-2 text-sm"
-                    >
-                      <span className="font-medium text-cream-900">{row.year}</span>
-                      <div className="text-end">
-                        <span className="font-semibold text-sage-800">
-                          {row.total.toFixed(2)} {primaryCode}
-                        </span>
-                        {hint ? <p className="sk-text-hint text-xs">{hint}</p> : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+          {histPayments.length === 0 ? (
+            <p className="sk-callout-muted">{t("insights.historyEmpty")}</p>
+          ) : (
+            <>
+              <section className="sk-card space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                      histFilter === "month"
+                        ? "bg-cream-800 text-cream-50"
+                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                    }`}
+                    onClick={() => setHistFilter("month")}
+                  >
+                    {t("insights.historyFilterMonth")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                      histFilter === "subscription"
+                        ? "bg-cream-800 text-cream-50"
+                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                    }`}
+                    onClick={() => setHistFilter("subscription")}
+                  >
+                    {t("insights.historyFilterSub")}
+                  </button>
+                </div>
 
-          <section className="sk-card space-y-4">
-            <h3 className="text-base font-semibold text-cream-900">{t("insights.historyByMonth")}</h3>
-            {histMonths.length === 0 ? (
-              <p className="text-sm text-cream-600">{t("insights.historyEmpty")}</p>
-            ) : (
-              <ul className="max-h-80 space-y-2 overflow-y-auto text-sm">
-                {histMonths.map((row, idx) => {
-                  const older = histMonths[idx + 1];
-                  let deltaHint = "";
-                  if (older) {
-                    const d = row.total - older.total;
-                    if (Math.abs(d) > 0.01) {
-                      deltaHint =
-                        d >= 0
-                          ? t("insights.historyMonthDeltaUp", { amount: d.toFixed(2) })
-                          : t("insights.historyMonthDeltaDown", { amount: Math.abs(d).toFixed(2) });
-                    }
-                  }
-                  return (
-                    <li
-                      key={row.ym}
-                      className="flex flex-wrap justify-between gap-2 border-b border-cream-200/80 py-1"
+                {histFilter === "month" ? (
+                  <div>
+                    <label className="sk-label" htmlFor="hist-month-pick">
+                      {t("insights.historyPickMonth")}
+                    </label>
+                    <input
+                      id="hist-month-pick"
+                      type="month"
+                      className="sk-input max-w-xs"
+                      dir="ltr"
+                      value={histMonth}
+                      onChange={(e) => setHistMonth(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="sk-label" htmlFor="hist-sub-pick">
+                      {t("insights.historyPickSub")}
+                    </label>
+                    <select
+                      id="hist-sub-pick"
+                      className="sk-select max-w-md"
+                      value={histSubId === "" ? "" : String(histSubId)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setHistSubId(v === "" ? "" : Number(v));
+                      }}
                     >
-                      <span dir="ltr" className="font-mono text-cream-800">
-                        {row.ym}
-                      </span>
-                      <div className="text-end">
-                        <span className="font-medium text-sage-800">
-                          {row.total.toFixed(2)} {primaryCode}
-                        </span>
-                        {deltaHint ? <p className="sk-text-hint text-xs">{deltaHint}</p> : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+                      <option value="">{t("insights.historyAllSubs")}</option>
+                      {histSubsWithPayments.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-sm text-cream-800">
+                  {t("insights.historyPaymentsCount", { count: filteredHistPayments.length })}
+                  {filteredHistPayments.length > 0 ? (
+                    <>
+                      {" — "}
+                      {t("insights.historyPaymentsTotal", {
+                        amount: filteredHistTotal.toFixed(2),
+                        code: primaryCode,
+                      })}
+                    </>
+                  ) : null}
+                </p>
+
+                {filteredHistPayments.length === 0 ? (
+                  <p className="text-sm text-cream-600">{t("insights.historyEmptyFilter")}</p>
+                ) : (
+                  <ul className="max-h-[28rem] space-y-2 overflow-y-auto">
+                    {filteredHistPayments.map((p) => {
+                      const paidLabel = format(new Date(p.paid_at.slice(0, 10)), "d MMMM yyyy", {
+                        locale: arSA,
+                      });
+                      const primaryAmt = p.amount_qar ?? p.amount_original ?? 0;
+                      const showOrig =
+                        p.amount_original != null &&
+                        p.currency &&
+                        p.currency.toUpperCase() !== primaryCode.toUpperCase();
+                      return (
+                        <li
+                          key={p.id}
+                          className="rounded-lg border border-cream-400/70 bg-cream-100/40 px-3 py-2.5 text-sm dark:bg-cream-200/20"
+                        >
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className="font-medium text-cream-900">{paidLabel}</span>
+                            <span className="font-semibold text-sage-800">
+                              {primaryAmt.toFixed(2)} {primaryCode}
+                              {showOrig ? (
+                                <span className="ms-1 text-xs font-normal text-cream-600">
+                                  ({p.amount_original!.toFixed(2)} {p.currency})
+                                </span>
+                              ) : null}
+                            </span>
+                          </div>
+                          <p className="mt-1">
+                            <Link
+                              className="font-medium text-sage-800 underline-offset-2 hover:underline"
+                              to={`/sub/${p.subscription_id}`}
+                            >
+                              {p.subscription_title}
+                            </Link>
+                          </p>
+                          {p.note?.trim() ? (
+                            <p className="sk-text-hint mt-1 text-xs">
+                              {t("insights.historyPaymentNote", { note: p.note.trim() })}
+                            </p>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              <details className="sk-card text-sm text-cream-800">
+                <summary className="cursor-pointer font-semibold text-cream-900">
+                  {t("insights.historyTotalsFold")}
+                </summary>
+                <div className="mt-4 grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h4 className="mb-2 font-medium text-cream-900">{t("insights.historyByYear")}</h4>
+                    <ul className="space-y-2">
+                      {histYears.map((row) => (
+                        <li key={row.year} className="flex justify-between gap-2 border-b border-cream-300/50 py-1">
+                          <span>{row.year}</span>
+                          <span className="font-medium text-sage-800">
+                            {row.total.toFixed(2)} {primaryCode}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="mb-2 font-medium text-cream-900">{t("insights.historyByMonth")}</h4>
+                    <ul className="max-h-48 space-y-1 overflow-y-auto">
+                      {histMonths.map((row) => (
+                        <li key={row.ym} className="flex justify-between gap-2 border-b border-cream-300/50 py-1">
+                          <span dir="ltr" className="font-mono text-xs">
+                            {row.ym}
+                          </span>
+                          <span className="font-medium text-sage-800">
+                            {row.total.toFixed(2)} {primaryCode}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </details>
+            </>
+          )}
         </div>
       ) : null}
     </div>
