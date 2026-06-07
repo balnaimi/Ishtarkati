@@ -2,9 +2,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  confirmSubscriptionPaid,
   loadSubscriptions,
   loadCategories,
   getPrimaryCurrencyCode,
+  subscriptionNeedsPaidAttention,
   type AppCurrency,
   type SubscriptionListRow,
 } from "../db/repo";
@@ -124,6 +126,24 @@ export function SubscriptionsListPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  async function onConfirmPaid(e: React.MouseEvent, id: number) {
+    e.stopPropagation();
+    try {
+      await confirmSubscriptionPaid(id);
+      void reload();
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      try {
+        await window.ishtarkati.showNotification({
+          title: t("home.markPaidErrorTitle"),
+          body: `${t("home.markPaidErrorBody")} ${detail}`,
+        });
+      } catch {
+        /* ignore notification failures */
+      }
+    }
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -316,11 +336,12 @@ export function SubscriptionsListPage() {
               {sortedItems.map((s) => {
                 const prog = computeDueProgress(progressInput(s));
                 const tone = prog ? dueProgressTone(prog) : null;
+                const needsPaid = subscriptionNeedsPaidAttention(s);
                 const rowTint = tone ? dueListRowHighlightClass(tone) : "";
                 return (
                   <tr
                     key={s.id}
-                    className={`cursor-pointer border-t border-cream-300/80 hover:bg-cream-200/40 ${rowTint}`}
+                    className={`cursor-pointer border-t border-cream-300/80 hover:bg-cream-200/40 ${needsPaid ? "sk-ring-needs-pay" : ""} ${rowTint}`.trim()}
                     onClick={() => nav(`/sub/${s.id}`)}
                   >
                     <td className="px-3 py-3 align-top">
@@ -369,12 +390,23 @@ export function SubscriptionsListPage() {
                       />
                     </td>
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Link
-                        to={`/sub/${s.id}/edit`}
-                        className="text-walnut-600 underline-offset-2 hover:underline"
-                      >
-                        {t("common.edit")}
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        {needsPaid ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-md bg-sage-600 px-2 py-1 text-xs font-medium text-cream-50 transition-colors hover:bg-sage-700"
+                            onClick={(e) => void onConfirmPaid(e, s.id)}
+                          >
+                            {t("home.markPaid")}
+                          </button>
+                        ) : null}
+                        <Link
+                          to={`/sub/${s.id}/edit`}
+                          className="inline-flex items-center text-walnut-600 underline-offset-2 hover:underline"
+                        >
+                          {t("common.edit")}
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
