@@ -10,17 +10,20 @@
   "description": "Arabic subscription tracker — desktop only (Electron, Linux AppImage; not for mobile)",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/bump-version-for-build.mjs && tsc && vite build && electron-builder --linux AppImage",
+    "rebuild:native": "npx @electron/rebuild -f -w better-sqlite3",
+    "verify:native": "node scripts/verify-sqlite-electron.mjs",
+    "prebuild:app": "npm run rebuild:native && npm run verify:native",
+    "build": "node scripts/bump-version-for-build.mjs && npm run prebuild:app && tsc && vite build && electron-builder --linux AppImage",
     "build:release": "npm run build && node scripts/git-ship.mjs",
-    "build:pack": "SKIP_VERSION_BUMP=1 tsc && vite build && electron-builder --linux AppImage",
+    "build:pack": "SKIP_VERSION_BUMP=1 npm run prebuild:app && tsc && vite build && electron-builder --linux AppImage",
     "ship": "node scripts/bump-version-for-build.mjs && node scripts/git-ship.mjs",
     "watch:build": "chokidar \"src/**/*\" \"electron/**/*\" \"index.html\" \"vite.config.ts\" \"src/index.css\" -c \"npm run build:pack\" -d 2500 --initial",
     "preview": "vite preview",
     "pretest": "npm rebuild better-sqlite3",
     "test": "vitest run",
-    "posttest": "electron-builder install-app-deps",
+    "posttest": "npm run rebuild:native",
     "version:bump": "node scripts/bump-version.mjs",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "npm run rebuild:native"
   },
   "dependencies": {
     "@fontsource/tajawal": "^5.2.7",
