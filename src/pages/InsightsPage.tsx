@@ -34,6 +34,7 @@ import { useFxManager } from "../hooks/useFx";
 type MainTab = "summary" | "calendar" | "history";
 type CalMode = "year" | "month";
 type HistFilter = "month" | "subscription";
+type HistSort = "desc" | "asc";
 
 function weekdayHeaderKeys(): string[] {
   return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -52,8 +53,9 @@ export function InsightsPage() {
   const [histMonths, setHistMonths] = useState<{ ym: string; total: number }[]>([]);
   const [histPayments, setHistPayments] = useState<PaymentHistoryDetailRow[]>([]);
   const [histFilter, setHistFilter] = useState<HistFilter>("month");
-  const [histMonth, setHistMonth] = useState(() => format(new Date(), "yyyy-MM"));
+  const [histMonth, setHistMonth] = useState("");
   const [histSubId, setHistSubId] = useState<number | "">("");
+  const [histSort, setHistSort] = useState<HistSort>("desc");
   const { hydrate, refresh } = useFxManager();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -166,12 +168,20 @@ export function InsightsPage() {
   }, [histPayments]);
 
   const filteredHistPayments = useMemo(() => {
+    let rows = histPayments;
     if (histFilter === "month") {
-      return histPayments.filter((p) => p.paid_at.slice(0, 7) === histMonth);
+      if (histMonth !== "") {
+        rows = rows.filter((p) => p.paid_at.slice(0, 7) === histMonth);
+      }
+    } else if (histSubId !== "") {
+      rows = rows.filter((p) => p.subscription_id === histSubId);
     }
-    if (histSubId === "") return histPayments;
-    return histPayments.filter((p) => p.subscription_id === histSubId);
-  }, [histPayments, histFilter, histMonth, histSubId]);
+    const dir = histSort === "desc" ? -1 : 1;
+    return [...rows].sort((a, b) => {
+      const byDate = a.paid_at.localeCompare(b.paid_at) * dir;
+      return byDate !== 0 ? byDate : (a.id - b.id) * dir;
+    });
+  }, [histPayments, histFilter, histMonth, histSubId, histSort]);
 
   const filteredHistTotal = useMemo(
     () => filteredHistPayments.reduce((s, p) => s + (p.amount_qar ?? 0), 0),
@@ -486,14 +496,23 @@ export function InsightsPage() {
                     <label className="sk-label" htmlFor="hist-month-pick">
                       {t("insights.historyPickMonth")}
                     </label>
-                    <input
+                    <select
                       id="hist-month-pick"
-                      type="month"
-                      className="sk-input max-w-xs"
-                      dir="ltr"
+                      className="sk-select max-w-xs"
                       value={histMonth}
                       onChange={(e) => setHistMonth(e.target.value)}
-                    />
+                    >
+                      <option value="">{t("insights.historyAllMonths")}</option>
+                      {histMonths.map((row) => {
+                        const [y, m] = row.ym.split("-").map(Number);
+                        const label = format(new Date(y, m - 1, 1), "MMMM yyyy", { locale: arSA });
+                        return (
+                          <option key={row.ym} value={row.ym}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 ) : (
                   <div>
@@ -518,6 +537,31 @@ export function InsightsPage() {
                     </select>
                   </div>
                 )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                      histSort === "desc"
+                        ? "bg-sage-700 text-cream-50"
+                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                    }`}
+                    onClick={() => setHistSort("desc")}
+                  >
+                    {t("insights.historySortNewest")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                      histSort === "asc"
+                        ? "bg-sage-700 text-cream-50"
+                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                    }`}
+                    onClick={() => setHistSort("asc")}
+                  >
+                    {t("insights.historySortOldest")}
+                  </button>
+                </div>
 
                 <p className="text-sm text-cream-800">
                   {t("insights.historyPaymentsCount", { count: filteredHistPayments.length })}
