@@ -4,8 +4,6 @@ import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
 import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 import { useDesktopReminders } from "../hooks/useDesktopReminders";
-import { useSyncBootstrap } from "../hooks/useSyncBootstrap";
-import { SyncStatusBadge } from "./SyncStatusBadge";
 
 const linkCls = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -19,7 +17,6 @@ export function Layout() {
   const loc = useLocation();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   useDesktopReminders();
-  useSyncBootstrap();
 
   function toggleTheme() {
     const next = !document.documentElement.classList.contains("dark");
@@ -55,7 +52,6 @@ export function Layout() {
                 {t("settings.version")} {APP_VERSION}
               </p>
             </div>
-            <SyncStatusBadge />
             <button
               type="button"
               className="sk-btn-muted text-sm"

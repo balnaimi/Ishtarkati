@@ -38,42 +38,4 @@ contextBridge.exposeInMainWorld("ishtarkati", {
   verifyPin: (pin: string): Promise<boolean> => ipcRenderer.invoke("security:verifyPin", pin),
   resetLocalDatabase: (): Promise<{ ok: true } | { ok: false; error?: string }> =>
     ipcRenderer.invoke("app:resetLocalDatabase"),
-  syncGetLocalConfig: () => ipcRenderer.invoke("sync:getLocalConfig"),
-  syncSaveLocalConfig: (payload: { baseUrl: string; vaultId: string; displayName?: string }) =>
-    ipcRenderer.invoke("sync:saveLocalConfig", payload),
-  syncLookupVaultByName: (payload: { baseUrl: string; name: string }) =>
-    ipcRenderer.invoke("sync:lookupVaultByName", payload),
-  syncUnlockSession: (payload: {
-    baseUrl: string;
-    vaultId: string;
-    password: string;
-    remember?: boolean;
-  }) => ipcRenderer.invoke("sync:unlockSession", payload),
-  syncClearSession: () => ipcRenderer.invoke("sync:clearSession"),
-  syncSetRememberSession: (payload: { enabled: boolean; password?: string }) =>
-    ipcRenderer.invoke("sync:setRememberSession", payload),
-  syncTryAutoUnlock: () => ipcRenderer.invoke("sync:tryAutoUnlock"),
-  syncGetStatusSummary: () => ipcRenderer.invoke("sync:getStatusSummary"),
-  syncCheckRemoteNewer: () => ipcRenderer.invoke("sync:checkRemoteNewer"),
-  syncGetActivityLog: () => ipcRenderer.invoke("sync:getActivityLog"),
-  syncCapabilities: (payload: { baseUrl: string }) => ipcRenderer.invoke("sync:capabilities", payload),
-  syncCreateVault: (payload: {
-    baseUrl: string;
-    password: string;
-    displayName: string;
-    remember?: boolean;
-  }) => ipcRenderer.invoke("sync:createVault", payload),
-  syncRemoteStatus: (payload: { baseUrl: string; vaultId: string }) =>
-    ipcRenderer.invoke("sync:remoteStatus", payload),
-  syncPullPreview: (payload: { baseUrl: string; vaultId: string; password: string }) =>
-    ipcRenderer.invoke("sync:pullPreview", payload),
-  syncRecordPulledRevision: (payload: { revision: number }) =>
-    ipcRenderer.invoke("sync:recordPulledRevision", payload),
-  syncPush: (payload: {
-    baseUrl: string;
-    vaultId: string;
-    password: string;
-    expectedRevision?: string | number;
-    scope?: "full" | "without_settings";
-  }) => ipcRenderer.invoke("sync:push", payload),
 });

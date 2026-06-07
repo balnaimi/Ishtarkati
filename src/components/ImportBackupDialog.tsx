@@ -6,8 +6,6 @@ type Props = {
   open: boolean;
   preview: BackupImportPreview | null;
   applying: boolean;
-  /** When set, apply uses inline JSON (sync) instead of reading filePath from disk. */
-  inlineBackupJson?: string | null;
   onClose: () => void;
   onApply: (args: BackupImportApplyArgs) => void;
 };
@@ -16,7 +14,6 @@ export function ImportBackupDialog({
   open,
   preview,
   applying,
-  inlineBackupJson = null,
   onClose,
   onApply,
 }: Props) {
@@ -33,15 +30,14 @@ export function ImportBackupDialog({
     setStrategy("merge");
     setOnDuplicateId("keep_local");
     setOnSimilarSubscription("keep_both");
-  }, [preview?.filePath, inlineBackupJson]);
+  }, [preview?.filePath]);
 
   if (!open || !preview) return null;
 
   function submit() {
     if (!preview) return;
     onApply({
-      filePath: inlineBackupJson ? undefined : preview.filePath,
-      json: inlineBackupJson ?? undefined,
+      filePath: preview.filePath,
       strategy,
       onDuplicateId,
       onSimilarSubscription,
@@ -58,7 +54,7 @@ export function ImportBackupDialog({
 
         <p className="text-xs text-cream-700">
           <span dir="ltr" className="font-mono break-all">
-            {preview.filePath.startsWith("sync:") ? t("backup.previewFromSync") : preview.filePath}
+            {preview.filePath}
           </span>
         </p>
         <p className="text-sm text-cream-800">{t("backup.importWizardStats")}</p>

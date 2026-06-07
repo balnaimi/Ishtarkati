@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
-const syncServerVersionPath = join(root, "sync-server", "internal", "version", "VERSION");
 const part = (process.argv[2] || "patch").toLowerCase();
 
 if (!["patch", "minor", "major"].includes(part)) {
@@ -42,6 +41,4 @@ writeFileSync(
   `/** App version — synced from package.json (see scripts/bump-version.mjs; \`npm run build\` يرفع الإصدار تلقائيًا عبر bump-version-for-build.mjs). */\nexport const APP_VERSION = "${next}";\n`,
 );
 
-writeFileSync(syncServerVersionPath, `${next}\n`, "utf8");
-
-console.log(`Bumped to ${next} (desktop + sync-server)`);
+console.log(`Bumped to ${next}`);

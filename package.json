@@ -1,7 +1,7 @@
 {
   "name": "ishtarkati",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "engines": {
     "node": ">=24.0.0 <25"
   },
@@ -16,8 +16,6 @@
     "ship": "node scripts/bump-version-for-build.mjs && node scripts/git-ship.mjs",
     "watch:build": "chokidar \"src/**/*\" \"electron/**/*\" \"index.html\" \"vite.config.ts\" \"src/index.css\" -c \"npm run build:pack\" -d 2500 --initial",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:sync-server": "cd sync-server && go test ./... -count=1",
     "version:bump": "node scripts/bump-version.mjs",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -50,8 +48,7 @@
     "typescript": "~6.0.3",
     "vite": "^8.0.10",
     "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.7",
-    "vitest": "^3.2.4"
+    "vite-plugin-electron-renderer": "^0.14.7"
   },
   "build": {
     "appId": "com.mrn.ishtarkati",

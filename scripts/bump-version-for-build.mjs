@@ -8,7 +8,6 @@
  * تجاوز يدوي: VERSION_BUMP=major|minor|patch
  * بدون رفع: SKIP_VERSION_BUMP=1
  *
- * عند رفع الإصدار يُحدَّث أيضًا `sync-server/internal/version/VERSION` ليبقى مطابقًا لـ package.json.
  */
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -19,14 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const pkgPath = join(root, "package.json");
 const versionTsPath = join(root, "src", "version.ts");
-/** Lockstep with desktop SemVer (see sync-server internal version package). */
-const syncServerVersionPath = join(root, "sync-server", "internal", "version", "VERSION");
-
-const VERSION_FILES = new Set([
-  "package.json",
-  "src/version.ts",
-  "sync-server/internal/version/VERSION",
-]);
+const VERSION_FILES = new Set(["package.json", "src/version.ts"]);
 
 function git(args) {
   try {
@@ -207,6 +199,4 @@ writeFileSync(
   `/** App version — synced from package.json (see scripts/bump-version-for-build.mjs / bump-version.mjs). */\nexport const APP_VERSION = "${next}";\n`,
 );
 
-writeFileSync(syncServerVersionPath, `${next}\n`, "utf8");
-
-console.log(`Build version → ${next} (${kind}) — desktop + sync-server`);
+console.log(`Build version → ${next} (${kind})`);

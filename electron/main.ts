@@ -6,7 +6,6 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
-import { registerSyncIpc, notifyLocalDataChanged, flushPendingAutoPush } from "./sync";
 import localeAr from "../src/locales/ar.json";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -531,7 +530,6 @@ function registerIpc(): void {
       if (!db) throw new Error("Database not ready");
       const stmt = db.prepare(normalizeSql(sql));
       const info = stmt.run(...params);
-      notifyLocalDataChanged(() => db);
       return {
         changes: info.changes,
         lastInsertRowid: Number(info.lastInsertRowid),
@@ -564,7 +562,6 @@ function registerIpc(): void {
         }
       });
       txn();
-      notifyLocalDataChanged(() => db);
     },
   );
   ipcMain.handle("shell:openExternal", (_evt, url: string) => {
@@ -634,15 +631,7 @@ function registerIpc(): void {
     return verifyPinScrypt(pin, salt, hash);
   });
 
-  registerBackupIpc(
-    () => db,
-    () => win,
-    () => notifyLocalDataChanged(() => db),
-  );
-  registerSyncIpc(
-    () => db,
-    () => app.getVersion(),
-  );
+  registerBackupIpc(() => db, () => win);
 }
 
 function createWindow(): void {
@@ -664,10 +653,6 @@ function createWindow(): void {
 
   win.once("ready-to-show", () => {
     win?.show();
-  });
-
-  win.on("blur", () => {
-    notifyLocalDataChanged(() => db);
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -698,9 +683,6 @@ function createWindow(): void {
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-/** يتجاوز منع الخروج بعد اكتمال رفع المزامنة المؤجل. */
-let allowQuitAfterSyncFlush = false;
-
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
@@ -711,21 +693,8 @@ if (!gotSingleInstanceLock) {
     }
   });
 
-  app.on("before-quit", (e) => {
-    if (allowQuitAfterSyncFlush) {
-      closeDatabase();
-      return;
-    }
-    e.preventDefault();
-    void (async () => {
-      try {
-        await flushPendingAutoPush(() => db);
-      } catch {
-        /* ignore */
-      }
-      allowQuitAfterSyncFlush = true;
-      app.quit();
-    })();
+  app.on("before-quit", () => {
+    closeDatabase();
   });
 
   app.on("window-all-closed", () => {
