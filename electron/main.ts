@@ -167,7 +167,11 @@ function insertSubscriptionsFromLegacyV4Rows(
   for (const r of legacyRows) {
     let billing_model: string =
       r.billing_model === "pay_as_needed" ? "one_time" : r.billing_model;
-    if (billing_model !== "recurring" && billing_model !== "one_time") {
+    if (
+      billing_model !== "recurring" &&
+      billing_model !== "one_time" &&
+      billing_model !== "free_account"
+    ) {
       billing_model = "one_time";
     }
     let interval_unit = r.interval_unit ?? null;
@@ -454,6 +458,63 @@ function runMigrations(database: Database.Database): void {
       }
     }
     database.prepare("UPDATE schema_version SET version = 10").run();
+  }
+
+  if (version < 11) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      database.exec("PRAGMA foreign_keys = OFF");
+      try {
+        database.exec(`
+          CREATE TABLE subscriptions_v11_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            notes TEXT,
+            website_url TEXT,
+            category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+            billing_model TEXT NOT NULL CHECK (billing_model IN ('one_time', 'recurring', 'free_account')),
+            interval_unit TEXT,
+            interval_months INTEGER,
+            interval_count INTEGER NOT NULL DEFAULT 1,
+            auto_renew INTEGER NOT NULL DEFAULT 0,
+            amount_original REAL NOT NULL,
+            currency_code TEXT NOT NULL DEFAULT 'USD',
+            amount_qar_snapshot REAL,
+            fx_rate_used REAL,
+            fx_quote_at TEXT,
+            start_date TEXT,
+            next_due_date TEXT,
+            end_date TEXT,
+            is_domain INTEGER NOT NULL DEFAULT 0,
+            tags TEXT,
+            credit_card_id INTEGER REFERENCES credit_cards(id) ON DELETE SET NULL,
+            wallet_method_id INTEGER REFERENCES wallet_methods(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            account_label TEXT,
+            cancelled_at TEXT
+          );
+          INSERT INTO subscriptions_v11_new (
+            id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
+            interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot,
+            fx_rate_used, fx_quote_at, start_date, next_due_date, end_date, is_domain, tags,
+            credit_card_id, wallet_method_id, created_at, updated_at, account_label, cancelled_at
+          )
+          SELECT
+            id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
+            interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot,
+            fx_rate_used, fx_quote_at, start_date, next_due_date, end_date, is_domain, tags,
+            credit_card_id, wallet_method_id, created_at, updated_at, account_label, cancelled_at
+          FROM subscriptions;
+          DROP TABLE subscriptions;
+          ALTER TABLE subscriptions_v11_new RENAME TO subscriptions;
+          CREATE INDEX IF NOT EXISTS idx_subs_category ON subscriptions(category_id);
+          CREATE INDEX IF NOT EXISTS idx_subs_next_due ON subscriptions(next_due_date);
+        `);
+      } finally {
+        database.exec("PRAGMA foreign_keys = ON");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 11").run();
   }
 }
 

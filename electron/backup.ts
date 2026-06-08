@@ -260,7 +260,13 @@ type NormalizedImportPayment = {
 function normalizeImportedSubscription(row: Record<string, unknown>): NormalizedImportSubscription {
   let billing_model = String(row.billing_model ?? "one_time");
   if (billing_model === "pay_as_needed") billing_model = "one_time";
-  if (billing_model !== "recurring" && billing_model !== "one_time") billing_model = "one_time";
+  if (
+    billing_model !== "recurring" &&
+    billing_model !== "one_time" &&
+    billing_model !== "free_account"
+  ) {
+    billing_model = "one_time";
+  }
 
   const interval_count =
     "interval_count" in row && row.interval_count != null ? Number(row.interval_count) : 1;

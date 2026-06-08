@@ -44,6 +44,7 @@ export function listDueDatesInInclusiveRange(
   rangeEndDay: string,
 ): string[] {
   if (!isActive(s)) return [];
+  if (s.billing_model === "free_account") return [];
   const rs = parseDateInput(rangeStartDay);
   const re = parseDateInput(rangeEndDay);
   if (!rs || !re || rs > re) return [];

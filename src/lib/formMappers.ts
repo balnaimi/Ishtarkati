@@ -22,6 +22,21 @@ export function defaultFormValues(): SubscriptionFormValues {
   };
 }
 
+/** Defaults for a free online account (no payment, no due dates). */
+export function defaultFreeAccountFormValues(primaryCurrencyCode: string): SubscriptionFormValues {
+  return {
+    ...defaultFormValues(),
+    billing_model: "free_account",
+    interval_unit: "",
+    interval_count: "1",
+    auto_renew: false,
+    amount_original: "0",
+    currency_code: primaryCurrencyCode.trim().toUpperCase() || "QAR",
+    wallet_method_id: "",
+    credit_card_id: "",
+  };
+}
+
 export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
   return {
     title: s.title,
@@ -87,13 +102,40 @@ export function formToRow(
   credit_card_id: number | null;
   wallet_method_id: number | null;
 } {
-  const amt = parseFloat(v.amount_original.replace(",", "."));
+  const isFree = v.billing_model === "free_account";
+  const amt = isFree ? 0 : parseFloat(v.amount_original.replace(",", "."));
   const interval_unit: IntervalUnit | null =
     v.billing_model === "recurring" && v.interval_unit ? v.interval_unit : null;
   const interval_count =
     v.billing_model === "recurring"
       ? Math.max(1, parseInt(v.interval_count, 10) || 1)
       : 1;
+
+  if (isFree) {
+    return {
+      title: v.title.trim(),
+      notes: v.notes.trim() || null,
+      website_url: v.website_url.trim() || null,
+      category_id: v.category_id ? parseInt(v.category_id, 10) : null,
+      billing_model: "free_account",
+      interval_unit: null,
+      interval_months: null,
+      interval_count: 1,
+      auto_renew: 0,
+      amount_original: 0,
+      currency_code: v.currency_code.trim().toUpperCase() || "QAR",
+      amount_qar_snapshot: 0,
+      fx_rate_used: 1,
+      fx_quote_at: fxAt,
+      start_date: v.start_date.trim() || null,
+      next_due_date: null,
+      end_date: null,
+      is_domain: 0,
+      account_label: v.account_label.trim() || null,
+      credit_card_id: null,
+      wallet_method_id: null,
+    };
+  }
 
   let next_due: string | null = null;
   if (v.billing_model === "recurring") {

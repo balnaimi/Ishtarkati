@@ -28,6 +28,7 @@ export function Layout() {
   const nav = [
     { to: "/", label: t("nav.home") },
     { to: "/list", label: t("nav.subscriptions") },
+    { to: "/accounts", label: t("nav.accounts") },
     { to: "/cancelled", label: t("nav.cancelled") },
     { to: "/insights", label: t("nav.insights") },
     { to: "/settings", label: t("nav.settings") },
@@ -67,15 +68,18 @@ export function Layout() {
               const homeMatch =
                 to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
               const listMatch = to === "/list" && loc.pathname === "/list";
+              const accountsMatch = to === "/accounts" && loc.pathname === "/accounts";
               const cancelledMatch = to === "/cancelled" && loc.pathname === "/cancelled";
               const insightsMatch = to === "/insights" && loc.pathname === "/insights";
               const active =
                 listMatch ||
+                accountsMatch ||
                 cancelledMatch ||
                 insightsMatch ||
                 loc.pathname === to ||
                 (to !== "/" &&
                   to !== "/list" &&
+                  to !== "/accounts" &&
                   to !== "/cancelled" &&
                   to !== "/insights" &&
                   loc.pathname.startsWith(to)) ||

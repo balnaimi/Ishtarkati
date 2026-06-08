@@ -222,6 +222,7 @@ function buildSubscriptionQuery(filters: {
   currency?: string;
   dueWithinDays?: number;
   search?: string;
+  recordKind?: "all" | "paid" | "free";
   /** Default `active`: excludes cancelled rows (`cancelled_at` set). */
   subscriptionStatus?: "active" | "cancelled" | "all";
 }): { sql: string; args: unknown[] } {
@@ -247,24 +248,33 @@ function buildSubscriptionQuery(filters: {
   if (filters.currency) {
     clauses.push(`s.currency_code = ${next(filters.currency.toUpperCase())}`);
   }
+  if (filters.recordKind === "paid") {
+    clauses.push("s.billing_model IN ('one_time', 'recurring')");
+  } else if (filters.recordKind === "free") {
+    clauses.push("s.billing_model = 'free_account'");
+  }
   if (filters.dueWithinDays != null && filters.dueWithinDays > 0) {
     const limit = new Date();
     limit.setDate(limit.getDate() + filters.dueWithinDays);
     const lim = limit.toISOString().slice(0, 10);
     clauses.push(
-      `s.next_due_date IS NOT NULL AND s.next_due_date <= ${next(lim)}`,
+      `s.billing_model != 'free_account' AND s.next_due_date IS NOT NULL AND s.next_due_date <= ${next(lim)}`,
     );
   }
   if (filters.search?.trim()) {
     const pat = `%${filters.search.trim()}%`;
     const p1 = next(pat);
-    clauses.push(`(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1})`);
+    clauses.push(
+      `(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1} OR IFNULL(s.website_url,'') LIKE ${p1})`,
+    );
   }
 
   const orderBy =
     status === "cancelled"
       ? "ORDER BY s.cancelled_at DESC, s.updated_at DESC, s.title ASC"
-      : "ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC";
+      : filters.recordKind === "free"
+        ? "ORDER BY s.title ASC, s.id ASC"
+        : "ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC";
 
   const sql = `
     SELECT s.*, c.name AS category_name
@@ -281,6 +291,7 @@ export async function loadSubscriptions(filters: {
   currency?: string;
   dueWithinDays?: number;
   search?: string;
+  recordKind?: "all" | "paid" | "free";
   subscriptionStatus?: "active" | "cancelled" | "all";
 }): Promise<SubscriptionListRow[]> {
   const db = await getDb();
@@ -312,8 +323,34 @@ export async function loadSubscriptionsDueSoon(limit: number): Promise<Subscript
     `SELECT s.*, c.name AS category_name
      FROM subscriptions s
      LEFT JOIN categories c ON c.id = s.category_id
-     WHERE s.next_due_date IS NOT NULL AND s.cancelled_at IS NULL
+     WHERE s.billing_model != 'free_account'
+       AND s.next_due_date IS NOT NULL AND s.cancelled_at IS NULL
      ORDER BY s.next_due_date ASC, s.title ASC
+     LIMIT ${lim}`,
+  );
+}
+
+export async function loadFreeAccountEmails(): Promise<{ email: string; count: number }[]> {
+  const db = await getDb();
+  return db.select<{ email: string; count: number }>(
+    `SELECT MIN(account_label) AS email, COUNT(*) AS count
+     FROM subscriptions
+     WHERE billing_model = 'free_account' AND cancelled_at IS NULL
+       AND account_label IS NOT NULL AND TRIM(account_label) != ''
+     GROUP BY LOWER(TRIM(account_label))
+     ORDER BY email ASC`,
+  );
+}
+
+export async function loadFreeAccountsRecent(limit: number): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const lim = Math.max(1, Math.min(50, limit));
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.billing_model = 'free_account' AND s.cancelled_at IS NULL
+     ORDER BY s.updated_at DESC, s.id DESC
      LIMIT ${lim}`,
   );
 }
@@ -517,7 +554,7 @@ export async function setSubscriptionNextDue(
 
 export async function confirmSubscriptionPaid(id: number): Promise<void> {
   const sub = await getSubscription(id);
-  if (!sub || sub.cancelled_at || !sub.next_due_date) return;
+  if (!sub || sub.cancelled_at || sub.billing_model === "free_account" || !sub.next_due_date) return;
   /** Record the billing cycle that was cleared (shown in ledger + Insights by this date). */
   const paidAtCycle = sub.next_due_date;
   const amtOriginal = Number.isFinite(sub.amount_original) ? sub.amount_original : null;
@@ -576,6 +613,7 @@ export async function confirmSubscriptionPaid(id: number): Promise<void> {
 
 export function subscriptionNeedsPaidAttention(sub: Subscription): boolean {
   if (sub.cancelled_at) return false;
+  if (sub.billing_model === "free_account") return false;
   if (!sub.next_due_date) return false;
   const today = new Date().toISOString().slice(0, 10);
   return sub.next_due_date <= today;

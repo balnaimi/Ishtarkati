@@ -151,11 +151,24 @@ export function SubscriptionForm({
     }
   }
 
+  const isFree = v.billing_model === "free_account";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     if (!v.title.trim()) {
       setErr(t("form.required"));
+      return;
+    }
+    if (isFree) {
+      setBusy(true);
+      try {
+        await onSubmit(v, { primary: 0, fxFactor: 1, fxAt: new Date().toISOString() });
+      } catch (er) {
+        setErr(er instanceof Error ? er.message : String(er));
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     const amt = parseFloat(v.amount_original.replace(",", "."));
@@ -222,21 +235,51 @@ export function SubscriptionForm({
       {err ? <p className="sk-alert">{err}</p> : null}
 
       <div>
-        <label className="sk-label">{t("form.title")}</label>
+        <label className="sk-label">{t("form.recordKind")}</label>
+        <select
+          className="sk-select"
+          value={v.billing_model}
+          onChange={(e) => {
+            const next = e.target.value as SubscriptionFormValues["billing_model"];
+            setV((prev) => {
+              if (next === "free_account") {
+                return {
+                  ...prev,
+                  billing_model: next,
+                  amount_original: "0",
+                  currency_code: primary || prev.currency_code,
+                  interval_unit: "",
+                  auto_renew: false,
+                  next_due_date: "",
+                  end_date: "",
+                  wallet_method_id: "",
+                  credit_card_id: "",
+                };
+              }
+              return {
+                ...prev,
+                billing_model: next,
+                interval_unit: next === "recurring" ? prev.interval_unit || "month" : "",
+              };
+            });
+          }}
+        >
+          <option value="recurring">{t("billing.recurring")}</option>
+          <option value="one_time">{t("billing.one_time")}</option>
+          <option value="free_account">{t("billing.free_account")}</option>
+        </select>
+        <p className="mt-1.5 text-xs text-cream-600">
+          {isFree ? t("form.freeAccountKindHint") : t("form.paidKindHint")}
+        </p>
+      </div>
+
+      <div>
+        <label className="sk-label">{isFree ? t("form.freeTitle") : t("form.title")}</label>
         <input
           className="sk-input"
           value={v.title}
           onChange={(e) => setField("title", e.target.value)}
           required
-        />
-      </div>
-
-      <div>
-        <label className="sk-label">{t("form.notes")}</label>
-        <textarea
-          className="sk-textarea"
-          value={v.notes}
-          onChange={(e) => setField("notes", e.target.value)}
         />
       </div>
 
@@ -260,15 +303,30 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className="sk-label">{t("form.accountLabel")}</label>
+        <label className="sk-label">{isFree ? t("form.freeEmail") : t("form.accountLabel")}</label>
         <input
           className="sk-input"
+          type={isFree ? "email" : "text"}
+          dir="ltr"
           value={v.account_label}
           onChange={(e) => setField("account_label", e.target.value)}
-          placeholder={t("form.accountLabelPlaceholder")}
+          placeholder={isFree ? t("form.freeEmailPlaceholder") : t("form.accountLabelPlaceholder")}
           autoComplete="off"
         />
-        <p className="mt-1.5 text-xs text-cream-600">{t("form.accountLabelHint")}</p>
+        <p className="mt-1.5 text-xs text-cream-600">
+          {isFree ? t("form.freeEmailHint") : t("form.accountLabelHint")}
+        </p>
+      </div>
+
+      <div>
+        <label className="sk-label">{isFree ? t("form.freePurpose") : t("form.notes")}</label>
+        <textarea
+          className="sk-textarea"
+          value={v.notes}
+          onChange={(e) => setField("notes", e.target.value)}
+          placeholder={isFree ? t("form.freePurposePlaceholder") : undefined}
+        />
+        {isFree ? <p className="mt-1.5 text-xs text-cream-600">{t("form.freePurposeHint")}</p> : null}
       </div>
 
       <div className="space-y-3">
@@ -320,6 +378,20 @@ export function SubscriptionForm({
         ) : null}
       </div>
 
+      {isFree ? (
+        <div>
+          <label className="sk-label">{t("form.freeCreatedAt")}</label>
+          <input
+            type="date"
+            className="sk-input"
+            value={v.start_date}
+            onChange={(e) => setField("start_date", e.target.value)}
+          />
+          <p className="mt-1.5 text-xs text-cream-600">{t("form.freeCreatedAtHint")}</p>
+        </div>
+      ) : null}
+
+      {!isFree ? (
       <div>
         <label className="sk-label">{t("form.paymentMethod")}</label>
         <select
@@ -351,22 +423,9 @@ export function SubscriptionForm({
         </select>
         <p className="mt-1 text-xs text-cream-600">{t("form.paymentMethodHint")}</p>
       </div>
+      ) : null}
 
-      <div>
-        <label className="sk-label">{t("form.billingModel")}</label>
-        <select
-          className="sk-select"
-          value={v.billing_model}
-          onChange={(e) =>
-            setField("billing_model", e.target.value as SubscriptionFormValues["billing_model"])
-          }
-        >
-          <option value="one_time">{t("billing.one_time")}</option>
-          <option value="recurring">{t("billing.recurring")}</option>
-        </select>
-      </div>
-
-      {v.billing_model === "recurring" ? (
+      {!isFree && v.billing_model === "recurring" ? (
         <div className="space-y-5 border-t border-cream-400/80 pt-5">
           <div>
             <label className="sk-label">{t("form.interval")}</label>
@@ -402,6 +461,7 @@ export function SubscriptionForm({
         </div>
       ) : null}
 
+      {!isFree ? (
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
           <input
@@ -413,7 +473,9 @@ export function SubscriptionForm({
           {t("form.autoRenew")}
         </label>
       </div>
+      ) : null}
 
+      {!isFree ? (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <label className="sk-label">{t("form.amount")}</label>
@@ -442,8 +504,9 @@ export function SubscriptionForm({
           </select>
         </div>
       </div>
+      ) : null}
 
-      {showFxPrimaryCard ? (
+      {!isFree && showFxPrimaryCard ? (
         <div className="sk-card space-y-3">
           <p className="text-sm font-medium text-cream-700">
             {t("form.approxPrimary", { code: primary, label: primaryMetaLabel })}
@@ -463,6 +526,7 @@ export function SubscriptionForm({
         </div>
       ) : null}
 
+      {!isFree ? (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <label className="sk-label">
@@ -496,6 +560,7 @@ export function SubscriptionForm({
           />
         </div>
       </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-t border-cream-400/80 pt-6 sm:flex-row sm:flex-wrap">
         <button type="submit" disabled={busy} className="sk-btn-primary sm:min-w-[8rem]">

@@ -1,6 +1,6 @@
 /** Domain types and enums — code in English per project convention. */
 
-export type BillingModel = "one_time" | "recurring";
+export type BillingModel = "one_time" | "recurring" | "free_account";
 
 /** Billing step for recurring subscriptions. */
 export type IntervalUnit = "day" | "week" | "month" | "year";

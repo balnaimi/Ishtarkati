@@ -28,6 +28,7 @@ import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { displayUrlForUi } from "../lib/siteFavicon";
+import { billingModelI18nKey, isFreeAccount } from "../lib/subscriptionKind";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { effectiveRenewalSteps } from "../lib/paymentRenewal";
 
@@ -260,6 +261,7 @@ export function DetailPage() {
   };
 
   const needsPaid = subscriptionNeedsPaidAttention(sub);
+  const free = isFreeAccount(sub);
 
   return (
     <>
@@ -298,24 +300,33 @@ export function DetailPage() {
                   </Link>
                 </div>
               ) : null}
+              <p className="text-sm text-cream-700">
+                <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">
+                  {t(billingModelI18nKey(sub.billing_model))}
+                </span>
+              </p>
               {sub.account_label?.trim() ? (
-                <p className="text-sm text-cream-700">
-                  {t("detail.accountLabel")}: {sub.account_label.trim()}
+                <p className="text-sm text-cream-700" dir="ltr">
+                  {free ? t("detail.freeEmail") : t("detail.accountLabel")}: {sub.account_label.trim()}
                 </p>
               ) : null}
               <p className="text-sm text-cream-700">
                 {sub.category_name ?? "—"}
-                {sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : " · —"}
-                {sub.start_date ? ` · ${t("form.startDate")}: ${sub.start_date}` : ""}
+                {!free && sub.next_due_date ? ` · ${t("list.nextDue")}: ${sub.next_due_date}` : ""}
+                {sub.start_date
+                  ? ` · ${free ? t("detail.freeCreatedAt") : t("form.startDate")}: ${sub.start_date}`
+                  : ""}
               </p>
-              <div className="text-sm">
-                <DualCurrencyAmounts
-                  originalAmount={sub.amount_original}
-                  originalCode={sub.currency_code}
-                  approxAmount={sub.amount_qar_snapshot}
-                  approxCode={primaryCode}
-                />
-              </div>
+              {!free ? (
+                <div className="text-sm">
+                  <DualCurrencyAmounts
+                    originalAmount={sub.amount_original}
+                    originalCode={sub.currency_code}
+                    approxAmount={sub.amount_qar_snapshot}
+                    approxCode={primaryCode}
+                  />
+                </div>
+              ) : null}
               {sub.website_url ? (
                 <a
                   href={sub.website_url}
@@ -356,6 +367,15 @@ export function DetailPage() {
                 {copiedKey === "url" ? t("detail.copied") : t("detail.copyUrl")}
               </button>
             ) : null}
+            {free && sub.account_label?.trim() ? (
+              <button
+                type="button"
+                className="sk-btn-secondary text-xs"
+                onClick={() => void copyField(sub.account_label!.trim(), "email")}
+              >
+                {copiedKey === "email" ? t("detail.copied") : t("detail.copyEmail")}
+              </button>
+            ) : null}
             {needsPaid ? (
               <button type="button" className="sk-btn-primary text-xs" onClick={() => void handleMarkPaid()}>
                 {t("home.markPaid")}
@@ -385,7 +405,7 @@ export function DetailPage() {
         </div>
       </div>
 
-      {sub.next_due_date && !sub.cancelled_at ? (
+      {!free && sub.next_due_date && !sub.cancelled_at ? (
         <div className="sk-card space-y-3">
           <h3 className="font-semibold text-cream-900">{t("detail.dueProgressTitle")}</h3>
           <DueProgressBar sub={progSub} size="md" />
@@ -393,9 +413,25 @@ export function DetailPage() {
       ) : null}
 
       {sub.notes ? (
-        <p className="sk-card text-cream-800 leading-relaxed">{sub.notes}</p>
+        <div className="sk-card space-y-2">
+          <h3 className="font-semibold text-cream-900">
+            {free ? t("detail.freePurposeTitle") : t("form.notes")}
+          </h3>
+          <p className="text-cream-800 leading-relaxed">{sub.notes}</p>
+        </div>
       ) : null}
 
+      {free ? (
+        <div className="sk-callout-muted text-sm">
+          <p>{t("detail.freeAccountHint")}</p>
+          <Link to="/accounts" className="mt-2 inline-block font-medium text-sage-800 underline">
+            {t("home.openAccounts")}
+          </Link>
+        </div>
+      ) : null}
+
+      {!free ? (
+      <>
       <div className="sk-card space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -581,6 +617,8 @@ export function DetailPage() {
           )}
         </ul>
       </div>
+      </>
+      ) : null}
 
       <Link to="/" className="inline-flex text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
         ← {t("common.back")}

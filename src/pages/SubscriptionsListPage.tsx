@@ -23,6 +23,7 @@ import {
   type DueTone,
 } from "../lib/dueProgress";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
+import { billingModelI18nKey, isFreeAccount, type RecordKindFilter } from "../lib/subscriptionKind";
 
 function toneTextClass(tone: DueTone): string {
   if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
@@ -57,6 +58,7 @@ export function SubscriptionsListPage() {
   const [catFilter, setCatFilter] = useState<string>("");
   const [curFilter, setCurFilter] = useState<string>("");
   const [dueSoon, setDueSoon] = useState(false);
+  const [recordKind, setRecordKind] = useState<RecordKindFilter>("all");
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [sortKey, setSortKey] = useState<SortKey>("next_due");
@@ -73,6 +75,7 @@ export function SubscriptionsListPage() {
           categoryId: catFilter ? parseInt(catFilter, 10) : undefined,
           currency: curFilter || undefined,
           dueWithinDays: dueSoon ? 30 : undefined,
+          recordKind,
           search: q || undefined,
         }),
         loadCategories(),
@@ -89,7 +92,7 @@ export function SubscriptionsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [catFilter, curFilter, dueSoon, deferredSearch]);
+  }, [catFilter, curFilter, dueSoon, recordKind, deferredSearch]);
 
   const sortedItems = useMemo(() => {
     const arr = [...items];
@@ -161,8 +164,7 @@ export function SubscriptionsListPage() {
   }, []);
 
   function billingLabel(model: string) {
-    if (model === "one_time") return t("billing.one_time");
-    return t("billing.recurring");
+    return t(billingModelI18nKey(model));
   }
 
   function billingCell(s: SubscriptionListRow) {
@@ -178,10 +180,18 @@ export function SubscriptionsListPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-cream-900">{t("list.title")}</h2>
-        <Link to="/" className="text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
-          ← {t("home.dashboardTitle")}
-        </Link>
+        <div>
+          <h2 className="text-xl font-semibold text-cream-900">{t("list.title")}</h2>
+          <p className="sk-text-hint mt-1 text-sm">{t("list.subtitle")}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/new?kind=account" className="sk-btn-secondary px-3 py-2 text-sm">
+            {t("accounts.addCta")}
+          </Link>
+          <Link to="/" className="text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
+            ← {t("home.dashboardTitle")}
+          </Link>
+        </div>
       </div>
 
       <details ref={filterDetailsRef} className="sk-card overflow-hidden p-0 shadow-sm">
@@ -201,6 +211,31 @@ export function SubscriptionsListPage() {
           <p className="text-[11px] leading-snug text-cream-600">{t("list.filtersPanelHint")}</p>
 
           <div className="grid grid-cols-2 gap-2 md:grid-cols-6 md:gap-x-2 md:gap-y-2">
+            <div className="col-span-2 min-w-0 md:col-span-6">
+              <span className="mb-1 block text-xs font-medium text-cream-700">{t("list.recordKind")}</span>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["all", t("list.recordKindAll")] as const,
+                    ["paid", t("list.recordKindPaid")] as const,
+                    ["free", t("list.recordKindFree")] as const,
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                      recordKind === id
+                        ? "bg-cream-800 text-cream-50"
+                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                    }`}
+                    onClick={() => setRecordKind(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="col-span-2 min-w-0 md:col-span-2">
               <label className="mb-0.5 block text-xs font-medium text-cream-700" htmlFor="list-filter-category">
                 {t("list.filterCategory")}
@@ -334,7 +369,8 @@ export function SubscriptionsListPage() {
             </thead>
             <tbody>
               {sortedItems.map((s) => {
-                const prog = computeDueProgress(progressInput(s));
+                const free = isFreeAccount(s);
+                const prog = free ? null : computeDueProgress(progressInput(s));
                 const tone = prog ? dueProgressTone(prog) : null;
                 const needsPaid = subscriptionNeedsPaidAttention(s);
                 const rowTint = tone ? dueListRowHighlightClass(tone) : "";
@@ -362,7 +398,11 @@ export function SubscriptionsListPage() {
                           ) : null}
                         </div>
                       </div>
-                      {s.next_due_date ? (
+                      {free ? (
+                        s.notes?.trim() ? (
+                          <span className="mt-1 block line-clamp-2 text-xs text-cream-600">{s.notes.trim()}</span>
+                        ) : null
+                      ) : s.next_due_date ? (
                         <div className="mt-2">
                           <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
                         </div>
@@ -373,21 +413,31 @@ export function SubscriptionsListPage() {
                     <td className="px-3 py-3 text-cream-800">{s.category_name ?? "—"}</td>
                     <td className="px-3 py-3 text-cream-800">{billingCell(s)}</td>
                     <td className="px-3 py-3 text-cream-800">
-                      {s.next_due_date ?? "—"}
-                      {prog && tone ? (
-                        <span className={`mt-0.5 block text-xs font-medium ${toneTextClass(tone)}`}>
-                          {relativeDueCaption(t, prog)}
-                        </span>
-                      ) : null}
+                      {free ? (
+                        <span className="text-cream-500">—</span>
+                      ) : (
+                        <>
+                          {s.next_due_date ?? "—"}
+                          {prog && tone ? (
+                            <span className={`mt-0.5 block text-xs font-medium ${toneTextClass(tone)}`}>
+                              {relativeDueCaption(t, prog)}
+                            </span>
+                          ) : null}
+                        </>
+                      )}
                     </td>
                     <td className="px-3 py-3 align-top">
-                      <DualCurrencyAmounts
-                        size="sm"
-                        originalAmount={s.amount_original}
-                        originalCode={s.currency_code}
-                        approxAmount={s.amount_qar_snapshot}
-                        approxCode={primaryCode}
-                      />
+                      {free ? (
+                        <span className="text-cream-500">—</span>
+                      ) : (
+                        <DualCurrencyAmounts
+                          size="sm"
+                          originalAmount={s.amount_original}
+                          originalCode={s.currency_code}
+                          approxAmount={s.amount_qar_snapshot}
+                          approxCode={primaryCode}
+                        />
+                      )}
                     </td>
                     <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-2">

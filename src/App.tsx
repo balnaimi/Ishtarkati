@@ -10,6 +10,7 @@ import { DetailPage } from "./pages/DetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { CancelledSubscriptionsPage } from "./pages/CancelledSubscriptionsPage";
 import { InsightsPage } from "./pages/InsightsPage";
+import { OnlineAccountsPage } from "./pages/OnlineAccountsPage";
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route index element={<HomePage />} />
               <Route path="list" element={<SubscriptionsListPage />} />
+              <Route path="accounts" element={<OnlineAccountsPage />} />
               <Route path="cancelled" element={<CancelledSubscriptionsPage />} />
               <Route path="insights" element={<InsightsPage />} />
               <Route path="new" element={<NewSubscriptionPage />} />

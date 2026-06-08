@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
+  loadFreeAccountsRecent,
   loadSubscriptions,
   loadSubscriptionsDueSoon,
   loadSubscriptionsRecent,
@@ -10,6 +11,7 @@ import {
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
+import { billingModelI18nKey, isFreeAccount } from "../lib/subscriptionKind";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
@@ -51,19 +53,22 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
 
   const [attentionAll, setAttentionAll] = useState<SubscriptionListRow[]>([]);
+  const [freeAccounts, setFreeAccounts] = useState<SubscriptionListRow[]>([]);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, d, r, all] = await Promise.all([
+      const [sum, d, r, all, free] = await Promise.all([
         statsSummary(),
         loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
         loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
         loadSubscriptions({}),
+        loadFreeAccountsRecent(HOME_PREVIEW_LIMIT),
       ]);
       setSummary(sum);
       setDueSoon(d);
       setRecent(r);
+      setFreeAccounts(free);
       setAttentionAll(all.filter(subscriptionNeedsPaidAttention));
     } finally {
       setLoading(false);
@@ -95,8 +100,7 @@ export function HomePage() {
   }
 
   function billingLabel(model: string) {
-    if (model === "one_time") return t("billing.one_time");
-    return t("billing.recurring");
+    return t(billingModelI18nKey(model));
   }
 
   const primary = summary?.primaryCode ?? "QAR";
@@ -112,8 +116,14 @@ export function HomePage() {
           <Link to="/new" className="sk-btn-warm px-5 py-2.5 text-center font-semibold shadow-sm">
             {t("home.addSubscriptionCta")}
           </Link>
+          <Link to="/new?kind=account" className="sk-btn-secondary px-4 py-2.5 text-center">
+            {t("home.addAccountCta")}
+          </Link>
           <Link to="/list" className="sk-btn-secondary px-4 py-2.5 text-center">
             {t("home.allSubscriptions")}
+          </Link>
+          <Link to="/accounts" className="sk-btn-secondary px-4 py-2.5 text-center">
+            {t("nav.accounts")}
           </Link>
           <Link to="/cancelled" className="sk-btn-secondary px-4 py-2.5 text-center">
             {t("nav.cancelled")}
@@ -350,15 +360,23 @@ export function HomePage() {
                       <p className="mt-1 text-[11px] text-cream-600">
                         {s.created_at.slice(0, 10)} · {billingLabel(s.billing_model)}
                       </p>
-                      <div className="mt-1">
-                        <DualCurrencyAmounts
-                          size="xs"
-                          originalAmount={s.amount_original}
-                          originalCode={s.currency_code}
-                          approxAmount={s.amount_qar_snapshot}
-                          approxCode={primary}
-                        />
-                      </div>
+                      {isFreeAccount(s) ? (
+                        s.account_label?.trim() ? (
+                          <p dir="ltr" className="mt-1 truncate text-[11px] text-sage-800">
+                            {s.account_label.trim()}
+                          </p>
+                        ) : null
+                      ) : (
+                        <div className="mt-1">
+                          <DualCurrencyAmounts
+                            size="xs"
+                            originalAmount={s.amount_original}
+                            originalCode={s.currency_code}
+                            approxAmount={s.amount_qar_snapshot}
+                            approxCode={primary}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -367,6 +385,51 @@ export function HomePage() {
           )}
         </section>
       </div>
+
+      <section className="space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold tracking-tight text-cream-900">
+            {t("home.onlineAccounts")}
+          </h3>
+          <Link to="/accounts" className="text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
+            {t("home.openAccounts")}
+          </Link>
+        </div>
+        <p className="sk-text-hint text-sm">{t("home.onlineAccountsHint")}</p>
+        {freeAccounts.length === 0 ? (
+          <p className="sk-text-hint text-sm">{t("accounts.empty")}</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            {freeAccounts.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className="flex flex-col rounded-xl border border-cream-400/90 bg-cream-50/95 p-2.5 text-start shadow-sm transition hover:border-sage-500/40 hover:bg-cream-100/40 hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-500/50"
+                onClick={() => nav(`/sub/${s.id}`)}
+              >
+                <div className="flex gap-2">
+                  {s.website_url?.trim() ? (
+                    <SiteFavicon websiteUrl={s.website_url} size="xs" className="mt-0.5 shrink-0" />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-cream-950">
+                      {s.title}
+                    </p>
+                    {s.account_label?.trim() ? (
+                      <p dir="ltr" className="mt-1 truncate text-[11px] text-sage-800">
+                        {s.account_label.trim()}
+                      </p>
+                    ) : null}
+                    {s.notes?.trim() ? (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-cream-600">{s.notes.trim()}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
