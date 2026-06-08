@@ -262,10 +262,11 @@ function buildSubscriptionQuery(filters: {
     );
   }
   if (filters.search?.trim()) {
-    const pat = `%${filters.search.trim()}%`;
+    const escaped = filters.search.trim().replace(/[%_\\]/g, (c) => `\\${c}`);
+    const pat = `%${escaped}%`;
     const p1 = next(pat);
     clauses.push(
-      `(s.title LIKE ${p1} OR IFNULL(s.notes,'') LIKE ${p1} OR IFNULL(s.account_label,'') LIKE ${p1} OR IFNULL(s.website_url,'') LIKE ${p1})`,
+      `(s.title LIKE ${p1} ESCAPE '\\' OR IFNULL(s.notes,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.account_label,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.website_url,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(c.name,'') LIKE ${p1} ESCAPE '\\')`,
     );
   }
 

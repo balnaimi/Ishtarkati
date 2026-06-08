@@ -1,45 +1,43 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   loadFreeAccountEmails,
   loadSubscriptions,
   type SubscriptionListRow,
 } from "../db/repo";
+import { filterFreeAccounts } from "../lib/accountSearch";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 
 export function OnlineAccountsPage() {
   const { t } = useTranslation();
   const nav = useNavigate();
+  const location = useLocation();
   const searchRef = useRef<HTMLInputElement>(null);
-  const [items, setItems] = useState<SubscriptionListRow[]>([]);
+  const [allItems, setAllItems] = useState<SubscriptionListRow[]>([]);
   const [emails, setEmails] = useState<{ email: string; count: number }[]>([]);
   const [search, setSearch] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
-  const deferredSearch = useDeferredValue(search);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [list, mailRows] = await Promise.all([
-        loadSubscriptions({
-          recordKind: "free",
-          search: deferredSearch.trim() || undefined,
-        }),
+        loadSubscriptions({ recordKind: "free" }),
         loadFreeAccountEmails(),
       ]);
-      setItems(list);
+      setAllItems(list);
       setEmails(mailRows);
     } finally {
       setLoading(false);
     }
-  }, [deferredSearch]);
+  }, []);
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, location.pathname, location.key]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -53,12 +51,12 @@ export function OnlineAccountsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const filteredItems = useMemo(() => {
-    if (!emailFilter) return items;
-    const key = emailFilter.trim().toLowerCase();
-    return items.filter((s) => (s.account_label ?? "").trim().toLowerCase() === key);
-  }, [items, emailFilter]);
+  const filteredItems = useMemo(
+    () => filterFreeAccounts(allItems, { search, email: emailFilter }),
+    [allItems, search, emailFilter],
+  );
 
+  const hasActiveFilter = search.trim().length > 0 || emailFilter.length > 0;
   const emailMatchCount = emailFilter ? filteredItems.length : null;
 
   return (
@@ -110,21 +108,53 @@ export function OnlineAccountsPage() {
             </select>
           </div>
         </div>
-        {emailMatchCount != null ? (
-          <p className="text-sm font-medium text-sage-800">
-            {t("accounts.emailMatchCount", { count: emailMatchCount, email: emailFilter })}
+        {hasActiveFilter ? (
+          <p className="text-sm text-cream-800">
+            {t("accounts.searchResultCount", { count: filteredItems.length })}
+            {emailMatchCount != null ? (
+              <>
+                {" — "}
+                {t("accounts.emailMatchCount", { count: emailMatchCount, email: emailFilter })}
+              </>
+            ) : null}
+            {filteredItems.length === 0 ? (
+              <button
+                type="button"
+                className="ms-2 font-medium text-sage-800 underline"
+                onClick={() => {
+                  setSearch("");
+                  setEmailFilter("");
+                }}
+              >
+                {t("accounts.clearFilters")}
+              </button>
+            ) : null}
           </p>
         ) : null}
       </div>
 
-      {loading ? (
+      {loading && allItems.length === 0 ? (
         <p className="sk-text-hint">{t("common.loading")}</p>
-      ) : filteredItems.length === 0 ? (
+      ) : allItems.length === 0 ? (
         <div className="sk-card text-sm text-cream-700">
           <p>{t("accounts.empty")}</p>
           <Link to="/new?kind=account" className="mt-3 inline-block font-medium text-sage-800 underline">
             {t("accounts.addCta")}
           </Link>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="sk-card text-sm text-cream-700">
+          <p>{t("accounts.noSearchResults")}</p>
+          <button
+            type="button"
+            className="mt-3 font-medium text-sage-800 underline"
+            onClick={() => {
+              setSearch("");
+              setEmailFilter("");
+            }}
+          >
+            {t("accounts.clearFilters")}
+          </button>
         </div>
       ) : (
         <div className="sk-card overflow-x-auto p-0 shadow-sm">
