@@ -516,6 +516,15 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 11").run();
   }
+
+  if (version < 12) {
+    if (sqliteTableExists(database, "payment_events")) {
+      database.exec(
+        "CREATE INDEX IF NOT EXISTS idx_payment_events_paid_at ON payment_events(paid_at)",
+      );
+    }
+    database.prepare("UPDATE schema_version SET version = 12").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

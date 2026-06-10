@@ -14,15 +14,17 @@ import { arSA } from "date-fns/locale";
 import {
   getPrimaryCurrencyCode,
   getSetting,
+  batchUpdateSubscriptionQarSnapshots,
   loadPaymentHistoryByMonth,
   loadPaymentHistoryByYear,
   loadPaymentHistoryDetails,
-  loadSubscriptions,
+  loadSubscriptionsForCashflow,
   type PaymentHistoryDetailRow,
   statsSummary,
-  updateSubscriptionQarSnapshot,
   type SubscriptionListRow,
 } from "../db/repo";
+import { CashflowSummaryGrid } from "../components/CashflowSummaryGrid";
+import { StatsGridSkeleton } from "../components/LoadingSkeleton";
 import { mapSubsDueByDayInMonth, projectedTotalsByMonthIndex } from "../lib/cashflowProjection";
 import {
   amountToPrimaryFromUsdBase,
@@ -63,7 +65,7 @@ export function InsightsPage() {
   const reload = useCallback(async () => {
     const [sum, rows, prim] = await Promise.all([
       statsSummary(),
-      loadSubscriptions({}),
+      loadSubscriptionsForCashflow(),
       getPrimaryCurrencyCode(),
     ]);
     setSummary(sum);
@@ -85,8 +87,12 @@ export function InsightsPage() {
   useEffect(() => {
     void hydrate();
     void reload();
+  }, [hydrate, reload]);
+
+  useEffect(() => {
+    if (tab !== "history") return;
     void reloadHistory();
-  }, [hydrate, reload, reloadHistory]);
+  }, [tab, reloadHistory]);
 
   async function recalcFxSnapshots() {
     setBusy(true);
@@ -119,7 +125,8 @@ export function InsightsPage() {
         }
       }
       const prim = await getPrimaryCurrencyCode();
-      const rows = await loadSubscriptions({});
+      const rows = await loadSubscriptionsForCashflow();
+      const updates: Array<{ id: number; qar: number; fxFactor: number; fxAt: string }> = [];
       for (const s of rows) {
         try {
           const { primary, fxFactor } = amountToPrimaryFromUsdBase(
@@ -129,11 +136,12 @@ export function InsightsPage() {
             rates,
             overrides,
           );
-          await updateSubscriptionQarSnapshot(s.id, primary, fxFactor, fxAt);
+          updates.push({ id: s.id, qar: primary, fxFactor, fxAt });
         } catch {
           /* skip */
         }
       }
+      await batchUpdateSubscriptionQarSnapshots(updates);
       await reload();
     } finally {
       setBusy(false);
@@ -236,87 +244,11 @@ export function InsightsPage() {
           </div>
 
           {!summary ? (
-            <p className="text-cream-700">{t("common.loading")}</p>
+            <StatsGridSkeleton />
           ) : (
             <>
-              <p className="text-sm text-cream-700">{t("insights.cashflowExplain")}</p>
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="sk-card">
-                  <p className="text-sm font-medium text-cream-700">{t("insights.dueThisMonth")}</p>
-                  <p className="mt-1 text-xs text-cream-600">
-                    {t("insights.monthNumbered", {
-                      month: summary.currentMonth.month,
-                      year: summary.currentMonth.year,
-                    })}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-sage-800">
-                    {summary.currentMonth.totalPrimary.toFixed(2)} {primary}
-                  </p>
-                  <p className="sk-text-hint mt-2 text-xs">
-                    {t("insights.dueEvents", { count: summary.currentMonth.dueCount })}
-                  </p>
-                </div>
-                <div className="sk-card">
-                  <p className="text-sm font-medium text-cream-700">{t("insights.dueNextMonth")}</p>
-                  <p className="mt-1 text-xs text-cream-600">
-                    {t("insights.monthNumbered", {
-                      month: summary.nextMonth.month,
-                      year: summary.nextMonth.year,
-                    })}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-sage-800">
-                    {summary.nextMonth.totalPrimary.toFixed(2)} {primary}
-                  </p>
-                  <p className="sk-text-hint mt-2 text-xs">
-                    {t("insights.dueEvents", { count: summary.nextMonth.dueCount })}
-                  </p>
-                </div>
-                <div className="sk-card">
-                  <p className="text-sm font-medium text-cream-700">{t("insights.projectedYear")}</p>
-                  <p className="mt-1 text-xs text-cream-600">
-                    {t("insights.yearLabel", { year: summary.currentYearProjected.year })}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold text-sage-800">
-                    {summary.currentYearProjected.totalPrimary.toFixed(2)} {primary}
-                  </p>
-                  <p className="sk-text-hint mt-2 text-xs">
-                    {t("insights.dueEvents", { count: summary.currentYearProjected.dueCount })}
-                  </p>
-                </div>
-                <div className="sk-card">
-                  <p className="text-sm font-medium text-cream-700">{t("insights.due30")}</p>
-                  <p className="mt-2 text-2xl font-semibold text-walnut-600">
-                    {summary.due30Projected.totalPrimary.toFixed(2)} {primary}
-                  </p>
-                  <p className="sk-text-hint mt-2 text-xs">
-                    {t("insights.dueEvents", { count: summary.due30Projected.dueCount })}
-                  </p>
-                </div>
-                <div className="md:col-span-2 sk-card">
-                  <p className="mb-2 text-sm font-medium text-cream-700">{t("stats.subscriptions")}</p>
-                  <p className="text-sm text-cream-800">{summary.recurringCount}</p>
-                </div>
-                <div className="md:col-span-2 sk-card">
-                  <p className="mb-3 text-sm font-medium text-cream-700">{t("insights.byCategoryThisMonth")}</p>
-                  <ul className="space-y-2">
-                    {summary.byCategory.length === 0 ? (
-                      <li className="text-cream-600">{t("common.none")}</li>
-                    ) : (
-                      summary.byCategory.map((row) => (
-                        <li
-                          key={row.name}
-                          className="flex flex-wrap justify-between gap-2 text-sm text-cream-800"
-                        >
-                          <span>{row.name}</span>
-                          <span className="font-medium text-sage-800">
-                            {row.amountPrimary.toFixed(2)} {primary}
-                          </span>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              </div>
+              <p className="mb-4 text-sm text-cream-700">{t("insights.cashflowExplain")}</p>
+              <CashflowSummaryGrid summary={summary} primaryCode={primary} />
             </>
           )}
         </div>

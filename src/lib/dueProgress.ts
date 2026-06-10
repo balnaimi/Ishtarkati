@@ -139,6 +139,13 @@ export function relativeDueCaption(
 export type DueTone = ReturnType<typeof dueProgressTone>;
 
 /** Subtle table row background by urgency (empty if safe or unknown). */
+export function dueToneTextClass(tone: DueTone): string {
+  if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
+  if (tone === "urgent") return "sk-tone-due-urgent";
+  if (tone === "warn") return "sk-tone-due-bar-warn";
+  return "sk-tone-due-safe";
+}
+
 export function dueListRowHighlightClass(tone: DueTone): string {
   if (tone === "safe") return "";
   if (tone === "warn") return "sk-due-row-warn";

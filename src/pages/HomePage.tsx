@@ -4,13 +4,15 @@ import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
   loadOnlineAccountsRecent,
-  loadSubscriptions,
   loadSubscriptionsDueSoon,
+  loadSubscriptionsNeedingAttention,
   loadSubscriptionsRecent,
   statsSummary,
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
+import { CashflowSummaryGrid } from "../components/CashflowSummaryGrid";
+import { CardGridSkeleton, StatsGridSkeleton } from "../components/LoadingSkeleton";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
@@ -24,19 +26,13 @@ import {
   computeDueProgress,
   dueListRowHighlightClass,
   dueProgressTone,
+  dueToneTextClass,
   relativeDueCaption,
   type DueProgressInput,
-  type DueTone,
 } from "../lib/dueProgress";
 
 const HOME_PREVIEW_LIMIT = 6;
-
-function toneTextClass(tone: DueTone): string {
-  if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
-  if (tone === "urgent") return "sk-tone-due-urgent";
-  if (tone === "warn") return "sk-tone-due-bar-warn";
-  return "sk-tone-due-safe";
-}
+const ATTENTION_BANNER_LIMIT = 12;
 
 function progressInput(s: SubscriptionListRow): DueProgressInput {
   return {
@@ -63,18 +59,18 @@ export function HomePage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, d, r, all, free] = await Promise.all([
+      const [sum, d, r, attention, free] = await Promise.all([
         statsSummary(),
         loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
         loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
-        loadSubscriptions({}),
+        loadSubscriptionsNeedingAttention(),
         loadOnlineAccountsRecent(HOME_PREVIEW_LIMIT),
       ]);
       setSummary(sum);
       setDueSoon(d);
       setRecent(r);
       setFreeAccounts(free);
-      setAttentionAll(all.filter(subscriptionNeedsPaidAttention));
+      setAttentionAll(attention);
     } finally {
       setLoading(false);
     }
@@ -84,7 +80,8 @@ export function HomePage() {
     void reload();
   }, [reload]);
 
-  const attentionList = attentionAll;
+  const attentionList = attentionAll.slice(0, ATTENTION_BANNER_LIMIT);
+  const attentionMore = Math.max(0, attentionAll.length - ATTENTION_BANNER_LIMIT);
 
   async function onConfirmPaid(e: React.MouseEvent, id: number) {
     e.stopPropagation();
@@ -150,90 +147,33 @@ export function HomePage() {
                 {t("home.attentionLine", { date: s.next_due_date ?? "" })}
               </li>
             ))}
+            {attentionMore > 0 ? (
+              <li className="text-cream-700">
+                {t("home.attentionMore", { count: attentionMore })}
+              </li>
+            ) : null}
           </ul>
         </div>
       ) : null}
 
       {loading || !summary ? (
-        <p className="sk-text-hint">{t("common.loading")}</p>
+        <StatsGridSkeleton />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="sk-card md:col-span-2">
-            <p className="sk-text-hint text-sm">{t("home.statsCashflowHint")}</p>
-            <Link to="/insights" className="mt-2 inline-block text-sm font-medium text-sage-800 underline">
-              {t("home.openInsights")}
-            </Link>
-          </div>
-          <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("insights.dueThisMonth")}</p>
-            <p className="mt-1 text-xs text-cream-600">
-              {t("insights.monthNumbered", { month: summary.currentMonth.month, year: summary.currentMonth.year })}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-sage-800">
-              {summary.currentMonth.totalPrimary.toFixed(2)} {primary}
-            </p>
-            <p className="sk-text-hint mt-2 text-xs">
-              {t("insights.dueEvents", { count: summary.currentMonth.dueCount })}
-            </p>
-          </div>
-          <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("insights.dueNextMonth")}</p>
-            <p className="mt-1 text-xs text-cream-600">
-              {t("insights.monthNumbered", { month: summary.nextMonth.month, year: summary.nextMonth.year })}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-sage-800">
-              {summary.nextMonth.totalPrimary.toFixed(2)} {primary}
-            </p>
-            <p className="sk-text-hint mt-2 text-xs">
-              {t("insights.dueEvents", { count: summary.nextMonth.dueCount })}
-            </p>
-          </div>
-          <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("insights.projectedYear")}</p>
-            <p className="mt-1 text-xs text-cream-600">
-              {t("insights.yearLabel", { year: summary.currentYearProjected.year })}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-sage-800">
-              {summary.currentYearProjected.totalPrimary.toFixed(2)} {primary}
-            </p>
-            <p className="sk-text-hint mt-2 text-xs">
-              {t("insights.dueEvents", { count: summary.currentYearProjected.dueCount })}
-            </p>
-          </div>
-          <div className="sk-card">
-            <p className="sk-text-hint text-sm font-medium">{t("insights.due30")}</p>
-            <p className="mt-2 text-2xl font-semibold text-walnut-600">
-              {summary.due30Projected.totalPrimary.toFixed(2)} {primary}
-            </p>
-            <p className="sk-text-hint mt-2 text-xs">
-              {t("insights.dueEvents", { count: summary.due30Projected.dueCount })}
-            </p>
-          </div>
-          <div className="md:col-span-2 sk-card">
-            <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.subscriptions")}</p>
-            <p className="text-sm text-cream-800">{summary.recurringCount}</p>
-          </div>
-          <div className="md:col-span-2 sk-card">
-            <p className="sk-text-hint mb-3 text-sm font-medium">{t("insights.byCategoryThisMonth")}</p>
-            <ul className="space-y-2">
-              {summary.byCategory.length === 0 ? (
-                <li className="sk-text-hint">{t("common.none")}</li>
-              ) : (
-                summary.byCategory.map((row) => (
-                  <li
-                    key={row.name}
-                    className="flex flex-wrap justify-between gap-2 text-sm text-cream-800"
-                  >
-                    <span>{row.name}</span>
-                    <span className="font-medium text-sage-800">
-                      {row.amountPrimary.toFixed(2)} {primary}
-                    </span>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        </div>
+        <CashflowSummaryGrid
+          summary={summary}
+          primaryCode={primary}
+          topHint={
+            <>
+              <p className="sk-text-hint text-sm">{t("home.statsCashflowHint")}</p>
+              <Link
+                to="/insights"
+                className="mt-2 inline-block text-sm font-medium text-sage-800 underline"
+              >
+                {t("home.openInsights")}
+              </Link>
+            </>
+          }
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
@@ -241,7 +181,9 @@ export function HomePage() {
           <h3 className="text-base font-semibold tracking-tight text-cream-900">
             {t("home.nearestDue")}
           </h3>
-          {dueSoon.length === 0 ? (
+          {loading ? (
+            <CardGridSkeleton count={HOME_PREVIEW_LIMIT} />
+          ) : dueSoon.length === 0 ? (
             <p className="sk-text-hint text-sm">{t("home.noDueSoon")}</p>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -295,7 +237,7 @@ export function HomePage() {
                           </div>
                           {prog && tone ? (
                             <span
-                              className={`mt-1 line-clamp-1 block text-[10px] font-medium leading-tight ${toneTextClass(tone)}`}
+                              className={`mt-1 line-clamp-1 block text-[10px] font-medium leading-tight ${dueToneTextClass(tone)}`}
                             >
                               {relativeDueCaption(t, prog)}
                             </span>

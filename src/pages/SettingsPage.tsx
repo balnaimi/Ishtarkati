@@ -36,6 +36,7 @@ export function SettingsPage() {
   const [fxMsg, setFxMsg] = useState<string | null>(null);
   const [fxErrDetail, setFxErrDetail] = useState<string | null>(null);
   const [fxBusy, setFxBusy] = useState(false);
+  const [overridesErr, setOverridesErr] = useState<string | null>(null);
   const [remindersOn, setRemindersOn] = useState(false);
   const [reminderDays, setReminderDays] = useState("7");
   const [reminderWeekly, setReminderWeekly] = useState(false);
@@ -144,8 +145,29 @@ export function SettingsPage() {
     }
   }
 
+  function parseOverridesJson(raw: string): Record<string, number> | null {
+    const trimmed = raw.trim() || "{}";
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    for (const v of Object.values(parsed as Record<string, unknown>)) {
+      if (typeof v !== "number" || !Number.isFinite(v)) return null;
+    }
+    return parsed as Record<string, number>;
+  }
+
   async function saveOverrides() {
-    await setSetting(OVERRIDES_KEY, overridesText.trim() || "{}");
+    const parsed = parseOverridesJson(overridesText);
+    if (!parsed) {
+      setOverridesErr(t("settings.fxOverridesInvalid"));
+      return;
+    }
+    setOverridesErr(null);
+    await setSetting(OVERRIDES_KEY, JSON.stringify(parsed));
     void hydrate();
   }
 
@@ -766,8 +788,12 @@ export function SettingsPage() {
             <textarea
               className="sk-textarea font-mono text-sm leading-relaxed"
               value={overridesText}
-              onChange={(e) => setOverridesText(e.target.value)}
+              onChange={(e) => {
+                setOverridesText(e.target.value);
+                if (overridesErr) setOverridesErr(null);
+              }}
             />
+            {overridesErr ? <p className="sk-alert text-sm">{overridesErr}</p> : null}
             <button type="button" className="sk-btn-primary" onClick={() => void saveOverrides()}>
               {t("settings.saveSettings")}
             </button>

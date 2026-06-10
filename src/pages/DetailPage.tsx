@@ -10,6 +10,7 @@ import {
   getPrimaryCurrencyCode,
   getSubscription,
   insertPaymentEvent,
+  insertPaymentEventsBatch,
   listPayments,
   PAYMENT_NOTE_MARK_PAID,
   reactivateSubscription,
@@ -193,9 +194,17 @@ export function DetailPage() {
 
     setBackfillBusy(true);
     try {
-      for (const paidAt of isoDates) {
-        await insertPaymentEvent(sid, paidAt, amtOriginal, cur, amtPrimary, cnt, autoNote);
-      }
+      await insertPaymentEventsBatch(
+        isoDates.map((paidAt) => ({
+          subId: sid,
+          paidAt,
+          amountOriginal: amtOriginal,
+          currency: cur,
+          amountQar: amtPrimary,
+          renewalStepCount: cnt,
+          note: autoNote,
+        })),
+      );
       if (backfillAdvanceNext && isoDates.length > 0) {
         const lastInserted = isoDates[isoDates.length - 1]!;
         let d = parseDateInput(lastInserted);

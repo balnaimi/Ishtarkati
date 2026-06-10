@@ -287,6 +287,46 @@ function buildSubscriptionQuery(filters: {
   return { sql, args };
 }
 
+/** Paid, active subscriptions only — used for cashflow projection (smaller than full table). */
+export async function loadSubscriptionsForCashflow(): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL
+       AND s.billing_model IN ('one_time', 'recurring')
+     ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC`,
+  );
+}
+
+/** Subscriptions with next_due_date on or before today (paid, active). */
+export async function loadSubscriptionsNeedingAttention(): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL
+       AND s.billing_model != 'free_account'
+       AND s.next_due_date IS NOT NULL
+       AND s.next_due_date <= $1
+     ORDER BY s.next_due_date ASC, s.title ASC`,
+    [today],
+  );
+}
+
+export async function loadDistinctSubscriptionCurrencies(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ code: string }>(
+    `SELECT DISTINCT currency_code AS code FROM subscriptions
+     WHERE cancelled_at IS NULL
+     ORDER BY code ASC`,
+  );
+  return rows.map((r) => r.code);
+}
+
 export async function loadSubscriptions(filters: {
   categoryId?: number;
   currency?: string;
@@ -561,11 +601,21 @@ export async function updateSubscriptionQarSnapshot(
   fxFactor: number,
   fxAt: string,
 ): Promise<void> {
+  await batchUpdateSubscriptionQarSnapshots([{ id, qar, fxFactor, fxAt }]);
+}
+
+export async function batchUpdateSubscriptionQarSnapshots(
+  updates: Array<{ id: number; qar: number; fxFactor: number; fxAt: string }>,
+): Promise<void> {
+  if (updates.length === 0) return;
   const db = await getDb();
   const now = new Date().toISOString();
-  await db.execute(
-    `UPDATE subscriptions SET amount_qar_snapshot = $1, fx_rate_used = $2, fx_quote_at = $3, updated_at = $4 WHERE id = $5`,
-    [qar, fxFactor, fxAt, now, id],
+  const sql = `UPDATE subscriptions SET amount_qar_snapshot = $1, fx_rate_used = $2, fx_quote_at = $3, updated_at = $4 WHERE id = $5`;
+  await db.executeTransaction(
+    updates.map((u) => ({
+      sql,
+      params: [u.qar, u.fxFactor, u.fxAt, now, u.id],
+    })),
   );
 }
 
@@ -665,11 +715,48 @@ export async function insertPaymentEvent(
   renewalStepCount: number | null,
   note: string | null,
 ): Promise<void> {
+  await insertPaymentEventsBatch([
+    {
+      subId,
+      paidAt,
+      amountOriginal,
+      currency,
+      amountQar,
+      renewalStepCount,
+      note,
+    },
+  ]);
+}
+
+export async function insertPaymentEventsBatch(
+  events: Array<{
+    subId: number;
+    paidAt: string;
+    amountOriginal: number | null;
+    currency: string | null;
+    amountQar: number | null;
+    renewalStepCount: number | null;
+    note: string | null;
+  }>,
+): Promise<void> {
+  if (events.length === 0) return;
   const db = await getDb();
-  await db.execute(
-    `INSERT INTO payment_events (subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [subId, paidAt, amountOriginal, currency, amountQar, null, renewalStepCount, note],
+  const sql = `INSERT INTO payment_events (subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`;
+  await db.executeTransaction(
+    events.map((e) => ({
+      sql,
+      params: [
+        e.subId,
+        e.paidAt,
+        e.amountOriginal,
+        e.currency,
+        e.amountQar,
+        null,
+        e.renewalStepCount,
+        e.note,
+      ],
+    })),
   );
 }
 
@@ -713,8 +800,16 @@ export async function statsSummary(): Promise<{
   recurringCount: number;
   byCategory: { name: string; amountPrimary: number }[];
 }> {
-  const rows = await loadSubscriptions({});
-  const primaryCode = await getPrimaryCurrencyCode();
+  const [rows, primaryCode, recurringRow] = await Promise.all([
+    loadSubscriptionsForCashflow(),
+    getPrimaryCurrencyCode(),
+    getDb().then((db) =>
+      db.select<{ n: number }>(
+        `SELECT COUNT(*) AS n FROM subscriptions
+         WHERE cancelled_at IS NULL AND billing_model = 'recurring' AND amount_qar_snapshot IS NOT NULL`,
+      ),
+    ),
+  ]);
   const now = new Date();
   const cy = now.getFullYear();
   const cm = now.getMonth();
@@ -739,11 +834,7 @@ export async function statsSummary(): Promise<{
 
   const byCategory = cashflowByCategoryInRange(rows, cur.start, cur.end);
 
-  let recurringCount = 0;
-  for (const s of rows) {
-    if (s.cancelled_at) continue;
-    if (s.billing_model === "recurring" && s.amount_qar_snapshot != null) recurringCount++;
-  }
+  const recurringCount = recurringRow[0]?.n ?? 0;
 
   return {
     primaryCode,

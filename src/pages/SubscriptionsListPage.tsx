@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
+  loadDistinctSubscriptionCurrencies,
   loadSubscriptions,
   loadCategories,
   getPrimaryCurrencyCode,
@@ -17,20 +18,13 @@ import { SiteFavicon } from "../components/SiteFavicon";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
+  dueToneTextClass,
   dueProgressTone,
   relativeDueCaption,
   type DueProgressInput,
-  type DueTone,
 } from "../lib/dueProgress";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
 import { billingModelI18nKey, isFreeAccount, type RecordKindFilter } from "../lib/subscriptionKind";
-
-function toneTextClass(tone: DueTone): string {
-  if (tone === "overdue" || tone === "due") return "sk-tone-due-bar-critical";
-  if (tone === "urgent") return "sk-tone-due-urgent";
-  if (tone === "warn") return "sk-tone-due-bar-warn";
-  return "sk-tone-due-safe";
-}
 
 type SortKey = "next_due" | "title" | "category" | "amount" | "primary";
 
@@ -79,10 +73,9 @@ export function SubscriptionsListPage() {
           search: q || undefined,
         }),
         loadCategories(),
-        loadSubscriptions({}).then((rows) => {
-          const codes = [...new Set(rows.map((r) => r.currency_code))].sort();
-          return codes.map((code, i) => ({ code, sort_order: i }));
-        }),
+        loadDistinctSubscriptionCurrencies().then((codes) =>
+          codes.map((code, i) => ({ code, sort_order: i })),
+        ),
         getPrimaryCurrencyCode(),
       ]);
       setItems(list);
@@ -414,7 +407,7 @@ export function SubscriptionsListPage() {
                         <>
                           {s.next_due_date ?? "—"}
                           {prog && tone ? (
-                            <span className={`mt-0.5 block text-xs font-medium ${toneTextClass(tone)}`}>
+                            <span className={`mt-0.5 block text-xs font-medium ${dueToneTextClass(tone)}`}>
                               {relativeDueCaption(t, prog)}
                             </span>
                           ) : null}
