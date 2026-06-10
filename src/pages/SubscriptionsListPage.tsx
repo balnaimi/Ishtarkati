@@ -184,14 +184,9 @@ export function SubscriptionsListPage() {
           <h2 className="text-xl font-semibold text-cream-900">{t("list.title")}</h2>
           <p className="sk-text-hint mt-1 text-sm">{t("list.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/new?kind=account" className="sk-btn-secondary px-3 py-2 text-sm">
-            {t("accounts.addCta")}
-          </Link>
-          <Link to="/" className="text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
-            ← {t("home.dashboardTitle")}
-          </Link>
-        </div>
+        <Link to="/new?kind=account" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
+          {t("accounts.addCta")}
+        </Link>
       </div>
 
       <details ref={filterDetailsRef} className="sk-card overflow-hidden p-0 shadow-sm">
