@@ -331,29 +331,40 @@ export async function loadSubscriptionsDueSoon(limit: number): Promise<Subscript
   );
 }
 
-export async function loadFreeAccountEmails(): Promise<{ email: string; count: number }[]> {
+/** Distinct emails across all active online accounts (free and paid). */
+export async function loadAllAccountEmails(): Promise<{ email: string; count: number }[]> {
   const db = await getDb();
   return db.select<{ email: string; count: number }>(
     `SELECT MIN(account_label) AS email, COUNT(*) AS count
      FROM subscriptions
-     WHERE billing_model = 'free_account' AND cancelled_at IS NULL
+     WHERE cancelled_at IS NULL
        AND account_label IS NOT NULL AND TRIM(account_label) != ''
      GROUP BY LOWER(TRIM(account_label))
      ORDER BY email ASC`,
   );
 }
 
-export async function loadFreeAccountsRecent(limit: number): Promise<SubscriptionListRow[]> {
+/** @deprecated Use loadAllAccountEmails */
+export async function loadFreeAccountEmails(): Promise<{ email: string; count: number }[]> {
+  return loadAllAccountEmails();
+}
+
+export async function loadOnlineAccountsRecent(limit: number): Promise<SubscriptionListRow[]> {
   const db = await getDb();
   const lim = Math.max(1, Math.min(50, limit));
   return db.select<SubscriptionListRow>(
     `SELECT s.*, c.name AS category_name
      FROM subscriptions s
      LEFT JOIN categories c ON c.id = s.category_id
-     WHERE s.billing_model = 'free_account' AND s.cancelled_at IS NULL
+     WHERE s.cancelled_at IS NULL
      ORDER BY s.updated_at DESC, s.id DESC
      LIMIT ${lim}`,
   );
+}
+
+/** @deprecated Use loadOnlineAccountsRecent */
+export async function loadFreeAccountsRecent(limit: number): Promise<SubscriptionListRow[]> {
+  return loadOnlineAccountsRecent(limit);
 }
 
 export async function getSubscription(id: number): Promise<SubscriptionListRow | null> {
@@ -510,6 +521,23 @@ export async function cancelSubscription(id: number): Promise<void> {
   await db.execute(
     "UPDATE subscriptions SET cancelled_at = $1, updated_at = $2 WHERE id = $3",
     [day, now, id],
+  );
+}
+
+/** End paid tracking but keep the online account (no login lost — subscription stopped). */
+export async function stopSubscriptionKeepAccount(id: number): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.execute(
+    `UPDATE subscriptions SET
+      billing_model = 'free_account',
+      next_due_date = NULL,
+      end_date = NULL,
+      auto_renew = 0,
+      interval_unit = NULL,
+      updated_at = $1
+     WHERE id = $2 AND cancelled_at IS NULL AND billing_model IN ('one_time', 'recurring')`,
+    [now, id],
   );
 }
 

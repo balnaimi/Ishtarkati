@@ -2,13 +2,25 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  loadFreeAccountEmails,
+  loadAllAccountEmails,
   loadSubscriptions,
   type SubscriptionListRow,
 } from "../db/repo";
 import { filterFreeAccounts } from "../lib/accountSearch";
+import {
+  accountPageFilterMatches,
+  accountPaymentStatus,
+  accountPaymentStatusI18nKey,
+  type AccountPageFilter,
+} from "../lib/subscriptionKind";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
+
+function paymentStatusBadgeClass(status: ReturnType<typeof accountPaymentStatus>): string {
+  if (status === "free") return "bg-cream-200/90 text-cream-800";
+  if (status === "one_time") return "bg-walnut-100/90 text-walnut-800";
+  return "bg-sage-100/90 text-sage-900";
+}
 
 export function OnlineAccountsPage() {
   const { t } = useTranslation();
@@ -19,14 +31,15 @@ export function OnlineAccountsPage() {
   const [emails, setEmails] = useState<{ email: string; count: number }[]>([]);
   const [search, setSearch] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
+  const [payFilter, setPayFilter] = useState<AccountPageFilter>("all");
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [list, mailRows] = await Promise.all([
-        loadSubscriptions({ recordKind: "free" }),
-        loadFreeAccountEmails(),
+        loadSubscriptions({ recordKind: "all" }),
+        loadAllAccountEmails(),
       ]);
       setAllItems(list);
       setEmails(mailRows);
@@ -51,12 +64,13 @@ export function OnlineAccountsPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const filteredItems = useMemo(
-    () => filterFreeAccounts(allItems, { search, email: emailFilter }),
-    [allItems, search, emailFilter],
-  );
+  const filteredItems = useMemo(() => {
+    const byPay = allItems.filter((s) => accountPageFilterMatches(s, payFilter));
+    return filterFreeAccounts(byPay, { search, email: emailFilter });
+  }, [allItems, payFilter, search, emailFilter]);
 
-  const hasActiveFilter = search.trim().length > 0 || emailFilter.length > 0;
+  const hasActiveFilter =
+    search.trim().length > 0 || emailFilter.length > 0 || payFilter !== "all";
   const emailMatchCount = emailFilter ? filteredItems.length : null;
 
   return (
@@ -73,6 +87,28 @@ export function OnlineAccountsPage() {
 
       <div className="sk-card space-y-3">
         <p className="text-sm text-cream-800">{t("accounts.searchExplain")}</p>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["all", t("accounts.filterAll")] as const,
+              ["free", t("accounts.filterFree")] as const,
+              ["paid", t("accounts.filterPaid")] as const,
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                payFilter === id
+                  ? "bg-cream-800 text-cream-50"
+                  : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+              }`}
+              onClick={() => setPayFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <label className="sk-label" htmlFor="accounts-search">
@@ -124,6 +160,7 @@ export function OnlineAccountsPage() {
                 onClick={() => {
                   setSearch("");
                   setEmailFilter("");
+                  setPayFilter("all");
                 }}
               >
                 {t("accounts.clearFilters")}
@@ -151,6 +188,7 @@ export function OnlineAccountsPage() {
             onClick={() => {
               setSearch("");
               setEmailFilter("");
+              setPayFilter("all");
             }}
           >
             {t("accounts.clearFilters")}
@@ -158,11 +196,12 @@ export function OnlineAccountsPage() {
         </div>
       ) : (
         <div className="sk-card overflow-x-auto p-0 shadow-sm">
-          <table className="w-full min-w-[560px] text-start text-sm">
+          <table className="w-full min-w-[640px] text-start text-sm">
             <thead className="border-b border-cream-400 bg-cream-200/80 text-cream-800">
               <tr>
                 <th className="px-3 py-3 font-semibold">{t("accounts.colSite")}</th>
                 <th className="px-3 py-3 font-semibold">{t("accounts.colEmail")}</th>
+                <th className="px-3 py-3 font-semibold">{t("accounts.colPayment")}</th>
                 <th className="px-3 py-3 font-semibold">{t("accounts.colPurpose")}</th>
                 <th className="px-3 py-3 font-semibold">{t("list.category")}</th>
                 <th className="px-3 py-3 font-semibold">{t("common.actions")}</th>
@@ -171,6 +210,7 @@ export function OnlineAccountsPage() {
             <tbody>
               {filteredItems.map((s) => {
                 const host = hostnameFromWebsiteUrl(s.website_url);
+                const payStatus = accountPaymentStatus(s);
                 return (
                   <tr
                     key={s.id}
@@ -213,6 +253,13 @@ export function OnlineAccountsPage() {
                       ) : (
                         <span className="text-cream-500">—</span>
                       )}
+                    </td>
+                    <td className="px-3 py-3 align-top">
+                      <span
+                        className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${paymentStatusBadgeClass(payStatus)}`}
+                      >
+                        {t(accountPaymentStatusI18nKey(payStatus))}
+                      </span>
                     </td>
                     <td className="max-w-xs px-3 py-3 align-top text-cream-800">
                       {s.notes?.trim() ? (

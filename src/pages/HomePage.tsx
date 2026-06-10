@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
-  loadFreeAccountsRecent,
+  loadOnlineAccountsRecent,
   loadSubscriptions,
   loadSubscriptionsDueSoon,
   loadSubscriptionsRecent,
@@ -11,7 +11,12 @@ import {
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
-import { billingModelI18nKey, isFreeAccount } from "../lib/subscriptionKind";
+import {
+  accountPaymentStatus,
+  accountPaymentStatusI18nKey,
+  billingModelI18nKey,
+  isFreeAccount,
+} from "../lib/subscriptionKind";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
@@ -63,7 +68,7 @@ export function HomePage() {
         loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
         loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
         loadSubscriptions({}),
-        loadFreeAccountsRecent(HOME_PREVIEW_LIMIT),
+        loadOnlineAccountsRecent(HOME_PREVIEW_LIMIT),
       ]);
       setSummary(sum);
       setDueSoon(d);
@@ -415,8 +420,11 @@ export function HomePage() {
                     <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-cream-950">
                       {s.title}
                     </p>
+                    <p className="mt-1 text-[10px] font-medium text-cream-600">
+                      {t(accountPaymentStatusI18nKey(accountPaymentStatus(s)))}
+                    </p>
                     {s.account_label?.trim() ? (
-                      <p dir="ltr" className="mt-1 truncate text-[11px] text-sage-800">
+                      <p dir="ltr" className="mt-0.5 truncate text-[11px] text-sage-800">
                         {s.account_label.trim()}
                       </p>
                     ) : null}

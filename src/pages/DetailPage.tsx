@@ -6,6 +6,7 @@ import {
   cancelSubscription,
   confirmSubscriptionPaid,
   deleteSubscription,
+  stopSubscriptionKeepAccount,
   getPrimaryCurrencyCode,
   getSubscription,
   insertPaymentEvent,
@@ -28,7 +29,12 @@ import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { displayUrlForUi } from "../lib/siteFavicon";
-import { billingModelI18nKey, isFreeAccount } from "../lib/subscriptionKind";
+import {
+  accountPaymentStatus,
+  accountPaymentStatusI18nKey,
+  isFreeAccount,
+  isPaidSubscription,
+} from "../lib/subscriptionKind";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { effectiveRenewalSteps } from "../lib/paymentRenewal";
 
@@ -66,6 +72,7 @@ export function DetailPage() {
   const [backfillAdvanceNext, setBackfillAdvanceNext] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [stopPayConfirmOpen, setStopPayConfirmOpen] = useState(false);
 
   const reload = useCallback(async () => {
     if (!id) return;
@@ -244,6 +251,13 @@ export function DetailPage() {
     void reload();
   }
 
+  async function handleStopSubscriptionKeepAccount() {
+    if (!id) return;
+    await stopSubscriptionKeepAccount(parseInt(id, 10));
+    setStopPayConfirmOpen(false);
+    void reload();
+  }
+
   if (loading) {
     return <p className="text-cream-700">{t("common.loading")}</p>;
   }
@@ -262,16 +276,26 @@ export function DetailPage() {
 
   const needsPaid = subscriptionNeedsPaidAttention(sub);
   const free = isFreeAccount(sub);
+  const paid = isPaidSubscription(sub);
+  const payStatus = accountPaymentStatus(sub);
 
   return (
     <>
       <ConfirmDialog
         open={cancelConfirmOpen}
-        title={t("detail.cancelSubscriptionTitle")}
-        message={t("detail.cancelSubscriptionConfirm")}
-        confirmLabel={t("detail.cancelSubscriptionConfirmBtn")}
+        title={t("detail.accountDeletedTitle")}
+        message={t("detail.accountDeletedConfirm")}
+        confirmLabel={t("detail.accountDeletedConfirmBtn")}
         onConfirm={() => void handleMarkCancelled()}
         onCancel={() => setCancelConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        open={stopPayConfirmOpen}
+        title={t("detail.stopPayTitle")}
+        message={t("detail.stopPayConfirm")}
+        confirmLabel={t("detail.stopPayConfirmBtn")}
+        onConfirm={() => void handleStopSubscriptionKeepAccount()}
+        onCancel={() => setStopPayConfirmOpen(false)}
       />
       <ConfirmDialog
         open={deleteConfirmOpen}
@@ -302,7 +326,7 @@ export function DetailPage() {
               ) : null}
               <p className="text-sm text-cream-700">
                 <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">
-                  {t(billingModelI18nKey(sub.billing_model))}
+                  {t(accountPaymentStatusI18nKey(payStatus))}
                 </span>
               </p>
               {sub.account_label?.trim() ? (
@@ -367,7 +391,7 @@ export function DetailPage() {
                 {copiedKey === "url" ? t("detail.copied") : t("detail.copyUrl")}
               </button>
             ) : null}
-            {free && sub.account_label?.trim() ? (
+            {sub.account_label?.trim() ? (
               <button
                 type="button"
                 className="sk-btn-secondary text-xs"
@@ -395,9 +419,25 @@ export function DetailPage() {
               {t("detail.reactivate")}
             </button>
           ) : (
-            <button type="button" className="sk-btn-secondary text-sm" onClick={() => setCancelConfirmOpen(true)}>
-              {t("detail.markCancelled")}
-            </button>
+            <>
+              {paid ? (
+                <button
+                  type="button"
+                  className="sk-btn-secondary text-sm"
+                  onClick={() => setStopPayConfirmOpen(true)}
+                >
+                  {t("detail.stopPayBtn")}
+                </button>
+              ) : null}
+              {free ? (
+                <Link to={`/sub/${sub.id}/edit`} className="sk-btn-primary text-sm">
+                  {t("detail.addPaidBtn")}
+                </Link>
+              ) : null}
+              <button type="button" className="sk-btn-secondary text-sm" onClick={() => setCancelConfirmOpen(true)}>
+                {t("detail.markAccountDeleted")}
+              </button>
+            </>
           )}
           <button type="button" className="sk-btn-danger text-sm" onClick={() => setDeleteConfirmOpen(true)}>
             {t("common.delete")}
@@ -421,9 +461,9 @@ export function DetailPage() {
         </div>
       ) : null}
 
-      {free ? (
+      {!sub.cancelled_at ? (
         <div className="sk-callout-muted text-sm">
-          <p>{t("detail.freeAccountHint")}</p>
+          <p>{free ? t("detail.freeAccountHint") : t("detail.paidAccountHint")}</p>
           <Link to="/accounts" className="mt-2 inline-block font-medium text-sage-800 underline">
             {t("home.openAccounts")}
           </Link>
