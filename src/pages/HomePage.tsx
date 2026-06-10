@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
+  loadCreditCards,
   loadOnlineAccountsRecent,
   loadSubscriptionsDueSoon,
   loadSubscriptionsNeedingAttention,
@@ -12,7 +13,9 @@ import {
   type SubscriptionListRow,
 } from "../db/repo";
 import { CashflowSummaryGrid } from "../components/CashflowSummaryGrid";
+import { HomeCreditCardsSummary } from "../components/HomeCreditCardsSummary";
 import { CardGridSkeleton, StatsGridSkeleton } from "../components/LoadingSkeleton";
+import type { CreditCard } from "../types";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
@@ -55,21 +58,24 @@ export function HomePage() {
 
   const [attentionAll, setAttentionAll] = useState<SubscriptionListRow[]>([]);
   const [freeAccounts, setFreeAccounts] = useState<SubscriptionListRow[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, d, r, attention, free] = await Promise.all([
+      const [sum, d, r, attention, free, cards] = await Promise.all([
         statsSummary(),
         loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
         loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
         loadSubscriptionsNeedingAttention(),
         loadOnlineAccountsRecent(HOME_PREVIEW_LIMIT),
+        loadCreditCards(),
       ]);
       setSummary(sum);
       setDueSoon(d);
       setRecent(r);
       setFreeAccounts(free);
+      setCreditCards(cards);
       setAttentionAll(attention);
     } finally {
       setLoading(false);
@@ -124,8 +130,8 @@ export function HomePage() {
           <Link to="/accounts" className="sk-btn-secondary px-4 py-2.5 text-center">
             {t("nav.accounts")}
           </Link>
-          <Link to="/cancelled" className="sk-btn-secondary px-4 py-2.5 text-center">
-            {t("nav.cancelled")}
+          <Link to="/payments" className="sk-btn-secondary px-4 py-2.5 text-center">
+            {t("nav.payments")}
           </Link>
         </div>
       </div>
@@ -175,6 +181,12 @@ export function HomePage() {
           }
         />
       )}
+
+      {!loading ? (
+        <div className="grid gap-5 md:grid-cols-2">
+          <HomeCreditCardsSummary cards={creditCards} />
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <section className="space-y-2.5">

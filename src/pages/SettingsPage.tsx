@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   getPrimaryCurrencyCode,
@@ -13,7 +13,6 @@ import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/table
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 import { CategoriesPage } from "./CategoriesPage";
-import { PaymentMethodsPanel } from "../components/PaymentMethodsPanel";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
@@ -23,10 +22,11 @@ import type { BackupImportPreview } from "../types/backupIPC";
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
-type TabId = "app" | "categories" | "payments" | "export" | "danger";
+type TabId = "app" | "categories" | "export" | "danger";
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<TabId>("app");
   const [overridesText, setOverridesText] = useState("{}");
@@ -118,12 +118,11 @@ export function SettingsPage() {
 
   useEffect(() => {
     const raw = searchParams.get("tab");
-    if (
-      raw === "categories" ||
-      raw === "payments" ||
-      raw === "export" ||
-      raw === "danger"
-    ) {
+    if (raw === "payments") {
+      nav("/payments", { replace: true });
+      return;
+    }
+    if (raw === "categories" || raw === "export" || raw === "danger") {
       setTab(raw);
     } else if (raw === "tags") {
       setTab("categories");
@@ -134,7 +133,7 @@ export function SettingsPage() {
     } else {
       setTab("app");
     }
-  }, [searchParams]);
+  }, [searchParams, nav]);
 
   function selectTab(id: TabId) {
     setTab(id);
@@ -445,7 +444,6 @@ export function SettingsPage() {
   const tabs: { id: TabId; label: string }[] = [
     { id: "app", label: t("settings.tabApp") },
     { id: "categories", label: t("settings.tabCategories") },
-    { id: "payments", label: t("settings.tabPayments") },
     { id: "export", label: t("settings.tabExport") },
     { id: "danger", label: t("settings.tabDanger") },
   ];
@@ -809,8 +807,6 @@ export function SettingsPage() {
       ) : null}
 
       {tab === "categories" ? <CategoriesPage omitTitle /> : null}
-      {tab === "payments" ? <PaymentMethodsPanel /> : null}
-
       {tab === "export" ? (
         <div className="space-y-6">
           <section className="sk-card space-y-4">

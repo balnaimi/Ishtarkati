@@ -328,7 +328,7 @@ export function DetailPage() {
                 <div className="sk-callout-muted text-sm">
                   <p className="font-medium text-cream-900">{t("detail.cancelledBannerTitle")}</p>
                   <p className="mt-1 text-cream-800">{t("detail.cancelledBannerBody", { date: sub.cancelled_at })}</p>
-                  <Link to="/cancelled" className="mt-2 inline-block text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
+                  <Link to="/accounts?tab=deleted" className="mt-2 inline-block text-sm font-medium text-sage-800 underline-offset-2 hover:underline">
                     {t("detail.cancelledBannerLink")}
                   </Link>
                 </div>

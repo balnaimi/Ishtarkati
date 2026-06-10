@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   loadAllAccountEmails,
@@ -13,8 +13,11 @@ import {
   accountPaymentStatusI18nKey,
   type AccountPageFilter,
 } from "../lib/subscriptionKind";
+import { CancelledAccountsTab } from "../components/CancelledAccountsTab";
 import { SiteFavicon } from "../components/SiteFavicon";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
+
+type AccountsPageTab = "active" | "deleted";
 
 function paymentStatusBadgeClass(status: ReturnType<typeof accountPaymentStatus>): string {
   if (status === "free") return "bg-cream-200/90 text-cream-800";
@@ -26,6 +29,9 @@ export function OnlineAccountsPage() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageTab: AccountsPageTab =
+    searchParams.get("tab") === "deleted" ? "deleted" : "active";
   const searchRef = useRef<HTMLInputElement>(null);
   const [allItems, setAllItems] = useState<SubscriptionListRow[]>([]);
   const [emails, setEmails] = useState<{ email: string; count: number }[]>([]);
@@ -80,11 +86,50 @@ export function OnlineAccountsPage() {
           <h2 className="text-xl font-semibold text-cream-900">{t("accounts.title")}</h2>
           <p className="sk-text-hint mt-1 text-sm">{t("accounts.subtitle")}</p>
         </div>
-        <Link to="/new" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
-          {t("accounts.addCta")}
-        </Link>
+        {pageTab === "active" ? (
+          <Link to="/new" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
+            {t("accounts.addCta")}
+          </Link>
+        ) : null}
       </div>
 
+      <div className="flex flex-wrap gap-2 border-b border-cream-400/70 pb-1">
+        {(
+          [
+            ["active", t("accounts.tabActive")] as const,
+            ["deleted", t("accounts.tabDeleted")] as const,
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`rounded-t-lg px-4 py-2 text-sm font-medium ${
+              pageTab === id
+                ? "bg-cream-800 text-cream-50"
+                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+            }`}
+            onClick={() => {
+              if (id === "active") {
+                setSearchParams({}, { replace: true });
+              } else {
+                setSearchParams({ tab: "deleted" }, { replace: true });
+              }
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {pageTab === "deleted" ? (
+        <div className="space-y-3">
+          <p className="text-sm text-cream-700">{t("cancelled.subtitle")}</p>
+          <CancelledAccountsTab />
+        </div>
+      ) : null}
+
+      {pageTab === "active" ? (
+      <>
       <div className="sk-card space-y-3">
         <p className="text-sm text-cream-800">{t("accounts.searchExplain")}</p>
         <div className="flex flex-wrap gap-2">
@@ -284,6 +329,8 @@ export function OnlineAccountsPage() {
           </table>
         </div>
       )}
+      </>
+      ) : null}
     </div>
   );
 }

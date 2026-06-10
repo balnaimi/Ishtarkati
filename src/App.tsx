@@ -11,11 +11,13 @@ const SubscriptionsListPage = lazy(() =>
 const OnlineAccountsPage = lazy(() =>
   import("./pages/OnlineAccountsPage").then((m) => ({ default: m.OnlineAccountsPage })),
 );
-const CancelledSubscriptionsPage = lazy(() =>
-  import("./pages/CancelledSubscriptionsPage").then((m) => ({
-    default: m.CancelledSubscriptionsPage,
-  })),
+const PaymentMethodsPage = lazy(() =>
+  import("./pages/PaymentMethodsPage").then((m) => ({ default: m.PaymentMethodsPage })),
 );
+
+function CancelledRedirect() {
+  return <Navigate to="/accounts?tab=deleted" replace />;
+}
 const InsightsPage = lazy(() =>
   import("./pages/InsightsPage").then((m) => ({ default: m.InsightsPage })),
 );
@@ -66,11 +68,12 @@ export default function App() {
                   </LazyPage>
                 }
               />
+              <Route path="cancelled" element={<CancelledRedirect />} />
               <Route
-                path="cancelled"
+                path="payments"
                 element={
                   <LazyPage>
-                    <CancelledSubscriptionsPage />
+                    <PaymentMethodsPage />
                   </LazyPage>
                 }
               />
