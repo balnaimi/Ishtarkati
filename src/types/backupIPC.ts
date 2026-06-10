@@ -38,9 +38,5 @@ export interface BackupImportPreview {
 }
 
 export interface BackupImportApplyArgs {
-  filePath?: string;
-  json?: string;
-  strategy: "replace" | "merge";
-  onDuplicateId: "keep_local" | "prefer_import";
-  onSimilarSubscription: "keep_both" | "replace_local";
+  filePath: string;
 }

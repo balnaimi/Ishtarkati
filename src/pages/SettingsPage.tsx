@@ -18,7 +18,7 @@ import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCurrency } from "../lib/i18nLabels";
-import type { BackupImportApplyArgs, BackupImportPreview } from "../types/backupIPC";
+import type { BackupImportPreview } from "../types/backupIPC";
 
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
@@ -186,30 +186,13 @@ export function SettingsPage() {
     }
   }
 
-  async function handleExportFull() {
+  async function handleBackupExport() {
     setBackupMsg(null);
     setBackupBusy(true);
     try {
-      const r = await window.ishtarkati.backupExport({ scope: "full" });
+      const r = await window.ishtarkati.backupExport();
       if (r.ok) {
         setBackupMsg(`${t("backup.exportOk")}: ${r.path}`);
-      } else if (r.canceled) {
-        setBackupMsg(t("backup.canceled"));
-      } else {
-        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
-      }
-    } finally {
-      setBackupBusy(false);
-    }
-  }
-
-  async function handleExportWithoutSettings() {
-    setBackupMsg(null);
-    setBackupBusy(true);
-    try {
-      const r = await window.ishtarkati.backupExport({ scope: "without_settings" });
-      if (r.ok) {
-        setBackupMsg(`${t("backup.exportOkWithoutSettings")}: ${r.path}`);
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
@@ -238,11 +221,11 @@ export function SettingsPage() {
     }
   }
 
-  async function applyImport(args: BackupImportApplyArgs) {
+  async function applyImport(filePath: string) {
     setBackupMsg(null);
     setImportApplying(true);
     try {
-      const r = await window.ishtarkati.backupApplyImport(args);
+      const r = await window.ishtarkati.backupApplyImport({ filePath });
       if (r.ok) {
         setImportDlgOpen(false);
         setImportPreview(null);
@@ -812,7 +795,7 @@ export function SettingsPage() {
                 type="button"
                 className="sk-btn-primary min-h-12 flex-1 text-base"
                 disabled={backupBusy}
-                onClick={() => void handleExportFull()}
+                onClick={() => void handleBackupExport()}
               >
                 {t("backup.exportButton")}
               </button>
@@ -826,20 +809,7 @@ export function SettingsPage() {
               </button>
             </div>
             {backupMsg ? <p className="sk-callout-muted">{backupMsg}</p> : null}
-            <details className="text-sm text-cream-700">
-              <summary className="cursor-pointer font-medium text-cream-900">{t("backup.moreOptions")}</summary>
-              <div className="mt-3 space-y-3">
-                <p className="text-xs text-cream-600">{t("backup.versionHint", { exportV: 6 })}</p>
-                <button
-                  type="button"
-                  className="sk-btn-muted text-sm"
-                  disabled={backupBusy}
-                  onClick={() => void handleExportWithoutSettings()}
-                >
-                  {t("backup.exportWithoutSettings")}
-                </button>
-              </div>
-            </details>
+            <p className="text-xs text-cream-600">{t("backup.versionHint", { exportV: 6 })}</p>
           </section>
 
           <section className="sk-card space-y-4">
@@ -935,7 +905,7 @@ export function SettingsPage() {
           setImportDlgOpen(false);
           setImportPreview(null);
         }}
-        onApply={(args) => void applyImport(args)}
+        onConfirm={(filePath) => void applyImport(filePath)}
       />
     </div>
   );

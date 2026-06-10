@@ -93,6 +93,61 @@ function createTestDatabase(): Database.Database {
   return db;
 }
 
+function tableSnapshot(db: Database.Database, table: string, orderBy: string): unknown[] {
+  return db.prepare(`SELECT * FROM ${table} ORDER BY ${orderBy}`).all();
+}
+
+function seedComprehensive(db: Database.Database): void {
+  db.prepare(
+    `INSERT INTO categories (id, name, sort_order) VALUES (1, 'ترفيه', 0), (2, 'سحابة', 1)`,
+  ).run();
+  db.prepare(
+    `INSERT INTO currencies (code, sort_order) VALUES ('QAR', 0), ('USD', 1)`,
+  ).run();
+  db.prepare(
+    `INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
+     VALUES (1, 'visa', '4242', 12, 2028, 'بطاقة رئيسية', ?, ?)`,
+  ).run(NOW, NOW);
+  db.prepare(
+    `INSERT INTO wallet_methods (id, service_code, account_text, linked_card_id, created_at, updated_at)
+     VALUES (1, 'apple_pay', 'user@mail.com', 1, ?, ?)`,
+  ).run(NOW, NOW);
+  db.prepare(
+    `INSERT INTO subscriptions (
+      id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
+      interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used,
+      fx_quote_at, start_date, next_due_date, end_date, is_domain, tags, credit_card_id,
+      wallet_method_id, account_label, cancelled_at, created_at, updated_at
+    ) VALUES
+    (1, 'Netflix', 'عائلة', 'https://www.netflix.com', 1, 'recurring', 'month', NULL,
+     1, 1, 50, 'QAR', 50, 1, '${NOW}', '2025-01-01', '2026-07-01', NULL, 0, NULL, NULL,
+     1, 'family@mail.com', NULL, '${NOW}', '${NOW}'),
+    (2, 'نشرة تقنية', 'مجاني', 'https://newsletter.example.com', 2, 'free_account', NULL, NULL,
+     1, 0, 0, 'QAR', NULL, NULL, NULL, '2026-01-15', NULL, NULL, 0, NULL, NULL,
+     NULL, 'reader@mail.com', NULL, '${NOW}', '${NOW}'),
+    (3, 'خدمة ملغاة', NULL, 'https://old.example.com', NULL, 'recurring', 'year', NULL,
+     1, 0, 99, 'USD', NULL, NULL, NULL, '2024-01-01', NULL, NULL, 0, NULL, NULL,
+     NULL, NULL, '2026-03-01', '${NOW}', '${NOW}'),
+    (4, 'دومين', NULL, 'https://example.org', NULL, 'one_time', 'year', NULL,
+     5, 0, 120, 'USD', 438, 3.65, '${NOW}', '2026-02-01', NULL, '2031-02-01', 1, NULL, 1,
+     NULL, NULL, NULL, '${NOW}', '${NOW}')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO payment_events (id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)
+     VALUES
+     (1, 1, '2026-06-01', 50, 'QAR', 50, NULL, NULL, 'دفعة شهرية'),
+     (2, 4, '2026-02-01', 120, 'USD', 438, 5, 5, 'تجديد ٥ سنوات')`,
+  ).run();
+  db.prepare(
+    `INSERT INTO settings (key, value) VALUES
+     ('primary_currency', 'QAR'),
+     ('reminders_enabled', '1'),
+     ('reminder_due_days', '7'),
+     ('onboarding_complete', '1'),
+     ('app_pin_enabled', '0')`,
+  ).run();
+}
+
 function seedDeviceA(db: Database.Database): void {
   db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (1, 'سحابة', 0)").run();
   db.prepare("INSERT INTO currencies (code, sort_order) VALUES ('QAR', 0)").run();
@@ -366,6 +421,133 @@ describe("buildImportPreview", () => {
       expect(preview.counts.db.subscriptions).toBe(1);
     } finally {
       deviceB.close();
+    }
+  });
+});
+
+describe("comprehensive round-trip (all account types)", () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = createTestDatabase();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it("full replace preserves every table row and field", () => {
+    seedComprehensive(db);
+    const before = {
+      categories: tableSnapshot(db, "categories", "id"),
+      currencies: tableSnapshot(db, "currencies", "code"),
+      credit_cards: tableSnapshot(db, "credit_cards", "id"),
+      wallet_methods: tableSnapshot(db, "wallet_methods", "id"),
+      subscriptions: tableSnapshot(db, "subscriptions", "id"),
+      payment_events: tableSnapshot(db, "payment_events", "id"),
+      settings: tableSnapshot(db, "settings", "key"),
+    };
+
+    const payload = buildBackupPayloadFromDatabase(db, "full");
+    const restored = createTestDatabase();
+    try {
+      applyBackupImport(restored, payload, {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+
+      expect(tableSnapshot(restored, "categories", "id")).toEqual(before.categories);
+      expect(tableSnapshot(restored, "currencies", "code")).toEqual(before.currencies);
+      expect(tableSnapshot(restored, "credit_cards", "id")).toEqual(before.credit_cards);
+      expect(tableSnapshot(restored, "wallet_methods", "id")).toEqual(before.wallet_methods);
+      expect(tableSnapshot(restored, "subscriptions", "id")).toEqual(before.subscriptions);
+      expect(tableSnapshot(restored, "payment_events", "id")).toEqual(before.payment_events);
+      expect(tableSnapshot(restored, "settings", "key")).toEqual(before.settings);
+
+      const free = restored
+        .prepare("SELECT billing_model, account_label FROM subscriptions WHERE id = 2")
+        .get() as { billing_model: string; account_label: string };
+      expect(free.billing_model).toBe("free_account");
+      expect(free.account_label).toBe("reader@mail.com");
+
+      const cancelled = restored
+        .prepare("SELECT cancelled_at FROM subscriptions WHERE id = 3")
+        .get() as { cancelled_at: string };
+      expect(cancelled.cancelled_at).toBe("2026-03-01");
+
+      const walletLink = restored
+        .prepare("SELECT linked_card_id FROM wallet_methods WHERE id = 1")
+        .get() as { linked_card_id: number };
+      expect(walletLink.linked_card_id).toBe(1);
+
+      const payStep = restored
+        .prepare("SELECT renewal_step_count FROM payment_events WHERE id = 2")
+        .get() as { renewal_step_count: number };
+      expect(payStep.renewal_step_count).toBe(5);
+    } finally {
+      restored.close();
+    }
+  });
+
+  it("full replace via JSON parse matches export→import pipeline", () => {
+    seedComprehensive(db);
+    const json = JSON.stringify(buildBackupPayloadFromDatabase(db, "full"));
+    const restored = createTestDatabase();
+    try {
+      applyBackupImport(restored, parseBackupJson(json), {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+      expect(countRow(restored, "subscriptions")).toBe(4);
+      expect(countRow(restored, "payment_events")).toBe(2);
+      expect(countRow(restored, "settings")).toBe(5);
+    } finally {
+      restored.close();
+    }
+  });
+
+  it("normalizes legacy pay_as_needed to one_time on import", () => {
+    const legacyPayload: BackupPayload = {
+      exportVersion: 5,
+      exportScope: "full",
+      exportedAt: NOW,
+      appVersion: "2.0.0",
+      categories: [],
+      currencies: [],
+      credit_cards: [],
+      wallet_methods: [],
+      settings: [],
+      subscriptions: [
+        {
+          id: 10,
+          title: "قديم",
+          billing_model: "pay_as_needed",
+          amount_original: 5,
+          currency_code: "QAR",
+          interval_count: 1,
+          auto_renew: 0,
+          is_domain: 0,
+          created_at: NOW,
+          updated_at: NOW,
+        },
+      ],
+      payment_events: [],
+    };
+    const restored = createTestDatabase();
+    try {
+      applyBackupImport(restored, legacyPayload, {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+      const row = restored
+        .prepare("SELECT billing_model FROM subscriptions WHERE id = 10")
+        .get() as { billing_model: string };
+      expect(row.billing_model).toBe("one_time");
+    } finally {
+      restored.close();
     }
   });
 });

@@ -19,15 +19,10 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     ipcRenderer.invoke("db:transaction", ops),
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke("shell:openExternal", url),
-  backupExport: (opts?: { scope?: "full" | "without_settings" }) =>
-    ipcRenderer.invoke("backup:export", opts ?? {}),
+  backupExport: () => ipcRenderer.invoke("backup:export"),
   backupPrepareImport: () => ipcRenderer.invoke("backup:prepareImport"),
-  backupApplyImport: (payload: {
-    filePath: string;
-    strategy: "replace" | "merge";
-    onDuplicateId: "keep_local" | "prefer_import";
-    onSimilarSubscription: "keep_both" | "replace_local";
-  }) => ipcRenderer.invoke("backup:applyImport", payload),
+  backupApplyImport: (payload: { filePath: string }) =>
+    ipcRenderer.invoke("backup:applyImport", payload),
   showNotification: (opts: { title: string; body: string }): Promise<boolean> =>
     ipcRenderer.invoke("notification:show", opts),
   pinStatus: (): Promise<{ enabled: boolean; hasPin: boolean }> =>

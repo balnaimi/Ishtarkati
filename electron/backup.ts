@@ -993,16 +993,7 @@ function isApplyPayload(raw: unknown): raw is ImportApplyPayload {
   if (!isRecord(raw)) return false;
   const hasFile = typeof raw.filePath === "string" && String(raw.filePath).length > 0;
   const hasJson = typeof raw.json === "string" && String(raw.json).length > 0;
-  if (!hasFile && !hasJson) return false;
-  if (raw.strategy !== "replace" && raw.strategy !== "merge") return false;
-  if (raw.onDuplicateId !== "keep_local" && raw.onDuplicateId !== "prefer_import") return false;
-  if (
-    raw.onSimilarSubscription !== "keep_both" &&
-    raw.onSimilarSubscription !== "replace_local"
-  ) {
-    return false;
-  }
-  return true;
+  return hasFile || hasJson;
 }
 
 export function registerBackupIpc(
@@ -1010,25 +1001,14 @@ export function registerBackupIpc(
   getWin: () => BrowserWindow | null,
   onDataChanged?: () => void,
 ): void {
-  ipcMain.handle("backup:export", async (_evt, raw?: unknown) => {
-    let scope: BackupExportScope = "full";
-    const reqScope =
-      raw != null && typeof raw === "object" && !Array.isArray(raw)
-        ? (raw as { scope?: string }).scope
-        : undefined;
-    if (reqScope === "without_settings" || reqScope === "subscriptions_only") {
-      scope = "without_settings";
-    }
+  ipcMain.handle("backup:export", async () => {
     const database = getDb();
     const w = getWin();
     if (!database) return { ok: false as const, error: "no-database" };
     if (!w) return { ok: false as const, error: "no-window" };
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const defaultPath =
-      scope === "without_settings"
-        ? `ishtarkati-data-${stamp}.json`
-        : `ishtarkati-backup-${stamp}.json`;
+    const defaultPath = `ishtarkati-backup-${stamp}.json`;
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
       title: localeAr.electron.backupSaveTitle,
       defaultPath,
@@ -1036,7 +1016,7 @@ export function registerBackupIpc(
     });
     if (canceled || !filePath) return { ok: false as const, canceled: true };
 
-    const payload = buildBackupPayloadFromDatabase(database, scope);
+    const payload = buildBackupPayloadFromDatabase(database, "full");
     fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
     return { ok: true as const, path: filePath };
   });
@@ -1079,9 +1059,9 @@ export function registerBackupIpc(
         return { ok: false as const, error: "missing-backup-source" };
       }
       applyBackupImport(database, data, {
-        strategy: raw.strategy,
-        onDuplicateId: raw.onDuplicateId,
-        onSimilarSubscription: raw.onSimilarSubscription,
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
       });
       onDataChanged?.();
       return { ok: true as const };
