@@ -8,9 +8,6 @@ import { HomePage } from "./pages/HomePage";
 const SubscriptionsListPage = lazy(() =>
   import("./pages/SubscriptionsListPage").then((m) => ({ default: m.SubscriptionsListPage })),
 );
-const OnlineAccountsPage = lazy(() =>
-  import("./pages/OnlineAccountsPage").then((m) => ({ default: m.OnlineAccountsPage })),
-);
 const PaymentMethodsPage = lazy(() =>
   import("./pages/PaymentMethodsPage").then((m) => ({ default: m.PaymentMethodsPage })),
 );
@@ -52,19 +49,12 @@ export default function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<HomePage />} />
-              <Route
-                path="list"
-                element={
-                  <LazyPage>
-                    <SubscriptionsListPage />
-                  </LazyPage>
-                }
-              />
+              <Route path="list" element={<Navigate to="/accounts" replace />} />
               <Route
                 path="accounts"
                 element={
                   <LazyPage>
-                    <OnlineAccountsPage />
+                    <SubscriptionsListPage />
                   </LazyPage>
                 }
               />
