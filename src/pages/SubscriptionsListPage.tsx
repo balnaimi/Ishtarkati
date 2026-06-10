@@ -184,7 +184,7 @@ export function SubscriptionsListPage() {
           <h2 className="text-xl font-semibold text-cream-900">{t("list.title")}</h2>
           <p className="sk-text-hint mt-1 text-sm">{t("list.subtitle")}</p>
         </div>
-        <Link to="/new?kind=account" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
+        <Link to="/new" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
           {t("accounts.addCta")}
         </Link>
       </div>

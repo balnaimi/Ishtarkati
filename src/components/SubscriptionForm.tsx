@@ -23,6 +23,9 @@ interface SubscriptionFormProps {
   ) => Promise<void>;
   onCancel: () => void;
   submitLabel?: string;
+  /** When set with `blockPaidWithoutMethods`, blocks saving a paid account without a payment method. */
+  paymentMethodCount?: number | null;
+  blockPaidWithoutMethods?: boolean;
 }
 
 export function SubscriptionForm({
@@ -35,6 +38,8 @@ export function SubscriptionForm({
   onSubmit,
   onCancel,
   submitLabel,
+  paymentMethodCount = null,
+  blockPaidWithoutMethods = false,
 }: SubscriptionFormProps) {
   const { t } = useTranslation();
   const [v, setV] = useState<SubscriptionFormValues>(initial);
@@ -152,12 +157,51 @@ export function SubscriptionForm({
   }
 
   const isFree = v.billing_model === "free_account";
+  const paidBlocked =
+    blockPaidWithoutMethods && !isFree && paymentMethodCount === 0;
+
+  function applyPayMode(mode: "free" | "paid") {
+    setV((prev) => {
+      if (mode === "free") {
+        return {
+          ...prev,
+          billing_model: "free_account",
+          amount_original: "0",
+          currency_code: primary || prev.currency_code,
+          interval_unit: "",
+          auto_renew: false,
+          next_due_date: "",
+          end_date: "",
+          wallet_method_id: "",
+          credit_card_id: "",
+        };
+      }
+      const nextBilling =
+        prev.billing_model === "one_time" || prev.billing_model === "recurring"
+          ? prev.billing_model
+          : "recurring";
+      return {
+        ...prev,
+        billing_model: nextBilling,
+        interval_unit: nextBilling === "recurring" ? prev.interval_unit || "month" : "",
+        interval_count: prev.interval_count || "1",
+        auto_renew: nextBilling === "recurring",
+        amount_original:
+          prev.amount_original === "0" || prev.amount_original === "" ? "" : prev.amount_original,
+        currency_code: prev.currency_code || primary,
+      };
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     if (!v.title.trim()) {
       setErr(t("form.required"));
+      return;
+    }
+    if (paidBlocked) {
+      setErr(t("form.needsPaymentMethodBody"));
       return;
     }
     if (isFree) {
@@ -234,47 +278,71 @@ export function SubscriptionForm({
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 md:space-y-6">
       {err ? <p className="sk-alert">{err}</p> : null}
 
-      <div>
-        <label className="sk-label">{t("form.recordKind")}</label>
-        <select
-          className="sk-select"
-          value={v.billing_model}
-          onChange={(e) => {
-            const next = e.target.value as SubscriptionFormValues["billing_model"];
-            setV((prev) => {
-              if (next === "free_account") {
-                return {
-                  ...prev,
-                  billing_model: next,
-                  amount_original: "0",
-                  currency_code: primary || prev.currency_code,
-                  interval_unit: "",
-                  auto_renew: false,
-                  next_due_date: "",
-                  end_date: "",
-                  wallet_method_id: "",
-                  credit_card_id: "",
-                };
-              }
-              return {
-                ...prev,
-                billing_model: next,
-                interval_unit: next === "recurring" ? prev.interval_unit || "month" : "",
-              };
-            });
-          }}
-        >
-          <option value="recurring">{t("billing.recurring")}</option>
-          <option value="one_time">{t("billing.one_time")}</option>
-          <option value="free_account">{t("billing.free_account")}</option>
-        </select>
-        <p className="mt-1.5 text-xs text-cream-600">
-          {isFree ? t("form.freeAccountKindHint") : t("form.paidKindHint")}
+      <div className="space-y-3">
+        <label className="sk-label">{t("form.accountPayMode")}</label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              isFree
+                ? "bg-cream-800 text-cream-50"
+                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+            }`}
+            onClick={() => applyPayMode("free")}
+          >
+            {t("form.accountPayFree")}
+          </button>
+          <button
+            type="button"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              !isFree
+                ? "bg-cream-800 text-cream-50"
+                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+            }`}
+            onClick={() => applyPayMode("paid")}
+          >
+            {t("form.accountPayPaid")}
+          </button>
+        </div>
+        <p className="text-xs text-cream-600">
+          {isFree ? t("form.accountPayFreeHint") : t("form.accountPayPaidHint")}
         </p>
       </div>
 
+      {!isFree ? (
+        <div>
+          <label className="sk-label" htmlFor="form-billing-type">
+            {t("form.billingType")}
+          </label>
+          <select
+            id="form-billing-type"
+            className="sk-select"
+            value={v.billing_model}
+            onChange={(e) => {
+              const next = e.target.value as "recurring" | "one_time";
+              setV((prev) => ({
+                ...prev,
+                billing_model: next,
+                interval_unit: next === "recurring" ? prev.interval_unit || "month" : "",
+                auto_renew: next === "recurring",
+              }));
+            }}
+          >
+            <option value="recurring">{t("billing.recurring")}</option>
+            <option value="one_time">{t("billing.one_time")}</option>
+          </select>
+        </div>
+      ) : null}
+
+      {paidBlocked ? (
+        <div className="sk-banner-warn-card text-sm">
+          <p className="font-semibold text-cream-950">{t("form.needsPaymentMethodTitle")}</p>
+          <p className="sk-text-hint mt-1 leading-relaxed">{t("form.needsPaymentMethodBody")}</p>
+        </div>
+      ) : null}
+
       <div>
-        <label className="sk-label">{isFree ? t("form.freeTitle") : t("form.title")}</label>
+        <label className="sk-label">{t("form.freeTitle")}</label>
         <input
           className="sk-input"
           value={v.title}
@@ -303,30 +371,28 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className="sk-label">{isFree ? t("form.freeEmail") : t("form.accountLabel")}</label>
+        <label className="sk-label">{t("form.freeEmail")}</label>
         <input
           className="sk-input"
-          type={isFree ? "email" : "text"}
+          type="text"
           dir="ltr"
           value={v.account_label}
           onChange={(e) => setField("account_label", e.target.value)}
-          placeholder={isFree ? t("form.freeEmailPlaceholder") : t("form.accountLabelPlaceholder")}
+          placeholder={t("form.freeEmailPlaceholder")}
           autoComplete="off"
         />
-        <p className="mt-1.5 text-xs text-cream-600">
-          {isFree ? t("form.freeEmailHint") : t("form.accountLabelHint")}
-        </p>
+        <p className="mt-1.5 text-xs text-cream-600">{t("form.freeEmailHint")}</p>
       </div>
 
       <div>
-        <label className="sk-label">{isFree ? t("form.freePurpose") : t("form.notes")}</label>
+        <label className="sk-label">{t("form.freePurpose")}</label>
         <textarea
           className="sk-textarea"
           value={v.notes}
           onChange={(e) => setField("notes", e.target.value)}
-          placeholder={isFree ? t("form.freePurposePlaceholder") : undefined}
+          placeholder={t("form.freePurposePlaceholder")}
         />
-        {isFree ? <p className="mt-1.5 text-xs text-cream-600">{t("form.freePurposeHint")}</p> : null}
+        <p className="mt-1.5 text-xs text-cream-600">{t("form.freePurposeHint")}</p>
       </div>
 
       <div className="space-y-3">
@@ -563,7 +629,7 @@ export function SubscriptionForm({
       ) : null}
 
       <div className="flex flex-col gap-3 border-t border-cream-400/80 pt-6 sm:flex-row sm:flex-wrap">
-        <button type="submit" disabled={busy} className="sk-btn-primary sm:min-w-[8rem]">
+        <button type="submit" disabled={busy || paidBlocked} className="sk-btn-primary sm:min-w-[8rem]">
           {submitLabel ?? t("common.save")}
         </button>
         <button type="button" onClick={onCancel} className="sk-btn-secondary">

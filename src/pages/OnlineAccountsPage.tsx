@@ -80,7 +80,7 @@ export function OnlineAccountsPage() {
           <h2 className="text-xl font-semibold text-cream-900">{t("accounts.title")}</h2>
           <p className="sk-text-hint mt-1 text-sm">{t("accounts.subtitle")}</p>
         </div>
-        <Link to="/new?kind=account" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
+        <Link to="/new" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
           {t("accounts.addCta")}
         </Link>
       </div>
@@ -175,7 +175,7 @@ export function OnlineAccountsPage() {
       ) : allItems.length === 0 ? (
         <div className="sk-card text-sm text-cream-700">
           <p>{t("accounts.empty")}</p>
-          <Link to="/new?kind=account" className="mt-3 inline-block font-medium text-sage-800 underline">
+          <Link to="/new" className="mt-3 inline-block font-medium text-sage-800 underline">
             {t("accounts.addCta")}
           </Link>
         </div>

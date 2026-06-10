@@ -121,9 +121,6 @@ export function HomePage() {
           <Link to="/new" className="sk-btn-warm px-5 py-2.5 text-center font-semibold shadow-sm">
             {t("home.addSubscriptionCta")}
           </Link>
-          <Link to="/new?kind=account" className="sk-btn-secondary px-4 py-2.5 text-center">
-            {t("home.addAccountCta")}
-          </Link>
           <Link to="/list" className="sk-btn-secondary px-4 py-2.5 text-center">
             {t("home.allSubscriptions")}
           </Link>
