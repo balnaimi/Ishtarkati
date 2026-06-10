@@ -835,11 +835,6 @@ export function SettingsPage() {
           </section>
 
           <section className="sk-card space-y-4">
-            <h3 className="text-base font-semibold text-cream-900">{t("export.groupTitle")}</h3>
-            <p className="text-sm text-cream-700">{t("export.groupHint")}</p>
-          </section>
-
-          <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("export.csvTitle")}</h3>
             <p className="text-sm text-cream-700">{t("export.csvHint")}</p>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">

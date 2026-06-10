@@ -594,8 +594,6 @@
     "importApplying": "جارٍ الاستعادة…"
   },
   "export": {
-    "groupTitle": "التصدير والنسخ الاحتياطي",
-    "groupHint": "ملفات تُخرج اشتراكاتك أو تقويمًا، أو نسخة احتياطية كاملة لقاعدة البيانات.",
     "csvTitle": "جدول للجداول (CSV)",
     "csvButton": "تحميل CSV (Excel)",
     "csvHint": "ملف UTF-8 مع رؤوس عربية؛ يفتح في Excel أو LibreOffice.",
