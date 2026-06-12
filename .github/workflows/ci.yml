@@ -33,4 +33,7 @@ jobs:
 
       - run: npm ci
       - run: npm test
-      - run: npm run build:linux
+      - run: npm run rebuild:native
+      - run: npx tsc
+      - run: npx vite build
+      - run: npx electron-builder --linux AppImage

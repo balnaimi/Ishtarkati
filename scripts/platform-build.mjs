@@ -21,10 +21,8 @@ if (!builders[platform]) {
   process.exit(1);
 }
 
-const prebuild =
-  process.env.CI === "true"
-    ? "npm run rebuild:native"
-    : "npm run prebuild:app";
+const isCi = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
+const prebuild = isCi ? "npm run rebuild:native" : "npm run prebuild:app";
 
 const steps = [prebuild, "npx tsc", "npx vite build", builders[platform]];
 
