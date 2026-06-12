@@ -21,14 +21,20 @@ if (!builders[platform]) {
   process.exit(1);
 }
 
-const steps = [
-  "npm run prebuild:app",
-  "npx tsc",
-  "npx vite build",
-  builders[platform],
-];
+const prebuild =
+  process.env.CI === "true"
+    ? "npm run rebuild:native"
+    : "npm run prebuild:app";
+
+const steps = [prebuild, "npx tsc", "npx vite build", builders[platform]];
 
 for (const step of steps) {
   console.log(`[platform-build] ${step}`);
-  execSync(step, { cwd: root, stdio: "inherit", env: process.env });
+  execSync(step, {
+    cwd: root,
+    stdio: "inherit",
+    env: process.env,
+    // npm is npm.cmd on Windows — needs a shell
+    shell: true,
+  });
 }
