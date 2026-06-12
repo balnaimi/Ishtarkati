@@ -24,6 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            binutils desktop-file-utils libglib2.0-0 \
             libgtk-3-0 libnss3 libxss1 libgbm1 \
             squashfs-tools zsync wget xdg-utils
           sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
@@ -36,4 +37,4 @@ jobs:
       - run: npm run rebuild:native
       - run: npx tsc
       - run: npx vite build
-      - run: npx electron-builder --linux AppImage
+      - run: npx electron-builder --linux AppImage --publish never

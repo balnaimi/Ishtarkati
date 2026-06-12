@@ -21,14 +21,17 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: linux
-            electron_builder: npx electron-builder --linux AppImage
+            electron_builder: npx electron-builder --linux AppImage --publish never
           - os: windows-latest
             artifact_name: win
-            electron_builder: npx electron-builder --win nsis --x64
+            electron_builder: npx electron-builder --win nsis --x64 --publish never
+            gyp_msvs_version: "2022"
           - os: macos-latest
             artifact_name: mac
-            electron_builder: npx electron-builder --mac dmg --arm64
+            electron_builder: npx electron-builder --mac dmg --arm64 --publish never
     runs-on: ${{ matrix.os }}
+    env:
+      GYP_MSVS_VERSION: ${{ matrix.gyp_msvs_version || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,16 +45,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            binutils desktop-file-utils libglib2.0-0 \
             libgtk-3-0 libnss3 libxss1 libgbm1 \
             squashfs-tools zsync wget xdg-utils
           sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
           sudo apt-get install -y libfuse2t64 libfuse2-4 fuse 2>/dev/null || \
           sudo apt-get install -y libfuse2 fuse 2>/dev/null || \
           sudo apt-get install -y fuse3 libfuse3-3 || true
-
-      - name: Configure node-gyp (Windows)
-        if: runner.os == 'Windows'
-        run: npm config set msvs_version 2022
 
       - run: npm ci
       - run: npm run rebuild:native
