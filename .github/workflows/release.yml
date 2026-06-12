@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+env:
+  CI: true
+  CSC_IDENTITY_AUTO_DISCOVERY: false
+
 jobs:
   build:
     strategy:
@@ -32,6 +36,18 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-0 libnss3 libxss1 libgbm1 \
+            squashfs-tools zsync wget xdg-utils
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
+          sudo apt-get install -y libfuse2t64 libfuse2-4 fuse 2>/dev/null || \
+          sudo apt-get install -y libfuse2 fuse 2>/dev/null || \
+          sudo apt-get install -y fuse3 libfuse3-3 || true
 
       - run: npm ci
       - run: npm run ${{ matrix.npm_script }}
