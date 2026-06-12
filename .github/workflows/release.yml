@@ -80,7 +80,11 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p upload
-          find artifacts -type f \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' \) -exec cp -v {} upload/ \;
+          find artifacts -type f \( \
+            -name '*-linux.AppImage' -o \
+            -name '*-win-x64-setup.exe' -o \
+            -name '*-mac-arm64.dmg' \
+          \) -exec cp -v {} upload/ \;
           ls -la upload/
 
       - uses: softprops/action-gh-release@v2
