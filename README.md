@@ -1,6 +1,6 @@
 # Ishtarkati
 
-Arabic **desktop-only** app to track online subscriptions, renewals, and multi-currency payments with QAR estimates. It does **not** run on phones or tablets; distribution is **Linux AppImage** (Electron + **React** + **TypeScript** + **SQLite**, local only, no backend). No `.deb` bundle.
+Arabic **desktop-only** app to track online subscriptions, renewals, and multi-currency payments with QAR estimates. It does **not** run on phones or tablets. Distribution: **Linux AppImage**, **Windows x64 (NSIS installer)**, **macOS Apple Silicon (DMG)** — Electron + **React** + **TypeScript** + **SQLite**, local only, no backend. No `.deb` bundle.
 
 ## Prerequisites (build machine)
 
@@ -20,15 +20,26 @@ npm run dev
 
 Runs Vite + Electron in development mode.
 
-## Production build (Linux AppImage only)
+## Production build
+
+**Linux (local):**
 
 ```bash
 npm run build
 ```
 
-This runs TypeScript checking, Vite production build, then **electron-builder** with target **`AppImage` only**. Output directory:
+Runs TypeScript, Vite, then **electron-builder** AppImage. Output:
 
-- `release/Ishtarkati-1.0.0.AppImage` (version follows `package.json`).
+- `release/Ishtarkati-{version}-linux.AppImage`
+
+**Windows x64 / macOS Apple Silicon** require the matching OS (or GitHub Actions — see below):
+
+```bash
+npm run build:win    # NSIS installer → release/Ishtarkati-{version}-win-x64-setup.exe
+npm run build:mac    # DMG arm64 → release/Ishtarkati-{version}-mac-arm64.dmg
+```
+
+`npm run build:pack` is the same as `build:linux` without bumping the version.
 
 Run the AppImage:
 
@@ -79,4 +90,19 @@ Updates `package.json` and `src/version.ts`.
 
 ---
 
-**English (short):** Build with `npm run build`; grab **`*.AppImage`** from **`release/`**. No Debian package is produced by design.
+## GitHub Releases (all platforms)
+
+Push a version tag to build Linux, Windows, and Mac on GitHub Actions and publish a Release:
+
+```bash
+git tag v4.9.0
+git push origin v4.9.0
+```
+
+Artifacts also appear under the workflow run when using **Actions → Release → Run workflow**.
+
+Unsigned Windows/macOS builds may show SmartScreen / Gatekeeper warnings until code signing is configured.
+
+---
+
+**English (short):** `npm run build` on Linux → **`release/*.AppImage`**. Tag `v*` on GitHub for Win + Mac builds. No Debian package by design.

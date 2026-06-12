@@ -1,21 +1,24 @@
 {
   "name": "ishtarkati",
   "private": true,
-  "version": "4.9.0",
+  "version": "4.9.1",
   "engines": {
     "node": ">=24.0.0 <25"
   },
   "type": "module",
   "main": "dist-electron/main.js",
-  "description": "Arabic subscription tracker — desktop only (Electron, Linux AppImage; not for mobile)",
+  "description": "Arabic subscription tracker — desktop only (Electron; Linux AppImage, Windows x64, macOS Apple Silicon)",
   "scripts": {
     "dev": "vite",
     "rebuild:native": "npx @electron/rebuild -f -w better-sqlite3",
     "verify:native": "node scripts/verify-sqlite-electron.mjs",
     "prebuild:app": "npm run rebuild:native && npm run verify:native",
-    "build": "node scripts/bump-version-for-build.mjs && npm run prebuild:app && tsc && vite build && electron-builder --linux AppImage",
+    "build": "node scripts/bump-version-for-build.mjs && npm run build:linux",
     "build:release": "npm run build && node scripts/git-ship.mjs",
-    "build:pack": "SKIP_VERSION_BUMP=1 npm run prebuild:app && tsc && vite build && electron-builder --linux AppImage",
+    "build:pack": "npm run build:linux",
+    "build:linux": "SKIP_VERSION_BUMP=1 npm run prebuild:app && tsc && vite build && electron-builder --linux AppImage",
+    "build:win": "SKIP_VERSION_BUMP=1 npm run prebuild:app && tsc && vite build && electron-builder --win nsis --x64",
+    "build:mac": "SKIP_VERSION_BUMP=1 npm run prebuild:app && tsc && vite build && electron-builder --mac dmg --arm64",
     "ship": "node scripts/bump-version-for-build.mjs && node scripts/git-ship.mjs",
     "watch:build": "chokidar \"src/**/*\" \"electron/**/*\" \"index.html\" \"vite.config.ts\" \"src/index.css\" -c \"npm run build:pack\" -d 2500 --initial",
     "preview": "vite preview",
@@ -85,7 +88,40 @@
         "AppImage"
       ],
       "category": "Office",
-      "artifactName": "${productName}-${version}.${ext}"
+      "artifactName": "${productName}-${version}-linux.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-x64.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-win-x64-setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.finance",
+      "artifactName": "${productName}-${version}-mac-arm64.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-mac-arm64.${ext}"
     }
   }
 }
