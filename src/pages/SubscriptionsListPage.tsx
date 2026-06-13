@@ -14,6 +14,7 @@ import {
 } from "../db/repo";
 import { formatUiError } from "../lib/uiErrors";
 import { useFxManager } from "../hooks/useFx";
+import { IconChevron, IconPlus, IconSearch } from "../components/NavIcons";
 import { CancelledAccountsTab } from "../components/CancelledAccountsTab";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
@@ -37,6 +38,13 @@ import {
 
 type SortKey = "next_due" | "title" | "category" | "amount" | "primary";
 type PageTab = "active" | "deleted";
+type StatusChip = "all" | "dueSoon" | "overdue";
+
+function categoryTagClass(categoryId: number | null | undefined): string {
+  if (categoryId == null) return "dash-tag-violet";
+  const classes = ["dash-tag-violet", "dash-tag-blue", "dash-tag-teal"] as const;
+  return classes[categoryId % classes.length];
+}
 
 function progressInput(s: SubscriptionListRow): DueProgressInput {
   return {
@@ -79,6 +87,7 @@ export function SubscriptionsListPage() {
   const deferredSearch = useDeferredValue(search);
   const [sortKey, setSortKey] = useState<SortKey>("next_due");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [statusChip, setStatusChip] = useState<StatusChip>("all");
   const [loading, setLoading] = useState(true);
   const { hydrate } = useFxManager();
 
@@ -146,6 +155,37 @@ export function SubscriptionsListPage() {
     return sortedItems.filter((s) => (s.account_label ?? "").trim().toLowerCase() === needle);
   }, [sortedItems, emailFilter]);
 
+  const visibleItems = useMemo(() => {
+    if (statusChip !== "overdue") return displayedItems;
+    return displayedItems.filter((s) => {
+      if (isFreeAccount(s) || !s.next_due_date) return false;
+      const prog = computeDueProgress(progressInput(s));
+      if (!prog) return false;
+      const tone = dueProgressTone(prog);
+      return tone === "overdue" || tone === "due";
+    });
+  }, [displayedItems, statusChip]);
+
+  const listSummary = useMemo(() => {
+    let dueSoonCount = 0;
+    let overdueCount = 0;
+    let monthlyApprox = 0;
+    for (const s of visibleItems) {
+      if (!isFreeAccount(s)) monthlyApprox += s.amount_qar_snapshot ?? 0;
+      if (isFreeAccount(s) || !s.next_due_date) continue;
+      const prog = computeDueProgress(progressInput(s));
+      if (!prog) continue;
+      const tone = dueProgressTone(prog);
+      if (tone === "overdue" || tone === "due") overdueCount += 1;
+      else if (tone === "urgent" || tone === "warn") dueSoonCount += 1;
+    }
+    return { dueSoonCount, overdueCount, monthlyApprox, active: visibleItems.length };
+  }, [visibleItems]);
+
+  useEffect(() => {
+    setDueSoon(statusChip === "dueSoon");
+  }, [statusChip]);
+
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
@@ -189,35 +229,6 @@ export function SubscriptionsListPage() {
     return t(billingModelI18nKey(model));
   }
 
-  function payDueCell(s: SubscriptionListRow) {
-    const free = isFreeAccount(s);
-    if (free) {
-      const status = accountPaymentStatus(s);
-      return (
-        <span
-          className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${payBadgeClass(status)}`}
-        >
-          {t(accountPaymentStatusI18nKey(status))}
-        </span>
-      );
-    }
-    const period = subscriptionBillingPeriodLine(s, t);
-    const prog = computeDueProgress(progressInput(s));
-    const tone = prog ? dueProgressTone(prog) : null;
-    return (
-      <div className="space-y-0.5">
-        <span className="block font-medium">{billingLabel(s.billing_model)}</span>
-        {period ? <span className="block text-xs text-cream-600">{period}</span> : null}
-        <span className="block text-cream-800">{s.next_due_date ?? "—"}</span>
-        {prog && tone ? (
-          <span className={`block text-xs font-medium ${dueToneTextClass(tone)}`}>
-            {relativeDueCaption(t, prog)}
-          </span>
-        ) : null}
-      </div>
-    );
-  }
-
   function setPageTab(tab: PageTab) {
     if (tab === "deleted") {
       setSearchParams({ tab: "deleted" }, { replace: true });
@@ -228,19 +239,20 @@ export function SubscriptionsListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-cream-900">{t("accounts.title")}</h2>
-          <p className="sk-text-hint mt-1 text-sm">{t("accounts.subtitle")}</p>
+          <h1 className="dash-page-title">{t("accounts.title")}</h1>
+          <p className="dash-page-sub">{t("accounts.subtitle")}</p>
         </div>
         {pageTab === "active" ? (
-          <Link to="/new" className="sk-btn-warm px-4 py-2.5 text-sm font-semibold">
+          <Link to="/new" className="dash-btn-primary no-underline">
+            <IconPlus className="size-4" />
             {t("accounts.addCta")}
           </Link>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-cream-400/70 pb-1">
+      <div className="flex flex-wrap gap-2">
         {(
           [
             ["active", t("accounts.tabActive")] as const,
@@ -250,11 +262,7 @@ export function SubscriptionsListPage() {
           <button
             key={id}
             type="button"
-            className={`rounded-t-lg px-4 py-2 text-sm font-medium ${
-              pageTab === id
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-            }`}
+            className={`dash-chip ${pageTab === id ? "dash-chip-active" : "dash-chip-idle"}`}
             onClick={() => setPageTab(id)}
           >
             {label}
@@ -269,305 +277,316 @@ export function SubscriptionsListPage() {
         </div>
       ) : (
         <>
-          <details ref={filterDetailsRef} className="sk-card overflow-hidden p-0 shadow-sm">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-cream-900 outline-none transition-colors hover:bg-cream-200/30 [&::-webkit-details-marker]:hidden">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-cream-500" aria-hidden>
-                  ▾
-                </span>
-                <span className="truncate">{t("list.filtersToggle")}</span>
-              </span>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <label className="dash-search max-w-xl flex-1">
+              <IconSearch className="size-4 shrink-0 text-cream-600" />
+              <input
+                ref={searchRef}
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t("accounts.searchPlaceholder")}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["all", t("list.filterStatusAll")] as const,
+                  ["dueSoon", t("list.filterStatusDueSoon")] as const,
+                  ["overdue", t("list.filterStatusOverdue")] as const,
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`dash-chip ${statusChip === id ? "dash-chip-active" : "dash-chip-idle"}`}
+                  onClick={() => setStatusChip(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <details ref={filterDetailsRef} className="dash-card overflow-hidden p-0">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-cream-800 [&::-webkit-details-marker]:hidden">
+              {t("list.filtersToggle")}
             </summary>
+            <div className="grid gap-3 border-t border-cream-400/60 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="sk-label" htmlFor="list-email-filter">
+                  {t("accounts.filterByEmail")}
+                </label>
+                <select
+                  id="list-email-filter"
+                  className="sk-select !min-h-9 text-sm"
+                  value={emailFilter}
+                  onChange={(e) => setEmailFilter(e.target.value)}
+                >
+                  <option value="">{t("accounts.allEmails")}</option>
+                  {emails.map((row) => (
+                    <option key={row.email} value={row.email}>
+                      {row.email} ({row.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="space-y-2 border-t border-cream-300/80 px-3 py-2.5">
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-6 md:gap-x-2 md:gap-y-2">
-                <div className="col-span-2 min-w-0 md:col-span-6">
-                  <span className="mb-1 block text-xs font-medium text-cream-700">
-                    {t("list.recordKind")}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {(
-                      [
-                        ["all", t("list.recordKindAll")] as const,
-                        ["paid", t("list.recordKindPaid")] as const,
-                        ["free", t("list.recordKindFree")] as const,
-                      ] as const
-                    ).map(([id, label]) => (
-                      <button
-                        key={id}
-                        type="button"
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                          recordKind === id
-                            ? "bg-cream-800 text-cream-50"
-                            : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                        }`}
-                        onClick={() => setRecordKind(id)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+              <div>
+                <label className="sk-label" htmlFor="list-filter-category">
+                  {t("list.filterCategory")}
+                </label>
+                <select
+                  id="list-filter-category"
+                  className="sk-select !min-h-9 text-sm"
+                  value={catFilter}
+                  onChange={(e) => setCatFilter(e.target.value)}
+                >
+                  <option value="">{t("common.all")}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="sk-label" htmlFor="list-filter-currency">
+                  {t("list.filterCurrency")}
+                </label>
+                <select
+                  id="list-filter-currency"
+                  className="sk-select !min-h-9 text-sm"
+                  value={curFilter}
+                  onChange={(e) => setCurFilter(e.target.value)}
+                >
+                  <option value="">{t("common.all")}</option>
+                  {currencyOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span className="sk-label">{t("list.recordKind")}</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["all", t("list.recordKindAll")] as const,
+                      ["paid", t("list.recordKindPaid")] as const,
+                      ["free", t("list.recordKindFree")] as const,
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`dash-chip ${recordKind === id ? "dash-chip-active" : "dash-chip-idle"}`}
+                      onClick={() => setRecordKind(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-
-                <div className="col-span-2 min-w-0 md:col-span-2">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-search"
-                  >
-                    {t("common.search")}
-                  </label>
-                  <input
-                    ref={searchRef}
-                    id="list-search"
-                    className="sk-input !min-h-9 w-full py-1.5 text-sm"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={t("accounts.searchPlaceholder")}
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div className="col-span-2 min-w-0 md:col-span-2">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-email-filter"
-                  >
-                    {t("accounts.filterByEmail")}
-                  </label>
-                  <select
-                    id="list-email-filter"
-                    className="sk-select !min-h-9 w-full py-1.5 text-sm"
-                    value={emailFilter}
-                    onChange={(e) => setEmailFilter(e.target.value)}
-                  >
-                    <option value="">{t("accounts.allEmails")}</option>
-                    {emails.map((row) => (
-                      <option key={row.email} value={row.email}>
-                        {row.email} ({row.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-2 min-w-0 md:col-span-2">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-filter-category"
-                  >
-                    {t("list.filterCategory")}
-                  </label>
-                  <select
-                    id="list-filter-category"
-                    className="sk-select !min-h-9 w-full py-1.5 text-sm"
-                    value={catFilter}
-                    onChange={(e) => setCatFilter(e.target.value)}
-                  >
-                    <option value="">{t("common.all")}</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-2 min-w-0 md:col-span-2">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-filter-currency"
-                  >
-                    {t("list.filterCurrency")}
-                  </label>
-                  <select
-                    id="list-filter-currency"
-                    className="sk-select !min-h-9 w-full py-1.5 text-sm"
-                    value={curFilter}
-                    onChange={(e) => setCurFilter(e.target.value)}
-                  >
-                    <option value="">{t("common.all")}</option>
-                    {currencyOptions.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-2 flex items-end md:col-span-2">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-cream-400/70 bg-cream-100/35 px-2.5 py-2 text-xs text-cream-800">
-                    <input
-                      type="checkbox"
-                      className="size-3.5 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
-                      checked={dueSoon}
-                      onChange={(e) => setDueSoon(e.target.checked)}
-                    />
-                    <span className="leading-snug">{t("list.dueSoon")}</span>
-                  </label>
-                </div>
-
-                <div className="col-span-2 min-w-0 md:col-span-3">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-sort-key"
-                  >
-                    {t("list.sortBy")}
-                  </label>
-                  <select
-                    id="list-sort-key"
-                    className="sk-select !min-h-9 min-w-0 w-full py-1.5 text-sm"
-                    value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as SortKey)}
-                  >
-                    <option value="next_due">{t("list.sort.nextDue")}</option>
-                    <option value="title">{t("list.sort.title")}</option>
-                    <option value="category">{t("list.sort.category")}</option>
-                    <option value="amount">{t("list.sort.amount")}</option>
-                    <option value="primary">{t("list.sort.primary")}</option>
-                  </select>
-                </div>
-                <div className="col-span-2 min-w-0 md:col-span-3">
-                  <label
-                    className="mb-0.5 block text-xs font-medium text-cream-700"
-                    htmlFor="list-sort-dir"
-                  >
-                    {t("list.sortDirectionShort")}
-                  </label>
-                  <select
-                    id="list-sort-dir"
-                    className="sk-select !min-h-9 w-full py-1.5 text-sm"
-                    value={sortDir}
-                    onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                  >
-                    <option value="asc">{t("list.sort.asc")}</option>
-                    <option value="desc">{t("list.sort.desc")}</option>
-                  </select>
-                </div>
+              </div>
+              <div>
+                <label className="sk-label" htmlFor="list-sort-key">
+                  {t("list.sortBy")}
+                </label>
+                <select
+                  id="list-sort-key"
+                  className="sk-select !min-h-9 text-sm"
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as SortKey)}
+                >
+                  <option value="next_due">{t("list.sort.nextDue")}</option>
+                  <option value="title">{t("list.sort.title")}</option>
+                  <option value="category">{t("list.sort.category")}</option>
+                  <option value="amount">{t("list.sort.amount")}</option>
+                  <option value="primary">{t("list.sort.primary")}</option>
+                </select>
+              </div>
+              <div>
+                <label className="sk-label" htmlFor="list-sort-dir">
+                  {t("list.sortDirectionShort")}
+                </label>
+                <select
+                  id="list-sort-dir"
+                  className="sk-select !min-h-9 text-sm"
+                  value={sortDir}
+                  onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                >
+                  <option value="asc">{t("list.sort.asc")}</option>
+                  <option value="desc">{t("list.sort.desc")}</option>
+                </select>
               </div>
             </div>
           </details>
 
           {loading ? (
             <p className="sk-text-hint">{t("common.loading")}</p>
-          ) : displayedItems.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <p className="sk-text-hint">
               {items.length === 0 ? t("accounts.empty") : t("accounts.noSearchResults")}
             </p>
           ) : (
-            <div className="sk-card overflow-x-auto p-0 shadow-sm">
-              <table className="w-full min-w-[520px] text-start text-sm">
-                <thead className="border-b border-cream-400 bg-cream-200/80 text-cream-800">
-                  <tr>
-                    <th className="px-3 py-3 font-semibold">{t("list.colAccount")}</th>
-                    <th className="px-3 py-3 font-semibold">{t("list.colPayDue")}</th>
-                    <th className="px-3 py-3 font-semibold">
-                      {t("list.amountAndApprox", { code: primaryCode })}
-                    </th>
-                    <th className="px-3 py-3 font-semibold">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedItems.map((s) => {
-                    const free = isFreeAccount(s);
-                    const prog = free ? null : computeDueProgress(progressInput(s));
-                    const tone = prog ? dueProgressTone(prog) : null;
-                    const needsPaid = subscriptionNeedsPaidAttention(s);
-                    const rowTint = tone ? dueListRowHighlightClass(tone) : "";
-                    return (
-                      <tr
-                        key={s.id}
-                        className={`cursor-pointer border-t border-cream-300/80 hover:bg-cream-200/40 ${needsPaid ? "sk-ring-needs-pay" : ""} ${rowTint}`.trim()}
-                        onClick={() => nav(`/sub/${s.id}`)}
-                      >
-                        <td className="px-3 py-3 align-top">
-                          <div className="flex w-full items-start justify-start gap-2">
-                            {s.website_url?.trim() ? (
-                              <SiteFavicon
-                                websiteUrl={s.website_url}
-                                size="sm"
-                                className="mt-0.5 shrink-0"
-                              />
-                            ) : null}
-                            <div className="min-w-0 flex-1">
-                              <Link
-                                to={`/sub/${s.id}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="font-medium text-cream-950 underline-offset-2 hover:underline"
-                              >
-                                {s.title}
-                              </Link>
-                              {s.account_label?.trim() ? (
-                                <button
-                                  type="button"
-                                  dir="ltr"
-                                  className="mt-0.5 block text-start text-xs text-sage-800 underline-offset-2 hover:underline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEmailFilter(s.account_label!.trim());
-                                    if (filterDetailsRef.current) filterDetailsRef.current.open = true;
-                                  }}
-                                >
-                                  {s.account_label.trim()}
-                                </button>
-                              ) : null}
-                              {s.category_name ? (
-                                <span className="mt-0.5 block text-xs text-cream-500">
-                                  {s.category_name}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-                          {free ? (
-                            s.notes?.trim() ? (
-                              <span className="mt-1 block line-clamp-2 text-xs text-cream-600">
-                                {s.notes.trim()}
-                              </span>
-                            ) : null
-                          ) : s.next_due_date ? (
-                            <div className="mt-2">
-                              <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+            <div className="space-y-3">
+              {visibleItems.map((s) => {
+                const free = isFreeAccount(s);
+                const prog = free ? null : computeDueProgress(progressInput(s));
+                const tone = prog ? dueProgressTone(prog) : null;
+                const needsPaid = subscriptionNeedsPaidAttention(s);
+                const tagClass = categoryTagClass(s.category_id);
+                return (
+                  <div
+                    key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`dash-sub-row cursor-pointer md:grid-cols-[minmax(0,1.6fr)_auto_auto_auto_auto] md:items-center ${needsPaid ? "sk-ring-needs-pay" : ""} ${tone ? dueListRowHighlightClass(tone) : ""}`.trim()}
+                    onClick={() => nav(`/sub/${s.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        nav(`/sub/${s.id}`);
+                      }
+                    }}
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      {s.website_url?.trim() ? (
+                        <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
+                      ) : (
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-cream-300/40 text-xs font-bold text-cream-700">
+                          {s.title.trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-cream-950">{s.title}</div>
+                        {s.account_label?.trim() ? (
+                          <button
+                            type="button"
+                            dir="ltr"
+                            className="mt-0.5 block text-start text-xs text-cream-600 underline-offset-2 hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEmailFilter(s.account_label!.trim());
+                              if (filterDetailsRef.current) filterDetailsRef.current.open = true;
+                            }}
+                          >
+                            {s.account_label.trim()}
+                          </button>
+                        ) : null}
+                        {s.category_name ? (
+                          <span className={`dash-tag mt-2 ${tagClass}`}>{s.category_name}</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-cream-700 md:text-center">
+                      {free ? (
+                        <span className={`dash-tag ${payBadgeClass(accountPaymentStatus(s))}`}>
+                          {t(accountPaymentStatusI18nKey(accountPaymentStatus(s)))}
+                        </span>
+                      ) : (
+                        <>
+                          <div className="font-medium text-cream-900">{billingLabel(s.billing_model)}</div>
+                          {subscriptionBillingPeriodLine(s, t) ? (
+                            <div className="text-xs text-cream-600">{subscriptionBillingPeriodLine(s, t)}</div>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="md:text-center">
+                      {free ? (
+                        <span className="text-cream-500">—</span>
+                      ) : (
+                        <DualCurrencyAmounts
+                          size="sm"
+                          originalAmount={s.amount_original}
+                          originalCode={s.currency_code}
+                          approxAmount={s.amount_qar_snapshot}
+                          approxCode={primaryCode}
+                        />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 md:max-w-[10rem]">
+                      {free ? null : s.next_due_date ? (
+                        <>
+                          <div className="text-sm font-medium text-cream-900">{s.next_due_date}</div>
+                          {prog && tone ? (
+                            <div className={`text-xs font-medium ${dueToneTextClass(tone)}`}>
+                              {relativeDueCaption(t, prog)}
                             </div>
                           ) : null}
-                        </td>
-                        <td className="px-3 py-3 align-top text-cream-800">{payDueCell(s)}</td>
-                        <td className="px-3 py-3 align-top">
-                          {free ? (
-                            <span className="text-cream-500">—</span>
-                          ) : (
-                            <DualCurrencyAmounts
-                              size="sm"
-                              originalAmount={s.amount_original}
-                              originalCode={s.currency_code}
-                              approxAmount={s.amount_qar_snapshot}
-                              approxCode={primaryCode}
-                            />
-                          )}
-                        </td>
-                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-wrap gap-2">
-                            {needsPaid ? (
-                              <button
-                                type="button"
-                                className="inline-flex items-center justify-center rounded-md bg-sage-600 px-2 py-1 text-xs font-medium text-cream-50 transition-colors hover:bg-sage-700"
-                                onClick={(e) => void onConfirmPaid(e, s.id)}
-                              >
-                                {t("home.markPaid")}
-                              </button>
-                            ) : null}
-                            <Link
-                              to={`/sub/${s.id}/edit`}
-                              className="inline-flex items-center text-walnut-600 underline-offset-2 hover:underline"
-                            >
-                              {t("common.edit")}
-                            </Link>
+                          <div className="mt-2">
+                            <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </>
+                      ) : (
+                        <span className="text-cream-500">—</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 md:justify-end">
+                      <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                        {needsPaid ? (
+                          <button
+                            type="button"
+                            className="dash-btn-primary !min-h-8 px-3 py-1 text-xs"
+                            onClick={(e) => void onConfirmPaid(e, s.id)}
+                          >
+                            {t("home.markPaid")}
+                          </button>
+                        ) : free || !tone || tone === "safe" ? (
+                          <span className="dash-status-active">
+                            <span className="size-1.5 rounded-full bg-sage-400" aria-hidden />
+                            {t("list.summaryActive")}
+                          </span>
+                        ) : tone === "overdue" || tone === "due" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-danger/15 px-2.5 py-1 text-xs font-medium text-brand-danger">
+                            <span className="size-1.5 rounded-full bg-brand-danger" aria-hidden />
+                            {t("list.summaryOverdue")}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-400">
+                            <span className="size-1.5 rounded-full bg-amber-400" aria-hidden />
+                            {t("list.summaryDueSoon")}
+                          </span>
+                        )}
+                      </div>
+                      <IconChevron className="size-5 shrink-0 text-cream-600" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
+
+          {pageTab === "active" && !loading && visibleItems.length > 0 ? (
+            <div className="dash-summary-bar">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <span>
+                  <span className="text-cream-600">{t("list.summaryActive")}: </span>
+                  <span className="font-semibold text-cream-950">{listSummary.active}</span>
+                </span>
+                <span>
+                  <span className="text-cream-600">{t("list.summaryDueSoon")}: </span>
+                  <span className="font-semibold text-amber-400">{listSummary.dueSoonCount}</span>
+                </span>
+                <span>
+                  <span className="text-cream-600">{t("list.summaryOverdue")}: </span>
+                  <span className="font-semibold text-brand-danger">{listSummary.overdueCount}</span>
+                </span>
+              </div>
+              <div className="text-end">
+                <div className="text-xs text-cream-600">{t("list.summaryMonthly")}</div>
+                <div className="text-lg font-bold text-cream-950">
+                  {listSummary.monthlyApprox.toFixed(2)} {primaryCode}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
     </div>

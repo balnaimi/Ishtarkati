@@ -26,7 +26,7 @@ export function applyThemeMode(mode: ThemeMode): void {
 
 export function parseThemeMode(raw: string | null | undefined): ThemeMode {
   if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  return "system";
+  return "dark";
 }
 
 /** Load theme from DB (fallback: localStorage legacy, then system). */

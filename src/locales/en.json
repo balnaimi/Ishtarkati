@@ -125,7 +125,21 @@
     "allCardsExpired": "All recorded cards are expired — review payment methods.",
     "dueTodayTitle": "Needs payment today",
     "dueTodayCount": "{{count}} subscription(s) reached their due date",
-    "dueTodayView": "View all due"
+    "dueTodayView": "View all due",
+    "welcomeHint": "Here is an overview of your subscriptions this month.",
+    "statActive": "Active subscriptions",
+    "statDueMonth": "Due this month",
+    "cashflowTitle": "Cash flow summary",
+    "cashflowHint": "Expected amounts by period in your primary currency.",
+    "cashflowPeriod": "This month",
+    "cashflowPaid": "Due this month",
+    "cashflowRemaining": "Next month",
+    "cashflowSpent": "Next 30 days"
+  },
+  "layout": {
+    "desktopOnly": "Desktop app",
+    "darkMode": "Dark mode",
+    "systemOk": "All systems operational"
   },
   "list": {
     "title": "All records",
@@ -140,6 +154,14 @@
     "filterCategory": "Category",
     "filterCurrency": "Currency",
     "dueSoon": "Due within 30 days",
+    "filterStatusAll": "All statuses",
+    "filterStatusDueSoon": "Due soon",
+    "filterStatusOverdue": "Overdue",
+    "statusActive": "Active",
+    "summaryMonthly": "Monthly total (approx.)",
+    "summaryActive": "Active",
+    "summaryDueSoon": "Due soon",
+    "summaryOverdue": "Overdue",
     "name": "Name",
     "colAccount": "Account",
     "colPayDue": "Payment & due date",

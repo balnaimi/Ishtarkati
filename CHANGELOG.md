@@ -7,10 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+
+## [4.22.0] - 2026-06-13
+
 ### Changed
 - Product README with screenshots, platform download icons, and stable `releases/latest/download/` asset names.
 - Release artifacts use fixed filenames (`Ishtarkati-linux.AppImage`, etc.) so download links stay valid across versions.
-
+- Dashboard UI: purple dark theme, sidebar navigation, redesigned Home and Accounts pages to match product screenshots (stat cards, cashflow chart, card-style subscription rows, summary bar).
+- Default appearance is now dark instead of system.
 ## [4.21.0] - 2026-06-13
 
 ### Fixed

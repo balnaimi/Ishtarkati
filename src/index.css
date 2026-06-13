@@ -44,6 +44,17 @@
   --color-walnut-500: #c9a96a;
   --color-walnut-600: #9a7b5f;
   --color-walnut-800: #6d5540;
+
+  --color-violet-400: #818cf8;
+  --color-violet-500: #6366f1;
+  --color-violet-600: #4f46e5;
+  --color-violet-700: #4338ca;
+
+  --color-dash-bg: #0b0f17;
+  --color-dash-sidebar: #111827;
+  --color-dash-card: #1a2234;
+  --color-dash-border: #2a3548;
+  --color-dash-muted: #94a3b8;
 }
 
 html,
@@ -294,41 +305,41 @@ body {
   }
 }
 
-/* Dark theme — soft charcoal base, warm off-white text, muted sage accents */
+/* Dark theme — dashboard purple/slate (README mockup style) */
 .dark {
-  --color-brand-ink: #e8e4dc;
-  --color-brand-muted: #b0aaa2;
-  --color-brand-accent: #7fa892;
-  --color-brand-warn: #d4b87a;
-  --color-brand-surface: #1c1f23;
-  --color-brand-danger: #c47a6e;
+  --color-brand-ink: #f1f5f9;
+  --color-brand-muted: #94a3b8;
+  --color-brand-accent: #818cf8;
+  --color-brand-warn: #fbbf24;
+  --color-brand-surface: #0b0f17;
+  --color-brand-danger: #f87171;
 
-  --color-cream-50: #1c1f23;
-  --color-cream-100: #22262b;
-  --color-cream-200: #25292e;
-  --color-cream-300: #2e3339;
-  --color-cream-400: #3d4349;
-  --color-cream-500: #525962;
-  --color-cream-600: #7a838c;
-  --color-cream-700: #b0aaa2;
-  --color-cream-800: #d4cec6;
-  --color-cream-900: #e8e4dc;
-  --color-cream-950: #f5f2ec;
+  --color-cream-50: #0b0f17;
+  --color-cream-100: #111827;
+  --color-cream-200: #1a2234;
+  --color-cream-300: #243044;
+  --color-cream-400: #2a3548;
+  --color-cream-500: #475569;
+  --color-cream-600: #64748b;
+  --color-cream-700: #94a3b8;
+  --color-cream-800: #cbd5e1;
+  --color-cream-900: #e2e8f0;
+  --color-cream-950: #f8fafc;
 
-  --color-sage-100: #2a3530;
-  --color-sage-300: #5a7866;
-  --color-sage-400: #6d8f7a;
-  --color-sage-500: #7fa892;
-  --color-sage-600: #96b8a4;
-  --color-sage-700: #b4d0c0;
-  --color-sage-800: #d0e6da;
-  --color-sage-900: #e8f4ee;
+  --color-sage-100: #1e293b;
+  --color-sage-300: #4ade80;
+  --color-sage-400: #22c55e;
+  --color-sage-500: #6366f1;
+  --color-sage-600: #818cf8;
+  --color-sage-700: #a5b4fc;
+  --color-sage-800: #c7d2fe;
+  --color-sage-900: #e0e7ff;
 
-  --color-walnut-100: #3a3028;
-  --color-walnut-300: #9a7b5f;
-  --color-walnut-500: #c9a96a;
-  --color-walnut-600: #d4b87a;
-  --color-walnut-800: #ecd9b8;
+  --color-walnut-100: #422006;
+  --color-walnut-300: #f59e0b;
+  --color-walnut-500: #fbbf24;
+  --color-walnut-600: #fcd34d;
+  --color-walnut-800: #fde68a;
 }
 
 .dark body {
@@ -525,7 +536,7 @@ body {
 }
 
 .dark .sk-btn-primary {
-  @apply bg-sage-500 text-cream-50 hover:bg-sage-400;
+  @apply bg-violet-500 text-white hover:bg-violet-600 shadow-sm shadow-violet-500/25;
 }
 
 .dark .sk-btn-warm {
@@ -538,4 +549,135 @@ body {
 
 .dark .sk-alert {
   @apply border-brand-danger/42 bg-brand-danger/16 text-cream-950;
+}
+
+/* ——— Dashboard shell (sidebar layout) ——— */
+.dash-shell {
+  @apply flex min-h-full bg-dash-bg text-cream-900;
+}
+
+.dash-sidebar {
+  @apply flex w-60 shrink-0 flex-col border-cream-400/80 bg-cream-100;
+  border-inline-end-width: 1px;
+}
+
+.dash-sidebar-brand {
+  @apply flex items-center gap-3 border-b border-cream-400/60 px-4 py-5;
+}
+
+.dash-sidebar-nav {
+  @apply flex flex-1 flex-col gap-1 px-3 py-4;
+}
+
+.dash-nav-item {
+  @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-cream-700 transition-colors;
+  @apply hover:bg-cream-300/40 hover:text-cream-950;
+}
+
+.dash-nav-item-active {
+  @apply bg-violet-500/20 text-violet-400 ring-1 ring-violet-500/30;
+}
+
+.dash-main {
+  @apply flex min-w-0 flex-1 flex-col;
+}
+
+.dash-main-inner {
+  @apply mx-auto w-full max-w-6xl flex-1 px-5 py-6 md:px-8 md:py-8;
+}
+
+.dash-footer {
+  @apply flex items-center justify-between gap-3 border-t border-cream-400/60 px-5 py-2 text-xs text-cream-600;
+}
+
+.dash-page-title {
+  @apply text-2xl font-bold tracking-tight text-cream-950;
+}
+
+.dash-page-sub {
+  @apply mt-1 text-sm text-cream-600;
+}
+
+.dash-stat-grid {
+  @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-4;
+}
+
+.dash-stat-card {
+  @apply rounded-2xl border border-cream-400/70 bg-cream-200/60 p-4 shadow-sm;
+}
+
+.dash-stat-label {
+  @apply text-sm font-medium text-cream-600;
+}
+
+.dash-stat-value {
+  @apply mt-2 text-3xl font-bold text-cream-950;
+}
+
+.dash-card {
+  @apply rounded-2xl border border-cream-400/70 bg-cream-200/50 p-5 shadow-sm;
+}
+
+.dash-card-title {
+  @apply text-base font-semibold text-cream-950;
+}
+
+.dash-card-alert {
+  @apply rounded-2xl border border-brand-danger/50 bg-brand-danger/10 p-5 ring-1 ring-brand-danger/25;
+}
+
+.dash-btn-primary {
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-violet-500/30 transition-colors hover:bg-violet-600;
+}
+
+.dash-btn-ghost {
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cream-400/80 bg-cream-300/20 px-4 py-2 text-sm font-medium text-cream-900 transition-colors hover:bg-cream-300/40;
+}
+
+.dash-chip {
+  @apply inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium transition-colors;
+}
+
+.dash-chip-active {
+  @apply bg-violet-500 text-white shadow-sm shadow-violet-500/25;
+}
+
+.dash-chip-idle {
+  @apply border border-cream-400/70 bg-cream-300/25 text-cream-800 hover:bg-cream-300/45;
+}
+
+.dash-search {
+  @apply flex min-h-11 w-full items-center gap-2 rounded-xl border border-cream-400/80 bg-cream-200/40 px-3 text-cream-950;
+}
+
+.dash-search input {
+  @apply min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-cream-600;
+}
+
+.dash-sub-row {
+  @apply grid grid-cols-1 gap-3 rounded-2xl border border-cream-400/60 bg-cream-200/35 p-4 transition-colors hover:border-violet-500/35 hover:bg-cream-300/25;
+}
+
+.dash-tag {
+  @apply inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold;
+}
+
+.dash-tag-violet {
+  @apply bg-violet-500/20 text-violet-400;
+}
+
+.dash-tag-teal {
+  @apply bg-teal-500/15 text-teal-300;
+}
+
+.dash-tag-blue {
+  @apply bg-sky-500/15 text-sky-300;
+}
+
+.dash-status-active {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-sage-400/15 px-2.5 py-1 text-xs font-medium text-sage-400;
+}
+
+.dash-summary-bar {
+  @apply mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-cream-400/70 bg-cream-200/40 px-5 py-4;
 }

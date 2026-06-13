@@ -125,7 +125,21 @@
     "allCardsExpired": "كل البطاقات المسجّلة منتهية — راجع طرق الدفع.",
     "dueTodayTitle": "مستحق الدفع اليوم",
     "dueTodayCount": "{{count}} اشتراك/حساب وصل موعد استحقاقه",
-    "dueTodayView": "عرض الكل"
+    "dueTodayView": "عرض الكل",
+    "welcomeHint": "إليك نظرة عامة على اشتراكاتك هذا الشهر.",
+    "statActive": "الاشتراكات النشطة",
+    "statDueMonth": "مستحقة هذا الشهر",
+    "cashflowTitle": "ملخص التدفقات النقدية",
+    "cashflowHint": "المبالغ المتوقعة حسب الفترة بعملتك الأساسية.",
+    "cashflowPeriod": "هذا الشهر",
+    "cashflowPaid": "مستحق هذا الشهر",
+    "cashflowRemaining": "الشهر القادم",
+    "cashflowSpent": "خلال ٣٠ يومًا"
+  },
+  "layout": {
+    "desktopOnly": "تطبيق سطح مكتب",
+    "darkMode": "الوضع الداكن",
+    "systemOk": "جميع الأنظمة تعمل بشكل جيد"
   },
   "list": {
     "title": "كل السجلات",
@@ -140,6 +154,14 @@
     "filterCategory": "التصنيف",
     "filterCurrency": "العملة",
     "dueSoon": "مستحق خلال ٣٠ يومًا",
+    "filterStatusAll": "كل الحالات",
+    "filterStatusDueSoon": "قريب الاستحقاق",
+    "filterStatusOverdue": "متأخر",
+    "statusActive": "نشط",
+    "summaryMonthly": "إجمالي شهري (تقريبًا)",
+    "summaryActive": "نشط",
+    "summaryDueSoon": "قريب الاستحقاق",
+    "summaryOverdue": "متأخر",
     "name": "الاسم",
     "colAccount": "الحساب",
     "colPayDue": "الدفع والاستحقاق",

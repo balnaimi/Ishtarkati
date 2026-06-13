@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
@@ -8,13 +8,23 @@ import { useUiDir } from "../hooks/useUiDir";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
+import {
+  IconAccounts,
+  IconHome,
+  IconInsights,
+  IconPayments,
+  IconSettings,
+} from "./NavIcons";
+import { getSetting } from "../db/repo";
+import { THEME_MODE_KEY } from "../lib/settingsKeys";
+import { parseThemeMode, persistThemeMode, type ThemeMode } from "../lib/theme";
 
-const linkCls = (active: boolean) =>
-  `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-    active
-      ? "bg-cream-800 text-cream-50 shadow-sm"
-      : "text-cream-800 hover:bg-cream-300/70"
-  }`;
+function navActive(pathname: string, to: string): boolean {
+  if (to === "/") return pathname === "/" || pathname.startsWith("/sub");
+  if (to === "/accounts")
+    return pathname === "/accounts" || pathname === "/list";
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
 
 export function Layout() {
   const { t } = useTranslation();
@@ -23,7 +33,12 @@ export function Layout() {
   const dir = useUiDir();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   useDesktopReminders();
+
+  useEffect(() => {
+    void getSetting(THEME_MODE_KEY).then((raw) => setThemeMode(parseThemeMode(raw)));
+  }, []);
 
   useGlobalShortcuts({
     paletteOpen,
@@ -38,74 +53,108 @@ export function Layout() {
   });
 
   const navItems = [
-    { to: "/", label: t("nav.home") },
-    { to: "/accounts", label: t("nav.accounts") },
-    { to: "/payments", label: t("nav.payments") },
-    { to: "/insights", label: t("nav.insights") },
-    { to: "/settings", label: t("nav.settings") },
+    { to: "/", label: t("nav.home"), Icon: IconHome },
+    { to: "/accounts", label: t("nav.accounts"), Icon: IconAccounts },
+    { to: "/payments", label: t("nav.payments"), Icon: IconPayments },
+    { to: "/insights", label: t("nav.insights"), Icon: IconInsights },
+    { to: "/settings", label: t("nav.settings"), Icon: IconSettings },
   ];
 
+  async function toggleTheme() {
+    const next: ThemeMode = themeMode === "dark" ? "light" : "dark";
+    await persistThemeMode(next);
+    setThemeMode(next);
+  }
+
   return (
-    <div className="flex min-h-full flex-col font-sans" dir={dir}>
-      <header className="border-b border-cream-400 bg-cream-100/85 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <img
-              src={ISHTARKATI_MARK_SRC}
-              alt=""
-              width={40}
-              height={40}
-              className="h-10 w-10 shrink-0 rounded-xl shadow-sm ring-1 ring-cream-400/80 dark:ring-cream-600/50"
-              decoding="async"
-            />
-            <div>
-              <h1 className="text-lg font-semibold text-cream-900">{t("app.title")}</h1>
-              <p className="text-xs text-cream-600">
-                {t("settings.version")} {APP_VERSION}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="sk-btn-muted hidden text-xs sm:inline-flex"
-              onClick={() => setPaletteOpen(true)}
-              title={t("commandPalette.openHint")}
-            >
-              {t("commandPalette.openLabel")}
-            </button>
-            <nav className="flex flex-wrap gap-2">
-              {navItems.map(({ to, label }) => {
-                const homeMatch =
-                  to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
-                const accountsMatch =
-                  to === "/accounts" && (loc.pathname === "/accounts" || loc.pathname === "/list");
-                const paymentsMatch = to === "/payments" && loc.pathname === "/payments";
-                const insightsMatch = to === "/insights" && loc.pathname === "/insights";
-                const active =
-                  accountsMatch ||
-                  paymentsMatch ||
-                  insightsMatch ||
-                  loc.pathname === to ||
-                  (to !== "/" &&
-                    to !== "/accounts" &&
-                    to !== "/payments" &&
-                    to !== "/insights" &&
-                    loc.pathname.startsWith(to)) ||
-                  homeMatch;
-                return (
-                  <Link key={to} to={to} className={linkCls(active)}>
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
+    <div className="dash-shell font-sans" dir={dir}>
+      <aside className="dash-sidebar hidden md:flex">
+        <div className="dash-sidebar-brand">
+          <img
+            src={ISHTARKATI_MARK_SRC}
+            alt=""
+            width={36}
+            height={36}
+            className="size-9 shrink-0 rounded-xl ring-1 ring-violet-500/40"
+            decoding="async"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-cream-950">{t("app.title")}</p>
+            <p className="text-[11px] text-cream-600">{t("layout.desktopOnly")}</p>
           </div>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-8">
-        <Outlet />
-      </main>
+
+        <nav className="dash-sidebar-nav" aria-label={t("nav.home")}>
+          {navItems.map(({ to, label, Icon }) => {
+            const active = navActive(loc.pathname, to);
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`dash-nav-item ${active ? "dash-nav-item-active" : ""}`}
+              >
+                <Icon className="size-5 shrink-0" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="space-y-2 border-t border-cream-400/60 px-3 py-4">
+          <button
+            type="button"
+            className="dash-btn-ghost w-full text-xs"
+            onClick={() => setPaletteOpen(true)}
+          >
+            {t("commandPalette.openLabel")}
+          </button>
+          <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-cream-400/60 px-3 py-2 text-xs text-cream-700">
+            <span>{t("layout.darkMode")}</span>
+            <input
+              type="checkbox"
+              className="size-4 rounded border-cream-500 accent-violet-500"
+              checked={themeMode === "dark"}
+              onChange={() => void toggleTheme()}
+            />
+          </label>
+        </div>
+      </aside>
+
+      <div className="dash-main">
+        <header className="flex items-center justify-between gap-3 border-b border-cream-400/60 px-4 py-3 md:hidden">
+          <div className="flex items-center gap-2">
+            <img src={ISHTARKATI_MARK_SRC} alt="" className="size-8 rounded-lg" />
+            <span className="font-semibold text-cream-950">{t("app.title")}</span>
+          </div>
+          <select
+            className="sk-select !min-h-9 max-w-[10rem] py-1 text-xs"
+            value={loc.pathname}
+            onChange={(e) => nav(e.target.value)}
+            aria-label={t("nav.home")}
+          >
+            {navItems.map(({ to, label }) => (
+              <option key={to} value={to}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </header>
+
+        <div className="dash-main-inner">
+          <Outlet />
+        </div>
+
+        <footer className="dash-footer">
+          <span>
+            {t("settings.version")} {APP_VERSION}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2 animate-pulse rounded-full bg-sage-400" aria-hidden />
+            {t("layout.systemOk")}
+          </span>
+        </footer>
+      </div>
+
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
