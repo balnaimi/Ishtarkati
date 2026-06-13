@@ -14,7 +14,8 @@ The dev team works in **English only** for everything in the repository except e
 - **Console / log / stderr** messages in scripts and Electron main (developer-facing)
 - **Git commit messages** and PR descriptions
 - **Cursor rules** and internal docs aimed at developers
-- README technical sections (user-facing Arabic marketing copy is optional elsewhere)
+- **`CHANGELOG.md`**, **`release-notes/*.md`**, and **GitHub Release descriptions**
+- README and other repo documentation (technical prose in English)
 
 ## Arabic only
 
@@ -26,7 +27,7 @@ The dev team works in **English only** for everything in the repository except e
 
 - Mix Arabic into code comments or commit messages
 - Hard-code Arabic UI strings in components when a translation key exists
-- Add Arabic explanations in scripts (`bump-version`, `git-ship`, etc.)
+- Add Arabic to CHANGELOG, release notes, commit messages, code comments, or script logs
 
 ## Examples
 

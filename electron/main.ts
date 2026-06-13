@@ -868,8 +868,8 @@ if (!gotSingleInstanceLock) {
       const detail = e instanceof Error ? e.message : String(e);
       const userData = app.getPath("userData");
       reportFatalStartup(
-        "تعذّر تشغيل إشتراكاتي",
-        `${detail}\n\nبياناتك محفوظة عادةً هنا (لا تُحذف بتحديث البرنامج):\n${path.join(userData, "ishtarkati.db")}`,
+        "Could not start Ishtarkati",
+        `${detail}\n\nYour data is usually stored here (not removed by app updates):\n${path.join(userData, "ishtarkati.db")}`,
       );
       app.exit(1);
     }

@@ -7,9 +7,14 @@ alwaysApply: true
 
 End users read **what changed** on each GitHub Release. Do not ship a version without notes.
 
+## Language
+
+- **`CHANGELOG.md`**, **`release-notes/vX.Y.Z.md`**, and **GitHub Release bodies** are **English only**.
+- Arabic copy lives only in `src/locales/ar.json` (and other locale files), not in release docs.
+
 ## Before `npm run build:release`
 
-1. Update **`CHANGELOG.md`** under `## [Unreleased]` with clear bullets (Arabic or English):
+1. Update **`CHANGELOG.md`** under `## [Unreleased]` with clear **English** bullets:
    - Use headings: `### Added`, `### Changed`, `### Fixed`, `### Removed` when relevant.
    - Describe **user-visible** behavior (screens, tray, reminders, settings, DB migrations), not internal refactors only.
 

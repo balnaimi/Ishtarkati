@@ -97,7 +97,7 @@ Push a version tag to build Linux, Windows, and Mac on GitHub Actions and publis
 npm run build:release   # bumps version, builds AppImage, writes release-notes/vX.Y.Z.md, pushes tag
 ```
 
-**Release notes:** before `build:release`, list user-facing changes under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md). The workflow attaches [`release-notes/vX.Y.Z.md`](release-notes/) as the GitHub Release description.
+**Release notes:** before `build:release`, list user-facing changes in **English** under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md). The workflow attaches [`release-notes/vX.Y.Z.md`](release-notes/) as the GitHub Release description.
 
 Artifacts also appear under the workflow run when using **Actions → Release → Run workflow**.
 
