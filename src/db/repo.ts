@@ -17,14 +17,22 @@ import type {
   PaymentEvent,
   Subscription,
   SubscriptionAuditEntry,
+  Tag,
   WalletMethod,
 } from "../types";
 import { findSimilarInList } from "../lib/subscriptionSimilarity";
+import { parseTags, removeTagFromString, renameTagInString } from "../lib/tags";
 
 /** Machine note stored for quick «mark paid»; UI shows `detail.paymentNoteMarkPaid`. */
 export const PAYMENT_NOTE_MARK_PAID = "__ishtarkati_mark_paid__";
 
 export type CategoryWithActiveCount = Category & { activeSubscriptionCount: number };
+export type TagWithActiveCount = Tag & { activeSubscriptionCount: number };
+
+function sqlTagMatchParam(tagName: string, next: (v: unknown) => string): string {
+  const p = next(tagName.trim().toLowerCase());
+  return `LOWER(',' || REPLACE(IFNULL(s.tags,''), ' ', '') || ',') LIKE '%,' || ${p} || ',%'`;
+}
 
 export async function loadCategories(): Promise<Category[]> {
   const db = await getDb();
@@ -82,6 +90,107 @@ export async function countActiveSubscriptionsUncategorized(): Promise<number> {
     "SELECT COUNT(*) AS n FROM subscriptions WHERE category_id IS NULL AND cancelled_at IS NULL",
   );
   return r[0]?.n ?? 0;
+}
+
+export async function loadTags(): Promise<Tag[]> {
+  const db = await getDb();
+  return db.select<Tag>("SELECT id, name, sort_order FROM tags ORDER BY sort_order ASC, id ASC");
+}
+
+export async function addTag(name: string): Promise<number> {
+  const db = await getDb();
+  const rows = await db.select<{ m: number | null }>("SELECT MAX(sort_order) AS m FROM tags");
+  const nextOrder = (rows[0]?.m ?? -1) + 1;
+  const r = await db.execute("INSERT INTO tags (name, sort_order) VALUES ($1, $2)", [
+    name.trim(),
+    nextOrder,
+  ]);
+  if (r.lastInsertId != null && r.lastInsertId > 0) return r.lastInsertId;
+  const idRows = await db.select<{ id: number }>("SELECT last_insert_rowid() AS id");
+  return idRows[0]?.id ?? 0;
+}
+
+export async function updateTag(id: number, name: string): Promise<void> {
+  const db = await getDb();
+  const rows = await db.select<{ name: string }>("SELECT name FROM tags WHERE id = $1", [id]);
+  const oldName = rows[0]?.name;
+  const newName = name.trim();
+  if (!oldName || !newName) return;
+  await db.execute("UPDATE tags SET name = $1 WHERE id = $2", [newName, id]);
+  if (oldName.toLowerCase() === newName.toLowerCase()) return;
+  const subs = await db.select<{ id: number; tags: string | null }>(
+    "SELECT id, tags FROM subscriptions WHERE tags IS NOT NULL AND TRIM(tags) != ''",
+  );
+  for (const s of subs) {
+    const next = renameTagInString(s.tags, oldName, newName);
+    if (next !== s.tags) {
+      await db.execute("UPDATE subscriptions SET tags = $1, updated_at = $2 WHERE id = $3", [
+        next,
+        new Date().toISOString(),
+        s.id,
+      ]);
+    }
+  }
+}
+
+export async function deleteTag(id: number): Promise<void> {
+  const db = await getDb();
+  const rows = await db.select<{ name: string }>("SELECT name FROM tags WHERE id = $1", [id]);
+  const name = rows[0]?.name;
+  if (!name) return;
+  const subs = await db.select<{ id: number; tags: string | null }>(
+    "SELECT id, tags FROM subscriptions WHERE tags IS NOT NULL AND TRIM(tags) != ''",
+  );
+  for (const s of subs) {
+    const next = removeTagFromString(s.tags, name);
+    if (next !== s.tags) {
+      await db.execute("UPDATE subscriptions SET tags = $1, updated_at = $2 WHERE id = $3", [
+        next,
+        new Date().toISOString(),
+        s.id,
+      ]);
+    }
+  }
+  await db.execute("DELETE FROM tags WHERE id = $1", [id]);
+}
+
+export async function loadTagsWithActiveCounts(): Promise<TagWithActiveCount[]> {
+  const db = await getDb();
+  const tags = await loadTags();
+  const counts = new Map<string, number>();
+  const subs = await db.select<{ tags: string | null }>(
+    "SELECT tags FROM subscriptions WHERE cancelled_at IS NULL AND tags IS NOT NULL AND TRIM(tags) != ''",
+  );
+  for (const s of subs) {
+    for (const tag of parseTags(s.tags)) {
+      const key = tag.toLowerCase();
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return tags.map((t) => ({
+    ...t,
+    activeSubscriptionCount: counts.get(t.name.toLowerCase()) ?? 0,
+  }));
+}
+
+export async function countActiveSubscriptionsUntagged(): Promise<number> {
+  const db = await getDb();
+  const r = await db.select<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM subscriptions WHERE cancelled_at IS NULL AND (tags IS NULL OR TRIM(tags) = '')",
+  );
+  return r[0]?.n ?? 0;
+}
+
+/** Ensure vocabulary entries exist for tags used on a subscription. */
+export async function ensureTagsExist(names: string[]): Promise<void> {
+  const unique = parseTags(names.join(","));
+  for (const name of unique) {
+    try {
+      await addTag(name);
+    } catch {
+      /* UNIQUE — already in vocabulary */
+    }
+  }
 }
 
 /** @deprecated Legacy table; UI uses built-in ISO list. */
@@ -229,6 +338,7 @@ export interface SubscriptionListRow extends Subscription {
 
 function buildSubscriptionQuery(filters: {
   categoryId?: number;
+  tagName?: string;
   currency?: string;
   dueWithinDays?: number;
   search?: string;
@@ -255,6 +365,9 @@ function buildSubscriptionQuery(filters: {
   if (filters.categoryId != null) {
     clauses.push(`s.category_id = ${next(filters.categoryId)}`);
   }
+  if (filters.tagName?.trim()) {
+    clauses.push(sqlTagMatchParam(filters.tagName.trim(), next));
+  }
   if (filters.currency) {
     clauses.push(`s.currency_code = ${next(filters.currency.toUpperCase())}`);
   }
@@ -276,7 +389,7 @@ function buildSubscriptionQuery(filters: {
     const pat = `%${escaped}%`;
     const p1 = next(pat);
     clauses.push(
-      `(s.title LIKE ${p1} ESCAPE '\\' OR IFNULL(s.notes,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.account_label,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.website_url,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(c.name,'') LIKE ${p1} ESCAPE '\\')`,
+      `(s.title LIKE ${p1} ESCAPE '\\' OR IFNULL(s.notes,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.account_label,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.website_url,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(c.name,'') LIKE ${p1} ESCAPE '\\' OR IFNULL(s.tags,'') LIKE ${p1} ESCAPE '\\')`,
     );
   }
 
@@ -339,6 +452,7 @@ export async function loadDistinctSubscriptionCurrencies(): Promise<string[]> {
 
 export async function loadSubscriptions(filters: {
   categoryId?: number;
+  tagName?: string;
   currency?: string;
   dueWithinDays?: number;
   search?: string;

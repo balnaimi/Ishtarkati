@@ -11,6 +11,12 @@ export interface Category {
   sort_order: number;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
 export interface CreditCard {
   id: number;
   brand: string;

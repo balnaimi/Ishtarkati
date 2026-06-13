@@ -563,6 +563,33 @@ function runMigrations(database: Database.Database): void {
     `);
     database.prepare("UPDATE schema_version SET version = 13").run();
   }
+
+  if (version < 14) {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        sort_order INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    const subs = database
+      .prepare("SELECT tags FROM subscriptions WHERE tags IS NOT NULL AND TRIM(tags) != ''")
+      .all() as { tags: string }[];
+    const seen = new Set<string>();
+    let sortOrder = 0;
+    const insert = database.prepare("INSERT OR IGNORE INTO tags (name, sort_order) VALUES (?, ?)");
+    for (const row of subs) {
+      for (const part of row.tags.split(",")) {
+        const name = part.trim();
+        if (!name) continue;
+        const key = name.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        insert.run(name, sortOrder++);
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 14").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

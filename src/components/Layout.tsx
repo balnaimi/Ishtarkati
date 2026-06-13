@@ -8,6 +8,8 @@ import { useUiDir } from "../hooks/useUiDir";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
+import { UpdateDialog } from "./UpdateDialog";
+import { useAppUpdateCheck } from "../hooks/useAppUpdateCheck";
 import {
   IconAccounts,
   IconHome,
@@ -34,6 +36,8 @@ export function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const { state: updateState, dialogOpen, setDialogOpen, check, dismissDialog, openDialog, currentVersion } =
+    useAppUpdateCheck();
   useDesktopReminders();
 
   useEffect(() => {
@@ -127,6 +131,28 @@ export function Layout() {
               onChange={() => void toggleTheme()}
             />
           </label>
+          <button
+            type="button"
+            className={`dash-btn-ghost w-full text-start text-xs ${
+              updateState.status === "available" ? "text-violet-600 dark:text-violet-300" : ""
+            }`}
+            onClick={() => {
+              if (updateState.status === "idle" || updateState.status === "checking") {
+                void check().then(() => openDialog());
+              } else {
+                openDialog();
+              }
+            }}
+            disabled={updateState.status === "checking"}
+          >
+            {updateState.status === "checking"
+              ? t("updates.checking")
+              : updateState.status === "available"
+                ? t("updates.sidebarAvailable", { version: updateState.latest })
+                : updateState.status === "error"
+                  ? t("updates.sidebarError")
+                  : t("updates.sidebarCurrent", { version: currentVersion })}
+          </button>
         </div>
       </aside>
 
@@ -169,6 +195,13 @@ export function Layout() {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <UpdateDialog
+        open={dialogOpen}
+        state={updateState}
+        currentVersion={currentVersion}
+        onClose={() => setDialogOpen(false)}
+        onDismiss={updateState.status === "available" ? dismissDialog : undefined}
+      />
     </div>
   );
 }

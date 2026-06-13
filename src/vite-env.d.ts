@@ -37,7 +37,14 @@ declare global {
         { ok: true; path: string } | { ok: false; canceled?: boolean }
       >;
       checkForUpdates: () => Promise<
-        | { ok: true; latest: string; updateAvailable: boolean; url: string }
+        | {
+            ok: true;
+            latest: string;
+            updateAvailable: boolean;
+            url: string;
+            downloadUrl: string;
+            notes: string;
+          }
         | { ok: false; error: string }
       >;
     };

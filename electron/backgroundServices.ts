@@ -283,8 +283,24 @@ function semverGt(a: string, b: string): boolean {
   return false;
 }
 
-export async function checkForAppUpdate(currentVersion: string): Promise<
-  | { ok: true; latest: string; updateAvailable: boolean; url: string }
+function platformAssetName(platform: NodeJS.Platform): string {
+  if (platform === "win32") return "Ishtarkati-win-x64-setup.exe";
+  if (platform === "darwin") return "Ishtarkati-mac-arm64.dmg";
+  return "Ishtarkati-linux.AppImage";
+}
+
+export async function checkForAppUpdate(
+  currentVersion: string,
+  platform: NodeJS.Platform = process.platform,
+): Promise<
+  | {
+      ok: true;
+      latest: string;
+      updateAvailable: boolean;
+      url: string;
+      downloadUrl: string;
+      notes: string;
+    }
   | { ok: false; error: string }
 > {
   try {
@@ -292,15 +308,27 @@ export async function checkForAppUpdate(currentVersion: string): Promise<
       headers: { Accept: "application/vnd.github+json", "User-Agent": "Ishtarkati" },
     });
     if (!res.ok) return { ok: false, error: `http-${res.status}` };
-    const data = (await res.json()) as { tag_name?: string; html_url?: string };
+    const data = (await res.json()) as {
+      tag_name?: string;
+      html_url?: string;
+      body?: string;
+      assets?: { name?: string; browser_download_url?: string }[];
+    };
     const latest = (data.tag_name ?? "").replace(/^v/i, "");
     const url = data.html_url ?? "https://github.com/balnaimi/Ishtarkati/releases";
     if (!latest) return { ok: false, error: "no-tag" };
+    const assetName = platformAssetName(platform);
+    const matched = data.assets?.find((a) => a.name === assetName);
+    const downloadUrl =
+      matched?.browser_download_url ??
+      `https://github.com/balnaimi/Ishtarkati/releases/latest/download/${assetName}`;
     return {
       ok: true,
       latest,
       updateAvailable: semverGt(latest, currentVersion),
       url,
+      downloadUrl,
+      notes: (data.body ?? "").trim(),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

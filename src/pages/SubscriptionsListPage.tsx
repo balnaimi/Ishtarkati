@@ -7,6 +7,7 @@ import {
   loadDistinctSubscriptionCurrencies,
   loadSubscriptions,
   loadCategories,
+  loadTags,
   getPrimaryCurrencyCode,
   subscriptionNeedsPaidAttention,
   type AppCurrency,
@@ -28,6 +29,7 @@ import {
   type DueProgressInput,
 } from "../lib/dueProgress";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
+import { parseTags } from "../lib/tags";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
@@ -75,10 +77,12 @@ export function SubscriptionsListPage() {
   const filterDetailsRef = useRef<HTMLDetailsElement>(null);
   const [items, setItems] = useState<SubscriptionListRow[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [tagOptions, setTagOptions] = useState<{ id: number; name: string }[]>([]);
   const [currencyOptions, setCurrencyOptions] = useState<AppCurrency[]>([]);
   const [emails, setEmails] = useState<{ email: string; count: number }[]>([]);
   const [primaryCode, setPrimaryCode] = useState("QAR");
   const [catFilter, setCatFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const [curFilter, setCurFilter] = useState("");
   const [emailFilter, setEmailFilter] = useState("");
   const [dueSoon, setDueSoon] = useState(false);
@@ -96,15 +100,17 @@ export function SubscriptionsListPage() {
     setLoading(true);
     try {
       const q = deferredSearch.trim();
-      const [list, cats, curs, prim, mailRows] = await Promise.all([
+      const [list, cats, tags, curs, prim, mailRows] = await Promise.all([
         loadSubscriptions({
           categoryId: catFilter ? parseInt(catFilter, 10) : undefined,
+          tagName: tagFilter || undefined,
           currency: curFilter || undefined,
           dueWithinDays: dueSoon ? 30 : undefined,
           recordKind,
           search: q || undefined,
         }),
         loadCategories(),
+        loadTags(),
         loadDistinctSubscriptionCurrencies().then((codes) =>
           codes.map((code, i) => ({ code, sort_order: i })),
         ),
@@ -113,13 +119,14 @@ export function SubscriptionsListPage() {
       ]);
       setItems(list);
       setCategories(cats);
+      setTagOptions(tags);
       setCurrencyOptions(curs);
       setPrimaryCode(prim);
       setEmails(mailRows);
     } finally {
       setLoading(false);
     }
-  }, [catFilter, curFilter, dueSoon, recordKind, deferredSearch, pageTab]);
+  }, [catFilter, tagFilter, curFilter, dueSoon, recordKind, deferredSearch, pageTab]);
 
   const sortedItems = useMemo(() => {
     const arr = [...items];
@@ -352,6 +359,25 @@ export function SubscriptionsListPage() {
                 </select>
               </div>
               <div>
+                <label className="sk-label" htmlFor="list-filter-tag">
+                  {t("list.filterTag")}
+                </label>
+                <select
+                  id="list-filter-tag"
+                  className="sk-select !min-h-9 text-sm"
+                  value={tagFilter}
+                  onChange={(e) => setTagFilter(e.target.value)}
+                >
+                  <option value="">{t("common.all")}</option>
+                  {tagOptions.map((tag) => (
+                    <option key={tag.id} value={tag.name}>
+                      {tag.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="sk-label" htmlFor="list-filter-currency">
                   {t("list.filterCurrency")}
                 </label>
@@ -480,6 +506,20 @@ export function SubscriptionsListPage() {
                           {s.category_name ? (
                             <span className={`dash-tag shrink-0 ${tagClass}`}>{s.category_name}</span>
                           ) : null}
+                          {parseTags(s.tags).map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              className="dash-tag dash-tag-teal shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTagFilter(tag);
+                                if (filterDetailsRef.current) filterDetailsRef.current.open = true;
+                              }}
+                            >
+                              {tag}
+                            </button>
+                          ))}
                         </div>
                         <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0 text-[11px] sk-text-hint">
                           {s.account_label?.trim() ? (

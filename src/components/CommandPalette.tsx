@@ -48,7 +48,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     if (!q) return [];
     return subs
       .filter((s) => {
-        const hay = [s.title, s.website_url, s.account_label, s.notes, s.category_name]
+        const hay = [s.title, s.website_url, s.account_label, s.notes, s.category_name, s.tags]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();

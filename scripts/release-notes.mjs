@@ -107,6 +107,15 @@ export function writeReleaseNotesFile(version) {
   const file = `# Ishtarkati ${version}\n\n${body}\n`;
   writeFileSync(outPath, file);
   console.log(`[release-notes] wrote ${outPath}`);
+
+  const arPending = join(notesDir, "ar-pending.md");
+  const arOut = join(notesDir, `${tag}.ar.md`);
+  if (existsSync(arPending) && !existsSync(arOut)) {
+    const arTemplate = readFileSync(arPending, "utf8").replaceAll("{{version}}", version);
+    writeFileSync(arOut, arTemplate.endsWith("\n") ? arTemplate : `${arTemplate}\n`);
+    console.log(`[release-notes] wrote ${arOut}`);
+  }
+
   return outPath;
 }
 

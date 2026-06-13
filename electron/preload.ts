@@ -41,7 +41,14 @@ contextBridge.exposeInMainWorld("ishtarkati", {
     { ok: true; path: string } | { ok: false; canceled?: boolean }
   > => ipcRenderer.invoke("backup:chooseAutoDir"),
   checkForUpdates: (): Promise<
-    | { ok: true; latest: string; updateAvailable: boolean; url: string }
+    | {
+        ok: true;
+        latest: string;
+        updateAvailable: boolean;
+        url: string;
+        downloadUrl: string;
+        notes: string;
+      }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("app:checkForUpdates"),
 });

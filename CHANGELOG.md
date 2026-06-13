@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.31.0] - 2026-06-13
+
+### Added
+- Tags settings tab: manage vocabulary, stats, rename/delete; tag picker in forms; filter, badges, and search (including command palette).
+- Automatic update check when online: sidebar version status, startup prompt for new releases, dialog with download link and release notes (Arabic notes when `release-notes/vX.Y.Z.ar.md` exists).
+
+### Changed
+- Tags are cross-cutting labels (multiple per account); categories remain the single structural grouping per account.
 ## [4.29.1] - 2026-06-13
 
 ### Changed

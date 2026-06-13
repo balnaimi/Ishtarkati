@@ -1,5 +1,6 @@
 import type { SubscriptionFormValues, Subscription, IntervalUnit, BillingModel } from "../types";
 import { addBillingSteps, formatDateInput, parseDateInput } from "./schedule";
+import { joinTags } from "./tags";
 
 export function defaultFormValues(): SubscriptionFormValues {
   return {
@@ -143,7 +144,7 @@ export function formToRow(
       account_label: v.account_label.trim() || null,
       credit_card_id: null,
       wallet_method_id: null,
-      tags: v.tags.trim() || null,
+      tags: joinTags([v.tags]),
       trial_ends_on: null,
       renewal_cancelled: 0,
     };
@@ -196,7 +197,7 @@ export function formToRow(
       ? parseInt(v.credit_card_id, 10)
       : null,
     wallet_method_id: v.wallet_method_id ? parseInt(v.wallet_method_id, 10) : null,
-    tags: v.tags.trim() || null,
+    tags: joinTags([v.tags]),
     trial_ends_on: v.trial_ends_on.trim() || null,
     renewal_cancelled: v.renewal_cancelled ? 1 : 0,
   };

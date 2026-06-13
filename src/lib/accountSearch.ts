@@ -6,9 +6,10 @@ export type AccountSearchRow = {
   website_url: string | null;
   account_label: string | null;
   category_name?: string | null;
+  tags?: string | null;
 };
 
-/** Lowercase haystack for substring search (title, URL, host, email, notes, category). */
+/** Lowercase haystack for substring search (title, URL, host, email, notes, category, tags). */
 export function accountSearchHaystack(row: AccountSearchRow): string {
   const host = hostnameFromWebsiteUrl(row.website_url) ?? "";
   return [
@@ -17,6 +18,7 @@ export function accountSearchHaystack(row: AccountSearchRow): string {
     row.account_label,
     row.website_url,
     row.category_name,
+    row.tags,
     host,
   ]
     .map((x) => (x ?? "").trim())

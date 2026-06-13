@@ -19,6 +19,7 @@ import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/table
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
 import { CategoriesPage } from "./CategoriesPage";
+import { TagsPage } from "./TagsPage";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
@@ -36,7 +37,7 @@ import {
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
-type TabId = "app" | "categories" | "export" | "danger";
+type TabId = "app" | "categories" | "tags" | "export" | "danger";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -84,6 +85,7 @@ export function SettingsPage() {
   const [lastManualBackup, setLastManualBackup] = useState<string | null>(null);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [updateBusy, setUpdateBusy] = useState(false);
+  const [updateDownloadUrl, setUpdateDownloadUrl] = useState<string | null>(null);
   const { hydrate, refresh, fx } = useFxManager();
 
   const syncFxAt = useCallback(async () => {
@@ -166,11 +168,8 @@ export function SettingsPage() {
       nav("/payments", { replace: true });
       return;
     }
-    if (raw === "categories" || raw === "export" || raw === "danger") {
+    if (raw === "categories" || raw === "tags" || raw === "export" || raw === "danger") {
       setTab(raw);
-    } else if (raw === "tags") {
-      setTab("categories");
-      setSearchParams({ tab: "categories" }, { replace: true });
     } else if (raw === "sync") {
       setTab("export");
       setSearchParams({ tab: "export" }, { replace: true });
@@ -239,12 +238,14 @@ export function SettingsPage() {
 
   async function checkUpdates() {
     setUpdateMsg(null);
+    setUpdateDownloadUrl(null);
     setUpdateBusy(true);
     try {
       const r = await window.ishtarkati.checkForUpdates();
       if (r.ok) {
         if (r.updateAvailable) {
           setUpdateMsg(t("settings.updateAvailable", { latest: r.latest, current: APP_VERSION }));
+          setUpdateDownloadUrl(r.downloadUrl);
         } else {
           setUpdateMsg(t("settings.updateCurrent", { version: APP_VERSION }));
         }
@@ -558,6 +559,7 @@ export function SettingsPage() {
   const tabs: { id: TabId; label: string }[] = [
     { id: "app", label: t("settings.tabApp") },
     { id: "categories", label: t("settings.tabCategories") },
+    { id: "tags", label: t("settings.tabTags") },
     { id: "export", label: t("settings.tabExport") },
     { id: "danger", label: t("settings.tabDanger") },
   ];
@@ -993,12 +995,22 @@ export function SettingsPage() {
               {t("settings.checkUpdates")}
             </button>
             {updateMsg ? <p className="text-sm text-cream-800">{updateMsg}</p> : null}
+            {updateDownloadUrl ? (
+              <button
+                type="button"
+                className="sk-btn-primary text-sm"
+                onClick={() => void window.ishtarkati.openExternal(updateDownloadUrl)}
+              >
+                {t("updates.download")}
+              </button>
+            ) : null}
             <p className="text-xs leading-relaxed text-cream-600">{t("settings.desktopOnly")}</p>
           </div>
         </div>
       ) : null}
 
       {tab === "categories" ? <CategoriesPage omitTitle /> : null}
+      {tab === "tags" ? <TagsPage omitTitle /> : null}
       {tab === "export" ? (
         <div className="space-y-6">
           <section className="sk-card space-y-4">

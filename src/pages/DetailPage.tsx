@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { formatUiError } from "../lib/uiErrors";
+import { parseTags } from "../lib/tags";
 import {
   cancelSubscription,
   confirmSubscriptionPaid,
@@ -350,10 +351,15 @@ export function DetailPage() {
                   <p className="mt-1 text-cream-800">{t("detail.renewalCancelledBody")}</p>
                 </div>
               ) : null}
-              {sub.tags?.trim() ? (
-                <p className="text-sm text-cream-700">
-                  {t("form.tags")}: {sub.tags}
-                </p>
+              {parseTags(sub.tags).length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-sm text-cream-700">{t("form.tags")}:</span>
+                  {parseTags(sub.tags).map((tag) => (
+                    <span key={tag} className="dash-tag dash-tag-teal">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               ) : null}
               <p className="text-sm text-cream-700">
                 <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">

@@ -4,12 +4,14 @@ import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types"
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
 import { formatUiError } from "../lib/uiErrors";
-import { addCategory, findSimilarSubscriptions, loadCreditCards, loadWalletMethods } from "../db/repo";
+import { addCategory, ensureTagsExist, findSimilarSubscriptions, loadCreditCards, loadTags, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
+import { parseTags } from "../lib/tags";
 import { SiteFavicon } from "./SiteFavicon";
+import { TagPicker } from "./TagPicker";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
@@ -55,15 +57,17 @@ export function SubscriptionForm({
   const [addCatBusy, setAddCatBusy] = useState(false);
   const [wallets, setWallets] = useState<WalletMethod[]>([]);
   const [cards, setCards] = useState<CreditCard[]>([]);
+  const [tagOptions, setTagOptions] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     setV(initial);
   }, [initial]);
 
   useEffect(() => {
-    void Promise.all([loadWalletMethods(), loadCreditCards()]).then(([w, c]) => {
+    void Promise.all([loadWalletMethods(), loadCreditCards(), loadTags()]).then(([w, c, tags]) => {
       setWallets(w);
       setCards(c);
+      setTagOptions(tags);
     });
   }, []);
 
@@ -229,7 +233,10 @@ export function SubscriptionForm({
     if (isFree) {
       setBusy(true);
       try {
+        await ensureTagsExist(parseTags(v.tags));
         await onSubmit(v, { primary: 0, fxFactor: 1, fxAt: new Date().toISOString() });
+        const tags = await loadTags();
+        setTagOptions(tags);
       } catch (er) {
         setErr(formatUiError(t, er));
       } finally {
@@ -285,7 +292,10 @@ export function SubscriptionForm({
 
     setBusy(true);
     try {
+      await ensureTagsExist(parseTags(v.tags));
       await onSubmit(v, { primary: pr, fxFactor, fxAt });
+      const tags = await loadTags();
+      setTagOptions(tags);
     } catch (er) {
       setErr(formatUiError(t, er));
     } finally {
@@ -656,12 +666,8 @@ export function SubscriptionForm({
 
       <div>
         <label className="sk-label">{t("form.tags")}</label>
-        <input
-          className="sk-input"
-          value={v.tags}
-          onChange={(e) => setField("tags", e.target.value)}
-          placeholder={t("form.tagsPlaceholder")}
-        />
+        <p className="mb-2 text-xs text-cream-600">{t("form.tagsHint")}</p>
+        <TagPicker value={v.tags} available={tagOptions} onChange={(tags) => setField("tags", tags)} />
       </div>
 
       {!isFree ? (
