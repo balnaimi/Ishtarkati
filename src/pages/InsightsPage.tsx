@@ -10,7 +10,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { arSA } from "date-fns/locale";
+import { arSA, enUS } from "date-fns/locale";
 import {
   getPrimaryCurrencyCode,
   getSetting,
@@ -43,7 +43,8 @@ function weekdayHeaderKeys(): string[] {
 }
 
 export function InsightsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateLocale = i18n.language === "en" ? enUS : arSA;
   const [tab, setTab] = useState<MainTab>("summary");
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof statsSummary>> | null>(null);
   const [subs, setSubs] = useState<SubscriptionListRow[]>([]);
@@ -163,7 +164,7 @@ export function InsightsPage() {
 
   const primary = summary?.primaryCode ?? primaryCode;
 
-  const monthTitle = format(monthAnchor, "MMMM yyyy", { locale: arSA });
+  const monthTitle = format(monthAnchor, "MMMM yyyy", { locale: dateLocale });
 
   const histSubsWithPayments = useMemo(() => {
     const seen = new Map<number, string>();
@@ -172,8 +173,8 @@ export function InsightsPage() {
     }
     return [...seen.entries()]
       .map(([id, title]) => ({ id, title }))
-      .sort((a, b) => a.title.localeCompare(b.title, "ar"));
-  }, [histPayments]);
+      .sort((a, b) => a.title.localeCompare(b.title, i18n.language === "en" ? "en" : "ar"));
+  }, [histPayments, i18n.language]);
 
   const filteredHistPayments = useMemo(() => {
     let rows = histPayments;
@@ -320,7 +321,7 @@ export function InsightsPage() {
           {calMode === "year" ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {monthTotals.map((tot, i) => {
-                const label = format(new Date(calYear, i, 1), "MMMM", { locale: arSA });
+                const label = format(new Date(calYear, i, 1), "MMMM", { locale: dateLocale });
                 return (
                   <button
                     key={i}
@@ -437,7 +438,7 @@ export function InsightsPage() {
                       <option value="">{t("insights.historyAllMonths")}</option>
                       {histMonths.map((row) => {
                         const [y, m] = row.ym.split("-").map(Number);
-                        const label = format(new Date(y, m - 1, 1), "MMMM yyyy", { locale: arSA });
+                        const label = format(new Date(y, m - 1, 1), "MMMM yyyy", { locale: dateLocale });
                         return (
                           <option key={row.ym} value={row.ym}>
                             {label}
@@ -514,7 +515,7 @@ export function InsightsPage() {
                   <ul className="max-h-[28rem] space-y-2 overflow-y-auto">
                     {filteredHistPayments.map((p) => {
                       const paidLabel = format(new Date(p.paid_at.slice(0, 10)), "d MMMM yyyy", {
-                        locale: arSA,
+                        locale: dateLocale,
                       });
                       const primaryAmt = p.amount_qar ?? p.amount_original ?? 0;
                       const showOrig =

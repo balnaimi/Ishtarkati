@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
-import localeAr from "../src/locales/ar.json";
+import { electronUiStrings } from "./uiLocale";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -746,17 +746,18 @@ function createWindow(): void {
   });
 
   win.webContents.on("context-menu", (_event, params) => {
+    const locale = electronUiStrings(db);
     const template: Electron.MenuItemConstructorOptions[] = [];
     if (params.isEditable) {
       template.push(
-        { role: "cut", label: localeAr.electron.menuCut },
-        { role: "copy", label: localeAr.electron.menuCopy },
-        { role: "paste", label: localeAr.electron.menuPaste },
+        { role: "cut", label: locale.menuCut },
+        { role: "copy", label: locale.menuCopy },
+        { role: "paste", label: locale.menuPaste },
         { type: "separator" },
-        { role: "selectAll", label: localeAr.electron.menuSelectAll },
+        { role: "selectAll", label: locale.menuSelectAll },
       );
     } else if (params.selectionText?.trim()) {
-      template.push({ role: "copy", label: localeAr.electron.menuCopy });
+      template.push({ role: "copy", label: locale.menuCopy });
     }
     if (template.length === 0) return;
     const menu = Menu.buildFromTemplate(template);

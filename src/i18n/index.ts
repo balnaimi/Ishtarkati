@@ -1,15 +1,30 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import ar from "../locales/ar.json";
+import en from "../locales/en.json";
 import currenciesAr from "../locales/currencies.ar.json";
+import currenciesEn from "../locales/currencies.en.json";
+import { APP_LOCALE_STORAGE_KEY, applyDocumentLocale, isAppLocale } from "../lib/appLocale";
 
-/** Single Arabic UI bundle: screens + ISO 4217 names + payment labels (codes/keys in English). */
-const translation = { ...ar, currencies: currenciesAr };
+function bundle(ui: typeof ar, currencies: typeof currenciesAr) {
+  return { ...ui, currencies };
+}
+
+const cached =
+  typeof localStorage !== "undefined" ? localStorage.getItem(APP_LOCALE_STORAGE_KEY) : null;
+const initialLng = isAppLocale(cached) ? cached : "ar";
+
+if (typeof document !== "undefined") {
+  applyDocumentLocale(initialLng);
+}
 
 void i18n.use(initReactI18next).init({
-  lng: "ar",
+  lng: initialLng,
   fallbackLng: "ar",
-  resources: { ar: { translation } },
+  resources: {
+    ar: { translation: bundle(ar, currenciesAr) },
+    en: { translation: bundle(en, currenciesEn) },
+  },
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
 });

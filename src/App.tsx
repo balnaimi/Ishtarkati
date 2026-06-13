@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { LocaleBootstrap } from "./components/LocaleBootstrap";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { PinGate } from "./components/PinGate";
 import { HomePage } from "./pages/HomePage";
@@ -44,7 +45,8 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <HashRouter>
-      <OnboardingGate>
+      <LocaleBootstrap>
+        <OnboardingGate>
         <PinGate>
           <Routes>
             <Route element={<Layout />}>
@@ -111,7 +113,8 @@ export default function App() {
             </Route>
           </Routes>
         </PinGate>
-      </OnboardingGate>
+        </OnboardingGate>
+      </LocaleBootstrap>
     </HashRouter>
   );
 }

@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  APP_LANGUAGE_KEY,
+  getSetting,
   insertWalletMethod,
   ONBOARDING_COMPLETE_KEY,
   PIN_ENABLED_KEY,
@@ -12,14 +14,17 @@ import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { PAYMENT_SERVICES } from "../lib/paymentCatalog";
 import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
+import { type AppLocale, isAppLocale, persistAppLocale } from "../lib/appLocale";
+import { useUiDir } from "../hooks/useUiDir";
 
-type Step = "welcome" | "currency" | "pin" | "payment";
+type Step = "language" | "welcome" | "currency" | "pin" | "payment";
 
-const ONBOARDING_STEPS: readonly Step[] = ["welcome", "currency", "pin", "payment"];
+const ONBOARDING_STEPS: readonly Step[] = ["language", "welcome", "currency", "pin", "payment"];
 
 export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<Step>("welcome");
+  const dir = useUiDir();
+  const [step, setStep] = useState<Step>("language");
   const currencies = useMemo(() => listCurrenciesSorted(), []);
   const [currencyCode, setCurrencyCode] = useState(() => currencies[0]?.code ?? "QAR");
 
@@ -32,6 +37,22 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const [payService, setPayService] = useState(PAYMENT_SERVICES[0]?.code ?? "OTHER");
   const [payAccount, setPayAccount] = useState("");
   const [payErr, setPayErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSetting(APP_LANGUAGE_KEY).then((saved) => {
+      if (isAppLocale(saved)) setStep("welcome");
+    });
+  }, []);
+
+  async function pickLanguage(locale: AppLocale) {
+    setBusy(true);
+    try {
+      await persistAppLocale(locale);
+      setStep("welcome");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function savePrimaryAndContinue() {
     await setSetting(PRIMARY_CURRENCY_KEY, currencyCode.trim().toUpperCase());
@@ -98,23 +119,47 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const stepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
 
   return (
-    <div
-      className="fixed inset-0 z-[150] overflow-y-auto bg-cream-50"
-      dir="rtl"
-    >
+    <div className="fixed inset-0 z-[150] overflow-y-auto bg-cream-50" dir={dir}>
       <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-5 py-10">
         <div className="mb-6 flex justify-center gap-2">
           {ONBOARDING_STEPS.map((s, i) => (
             <span
               key={s}
-              className={`h-2 w-8 rounded-full ${
-                i <= stepIndex ? "bg-sage-600" : "bg-cream-400"
-              }`}
+              className={`h-2 w-8 rounded-full ${i <= stepIndex ? "bg-sage-600" : "bg-cream-400"}`}
             />
           ))}
         </div>
 
         <div className="sk-card space-y-5 border-cream-400/80 shadow-lg">
+          {step === "language" ? (
+            <>
+              <h1 className="text-center text-2xl font-bold text-cream-900">
+                {t("onboarding.languageTitle")}
+              </h1>
+              <p className="text-center text-sm leading-relaxed text-cream-800">
+                {t("onboarding.languageHint")}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  className="sk-btn-primary py-4 text-lg"
+                  disabled={busy}
+                  onClick={() => void pickLanguage("ar")}
+                >
+                  {t("onboarding.languageArabic")}
+                </button>
+                <button
+                  type="button"
+                  className="sk-btn-secondary py-4 text-lg"
+                  disabled={busy}
+                  onClick={() => void pickLanguage("en")}
+                >
+                  {t("onboarding.languageEnglish")}
+                </button>
+              </div>
+            </>
+          ) : null}
+
           {step === "welcome" ? (
             <>
               <div className="flex justify-center">
@@ -268,7 +313,11 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   {t("onboarding.addPaymentAndFinish")}
                 </button>
               </div>
-              <button type="button" className="w-full text-sm text-cream-700 underline decoration-cream-500" onClick={() => setStep("pin")}>
+              <button
+                type="button"
+                className="w-full text-sm text-cream-700 underline decoration-cream-500"
+                onClick={() => setStep("pin")}
+              >
                 {t("common.back")}
               </button>
             </>

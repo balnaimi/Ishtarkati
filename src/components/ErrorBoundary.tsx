@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.error) {
       return (
         <div
-          dir="rtl"
+          dir={document.documentElement.dir === "ltr" ? "ltr" : "rtl"}
           className="flex min-h-full flex-col items-center justify-center gap-4 bg-cream-100 p-8 text-center text-cream-900"
         >
           <p className="text-lg font-semibold">{i18n.t("errorBoundary.title")}</p>

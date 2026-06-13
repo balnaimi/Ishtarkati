@@ -1,16 +1,16 @@
 # Locale bundles (`src/locales/`)
 
-This folder holds **all user-visible Arabic copy** for the default (`ar`) language, kept separate from TypeScript so code stays English-only.
+User-visible copy lives here, separate from TypeScript. The app supports **Arabic (`ar`)** and **English (`en`)**.
 
 | File | Purpose |
 |------|--------|
-| `ar.json` | UI strings: navigation, forms, settings, errors, payment catalog labels (`paymentCatalog.services.*`, `paymentCatalog.brands.*`), etc. Keys are English dot-paths (e.g. `settings.title`). |
-| `currencies.ar.json` | ISO 4217 currency codes → Arabic names. Loaded into i18n as `currencies.<CODE>` (e.g. `currencies.QAR`). |
+| `ar.json` / `en.json` | UI strings: navigation, forms, settings, onboarding, errors, payment catalog labels, etc. |
+| `currencies.ar.json` / `currencies.en.json` | ISO 4217 codes → localized currency names (`currencies.<CODE>`). |
 
-Runtime wiring: `src/i18n/index.ts` merges `ar.json` and `currencies.ar.json` into a single `translation` resource.
+Runtime: `src/i18n/index.ts` loads both languages and merges each UI bundle with its currency map.
 
-Helpers: `src/lib/i18nLabels.ts` (`tCurrency`, `tPaymentService`, `tCardBrand`).
+Persistence: `app_language` in SQLite settings (+ `ishtarkati_lang` in `localStorage` for fast boot). Helpers: `src/lib/appLocale.ts`, `src/lib/i18nLabels.ts`.
 
-**Electron** (`electron/main.ts`, `electron/backup.ts`) imports `ar.json` for context-menu and backup dialog titles (`electron.*` keys).
+**Electron** (`electron/uiLocale.ts`) reads `app_language` for context-menu and backup dialog titles (`electron.*` keys).
 
-To add UI text: extend `ar.json`, then use `t("…")` in React or `i18n.t` where hooks are unavailable.
+To add UI text: extend **both** `ar.json` and `en.json`, then use `t("…")` in React.

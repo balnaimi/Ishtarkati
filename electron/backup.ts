@@ -1,7 +1,7 @@
 import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
-import localeAr from "../src/locales/ar.json";
+import { electronUiStrings } from "./uiLocale";
 
 export const BACKUP_EXPORT_VERSION = 6;
 
@@ -1009,8 +1009,9 @@ export function registerBackupIpc(
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const defaultPath = `ishtarkati-backup-${stamp}.json`;
+    const locale = electronUiStrings(database);
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
-      title: localeAr.electron.backupSaveTitle,
+      title: locale.backupSaveTitle,
       defaultPath,
       filters: [{ name: "JSON", extensions: ["json"] }],
     });
@@ -1027,8 +1028,9 @@ export function registerBackupIpc(
     if (!database) return { ok: false as const, error: "no-database" };
     if (!w) return { ok: false as const, error: "no-window" };
 
+    const locale = electronUiStrings(database);
     const { filePaths, canceled } = await dialog.showOpenDialog(w, {
-      title: localeAr.electron.backupOpenTitle,
+      title: locale.backupOpenTitle,
       properties: ["openFile"],
       filters: [{ name: "JSON", extensions: ["json"] }],
     });

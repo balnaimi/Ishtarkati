@@ -18,6 +18,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCurrency } from "../lib/i18nLabels";
 import type { BackupImportPreview } from "../types/backupIPC";
+import { type AppLocale, loadAppLocale, persistAppLocale } from "../lib/appLocale";
 
 const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
@@ -60,6 +61,8 @@ export function SettingsPage() {
   const [importPreview, setImportPreview] = useState<BackupImportPreview | null>(null);
   const [importDlgOpen, setImportDlgOpen] = useState(false);
   const [importApplying, setImportApplying] = useState(false);
+  const [appLanguage, setAppLanguage] = useState<AppLocale>("ar");
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const { hydrate, refresh, fx } = useFxManager();
 
   const syncFxAt = useCallback(async () => {
@@ -103,6 +106,8 @@ export function SettingsPage() {
       setReminderMonthly(rm === "1");
       const prim = await getPrimaryCurrencyCode();
       setPrimaryCurrency(prim);
+      const lang = await loadAppLocale();
+      setAppLanguage(lang);
       await syncPinStateFromDb();
     })();
   }, [syncFxAt, syncPinStateFromDb]);
@@ -142,6 +147,19 @@ export function SettingsPage() {
     } else {
       setSearchParams({ tab: id }, { replace: true });
     }
+  }
+
+  async function changeAppLanguage(next: AppLocale) {
+    if (next === appLanguage) return;
+    await persistAppLocale(next);
+    setAppLanguage(next);
+  }
+
+  function toggleTheme() {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("ishtarkati_theme", next ? "dark" : "light");
+    setDark(next);
   }
 
   function parseOverridesJson(raw: string): Record<string, number> | null {
@@ -478,6 +496,49 @@ export function SettingsPage() {
 
       {tab === "app" ? (
         <div className="space-y-8">
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.languageTitle")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.languageHint")}</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={`min-h-11 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                  appLanguage === "ar"
+                    ? "bg-cream-800 text-cream-50 shadow-sm"
+                    : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                }`}
+                onClick={() => void changeAppLanguage("ar")}
+              >
+                {t("settings.languageArabic")}
+              </button>
+              <button
+                type="button"
+                className={`min-h-11 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                  appLanguage === "en"
+                    ? "bg-cream-800 text-cream-50 shadow-sm"
+                    : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
+                }`}
+                onClick={() => void changeAppLanguage("en")}
+              >
+                {t("settings.languageEnglish")}
+              </button>
+            </div>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.appearanceTitle")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.appearanceHint")}</p>
+            <button
+              type="button"
+              className="sk-btn-muted text-sm"
+              onClick={toggleTheme}
+              aria-pressed={dark}
+              aria-label={dark ? t("settings.themeLight") : t("settings.themeDark")}
+            >
+              {dark ? t("settings.themeUseLight") : t("settings.themeUseDark")}
+            </button>
+          </section>
+
           <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("settings.primaryCurrencyTitle")}</h3>
             <p className="text-sm leading-relaxed text-cream-700">{t("settings.primaryCurrencyHint")}</p>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useUiDir } from "../hooks/useUiDir";
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const { t } = useTranslation();
+  const dir = useUiDir();
 
   useEffect(() => {
     if (!open) return;
@@ -38,7 +40,7 @@ export function ConfirmDialog({
   return (
     <div className="sk-modal-overlay" role="presentation" onClick={onCancel}>
       <div
-        dir="rtl"
+        dir={dir}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "sk-confirm-title" : undefined}

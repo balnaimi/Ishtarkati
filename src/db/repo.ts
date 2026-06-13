@@ -762,6 +762,7 @@ export async function insertPaymentEventsBatch(
 
 /** When `'1'`, first-run onboarding has finished. */
 export const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+export const APP_LANGUAGE_KEY = "app_language";
 
 export const PRIMARY_CURRENCY_KEY = "primary_currency";
 

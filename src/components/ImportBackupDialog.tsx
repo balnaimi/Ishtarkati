@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { BackupImportPreview } from "../types/backupIPC";
+import { useUiDir } from "../hooks/useUiDir";
 
 type Props = {
   open: boolean;
@@ -17,13 +18,14 @@ export function ImportBackupDialog({
   onConfirm,
 }: Props) {
   const { t } = useTranslation();
+  const dir = useUiDir();
 
   if (!open || !preview) return null;
 
   return (
     <div className="sk-modal-overlay">
       <div
-        dir="rtl"
+        dir={dir}
         className="sk-card max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto border-cream-500/70 shadow-xl"
       >
         <h3 className="text-lg font-semibold text-cream-950">{t("backup.restoreConfirmTitle")}</h3>

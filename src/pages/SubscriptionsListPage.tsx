@@ -56,7 +56,8 @@ function payBadgeClass(status: ReturnType<typeof accountPaymentStatus>): string 
 
 /** Unified accounts list with due progress bar. */
 export function SubscriptionsListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const collatorLocale = i18n.language === "en" ? "en" : "ar";
   const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const pageTab: PageTab = searchParams.get("tab") === "deleted" ? "deleted" : "active";
@@ -121,9 +122,9 @@ export function SubscriptionsListPage() {
           if (!b.next_due_date) return -1;
           return a.next_due_date.localeCompare(b.next_due_date) * mul;
         case "title":
-          return a.title.localeCompare(b.title, "ar") * mul;
+          return a.title.localeCompare(b.title, collatorLocale) * mul;
         case "category":
-          return (a.category_name ?? "").localeCompare(b.category_name ?? "", "ar") * mul;
+          return (a.category_name ?? "").localeCompare(b.category_name ?? "", collatorLocale) * mul;
         case "amount":
           return (a.amount_original - b.amount_original) * mul;
         case "primary": {
