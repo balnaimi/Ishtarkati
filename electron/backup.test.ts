@@ -101,14 +101,14 @@ function tableSnapshot(db: Database.Database, table: string, orderBy: string): u
 
 function seedComprehensive(db: Database.Database): void {
   db.prepare(
-    `INSERT INTO categories (id, name, sort_order) VALUES (1, 'ترفيه', 0), (2, 'سحابة', 1)`,
+    `INSERT INTO categories (id, name, sort_order) VALUES (1, 'Entertainment', 0), (2, 'Cloud', 1)`,
   ).run();
   db.prepare(
     `INSERT INTO currencies (code, sort_order) VALUES ('QAR', 0), ('USD', 1)`,
   ).run();
   db.prepare(
     `INSERT INTO credit_cards (id, brand, last4, exp_month, exp_year, description, created_at, updated_at)
-     VALUES (1, 'visa', '4242', 12, 2028, 'بطاقة رئيسية', ?, ?)`,
+     VALUES (1, 'visa', '4242', 12, 2028, 'Primary card', ?, ?)`,
   ).run(NOW, NOW);
   db.prepare(
     `INSERT INTO wallet_methods (id, service_code, account_text, linked_card_id, created_at, updated_at)
@@ -121,24 +121,24 @@ function seedComprehensive(db: Database.Database): void {
       fx_quote_at, start_date, next_due_date, end_date, is_domain, tags, credit_card_id,
       wallet_method_id, account_label, cancelled_at, created_at, updated_at
     ) VALUES
-    (1, 'Netflix', 'عائلة', 'https://www.netflix.com', 1, 'recurring', 'month', NULL,
+    (1, 'Netflix', 'Family plan', 'https://www.netflix.com', 1, 'recurring', 'month', NULL,
      1, 1, 50, 'QAR', 50, 1, '${NOW}', '2025-01-01', '2026-07-01', NULL, 0, NULL, NULL,
      1, 'family@mail.com', NULL, '${NOW}', '${NOW}'),
-    (2, 'نشرة تقنية', 'مجاني', 'https://newsletter.example.com', 2, 'free_account', NULL, NULL,
+    (2, 'Tech newsletter', 'Free tier', 'https://newsletter.example.com', 2, 'free_account', NULL, NULL,
      1, 0, 0, 'QAR', NULL, NULL, NULL, '2026-01-15', NULL, NULL, 0, NULL, NULL,
      NULL, 'reader@mail.com', NULL, '${NOW}', '${NOW}'),
-    (3, 'خدمة ملغاة', NULL, 'https://old.example.com', NULL, 'recurring', 'year', NULL,
+    (3, 'Cancelled service', NULL, 'https://old.example.com', NULL, 'recurring', 'year', NULL,
      1, 0, 99, 'USD', NULL, NULL, NULL, '2024-01-01', NULL, NULL, 0, NULL, NULL,
      NULL, NULL, '2026-03-01', '${NOW}', '${NOW}'),
-    (4, 'دومين', NULL, 'https://example.org', NULL, 'one_time', 'year', NULL,
+    (4, 'Domain', NULL, 'https://example.org', NULL, 'one_time', 'year', NULL,
      5, 0, 120, 'USD', 438, 3.65, '${NOW}', '2026-02-01', NULL, '2031-02-01', 1, NULL, 1,
      NULL, NULL, NULL, '${NOW}', '${NOW}')`,
   ).run();
   db.prepare(
     `INSERT INTO payment_events (id, subscription_id, paid_at, amount_original, currency, amount_qar, renewal_years, renewal_step_count, note)
      VALUES
-     (1, 1, '2026-06-01', 50, 'QAR', 50, NULL, NULL, 'دفعة شهرية'),
-     (2, 4, '2026-02-01', 120, 'USD', 438, 5, 5, 'تجديد ٥ سنوات')`,
+     (1, 1, '2026-06-01', 50, 'QAR', 50, NULL, NULL, 'Monthly payment'),
+     (2, 4, '2026-02-01', 120, 'USD', 438, 5, 5, '5-year renewal')`,
   ).run();
   db.prepare(
     `INSERT INTO settings (key, value) VALUES
@@ -151,7 +151,7 @@ function seedComprehensive(db: Database.Database): void {
 }
 
 function seedDeviceA(db: Database.Database): void {
-  db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (1, 'سحابة', 0)").run();
+  db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (1, 'Cloud', 0)").run();
   db.prepare("INSERT INTO currencies (code, sort_order) VALUES ('QAR', 0)").run();
   db.prepare(
     `INSERT INTO subscriptions (
@@ -250,7 +250,7 @@ describe("full backup round-trip (device A → device B)", () => {
     try {
       deviceB.prepare(
         `INSERT INTO subscriptions (id, title, billing_model, amount_original, currency_code, created_at, updated_at, interval_count)
-         VALUES (9, 'قديم', 'one_time', 1, 'USD', ?, ?, 1)`,
+         VALUES (9, 'Legacy', 'one_time', 1, 'USD', ?, ?, 1)`,
       ).run(NOW, NOW);
 
       applyBackupImport(deviceB, payload, {
@@ -287,7 +287,7 @@ describe("merge import", () => {
     try {
       deviceB.prepare(
         `INSERT INTO subscriptions (id, title, billing_model, amount_original, currency_code, created_at, updated_at, interval_count)
-         VALUES (1, 'محلي', 'one_time', 10, 'QAR', ?, ?, 1)`,
+         VALUES (1, 'Local-only', 'one_time', 10, 'QAR', ?, ?, 1)`,
       ).run(NOW, NOW);
 
       applyBackupImport(deviceB, payload, {
@@ -299,7 +299,7 @@ describe("merge import", () => {
       const row = deviceB.prepare("SELECT title FROM subscriptions WHERE id = 1").get() as {
         title: string;
       };
-      expect(row.title).toBe("محلي");
+      expect(row.title).toBe("Local-only");
     } finally {
       deviceB.close();
     }
@@ -313,7 +313,7 @@ describe("merge import", () => {
     try {
       deviceB.prepare(
         `INSERT INTO subscriptions (id, title, billing_model, amount_original, currency_code, created_at, updated_at, interval_count)
-         VALUES (1, 'محلي', 'one_time', 10, 'QAR', ?, ?, 1)`,
+         VALUES (1, 'Local-only', 'one_time', 10, 'QAR', ?, ?, 1)`,
       ).run(NOW, NOW);
 
       applyBackupImport(deviceB, payload, {
@@ -342,7 +342,7 @@ describe("merge import", () => {
     try {
       deviceB.prepare(
         `INSERT INTO subscriptions (id, title, billing_model, amount_original, currency_code, created_at, updated_at, interval_count)
-         VALUES (1, 'محلي', 'one_time', 10, 'QAR', ?, ?, 1)`,
+         VALUES (1, 'Local-only', 'one_time', 10, 'QAR', ?, ?, 1)`,
       ).run(NOW, NOW);
 
       applyBackupImport(deviceB, payload, {
@@ -414,7 +414,7 @@ describe("buildImportPreview", () => {
     try {
       deviceB.prepare(
         `INSERT INTO subscriptions (id, title, billing_model, amount_original, currency_code, created_at, updated_at, interval_count)
-         VALUES (1, 'محلي', 'one_time', 1, 'QAR', ?, ?, 1)`,
+         VALUES (1, 'Local-only', 'one_time', 1, 'QAR', ?, ?, 1)`,
       ).run(NOW, NOW);
 
       const preview = buildImportPreview(deviceB, "/tmp/backup.json", payload);
@@ -524,7 +524,7 @@ describe("comprehensive round-trip (all account types)", () => {
       subscriptions: [
         {
           id: 10,
-          title: "قديم",
+          title: "Legacy",
           billing_model: "pay_as_needed",
           amount_original: 5,
           currency_code: "QAR",

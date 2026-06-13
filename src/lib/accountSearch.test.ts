@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import { accountSearchHaystack, filterFreeAccounts, matchesAccountSearch } from "./accountSearch";
 
 const sample = {
-  title: "نشرة Tech Weekly",
-  notes: "أخبار تقنية أسبوعية",
+  title: "Tech Weekly Newsletter",
+  notes: "Weekly tech news",
   website_url: "https://newsletter.example.com/path",
   account_label: "Me@Example.COM",
-  category_name: "إعلام",
+  category_name: "Media",
 };
 
 describe("accountSearchHaystack", () => {
   it("includes hostname extracted from website URL", () => {
     const hay = accountSearchHaystack(sample);
     expect(hay).toContain("newsletter.example.com");
-    expect(hay).toContain("نشرة tech weekly");
+    expect(hay).toContain("tech weekly newsletter");
     expect(hay).toContain("me@example.com");
   });
 });
@@ -21,7 +21,7 @@ describe("accountSearchHaystack", () => {
 describe("matchesAccountSearch", () => {
   it("matches title substring", () => {
     expect(matchesAccountSearch(sample, "tech")).toBe(true);
-    expect(matchesAccountSearch(sample, "نشرة")).toBe(true);
+    expect(matchesAccountSearch(sample, "weekly")).toBe(true);
   });
 
   it("matches hostname without protocol", () => {
@@ -53,7 +53,7 @@ describe("filterFreeAccounts", () => {
     },
     {
       title: "Reddit",
-      notes: "مجتمعات",
+      notes: "Communities",
       website_url: null,
       account_label: "other@mail.com",
       category_name: null,

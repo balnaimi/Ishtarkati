@@ -409,7 +409,7 @@ export function SettingsPage() {
         t("settings.testNotifyBody"),
         "",
         "• Netflix: 45 USD — ≈ 164.00 QAR",
-        "• Spotify (عائلة): 26 QAR",
+        "• Spotify (family): 26 QAR",
       ].join("\n"),
     });
   }

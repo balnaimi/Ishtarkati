@@ -19,9 +19,8 @@ The dev team works in **English only** for everything in the repository except e
 
 ## Arabic only
 
-- `src/locales/ar.json` and any future locale files
+- `src/locales/ar.json`, `src/locales/currencies.ar.json`, and any future Arabic locale files
 - User-visible strings in the React UI (via `t("…")` / i18n keys)
-- Arabic **test fixture data** when explicitly testing Arabic search or RTL behavior (not comments)
 
 ## User-facing errors
 
@@ -37,24 +36,24 @@ The dev team works in **English only** for everything in the repository except e
 ## Examples
 
 ```typescript
-// ❌ BAD
-/** قائمة الحسابات الموحّدة */
+// ❌ BAD — non-English comment (Arabic or other language in source)
+/** … */
 
 // ✅ GOOD
 /** Unified accounts list with due progress bar */
 ```
 
 ```javascript
-// ❌ BAD
-console.log("[ship] تمّ push");
+// ❌ BAD — non-English log message
+console.log("[ship] …");
 
 // ✅ GOOD
 console.log("[ship] pushed to current branch");
 ```
 
 ```bash
-# ❌ BAD
-git commit -m "إصلاح الصفحة الرئيسية"
+# ❌ BAD — non-English commit message
+git commit -m "…"
 
 # ✅ GOOD
 git commit -m "fix(home): reorganize stats into tabs"
