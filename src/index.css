@@ -3,45 +3,47 @@
 @theme {
   --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
-  /* Brand palette — flat UI; gradients only on due progress bar fills */
-  --color-brand-ink: #222831;
-  --color-brand-slate: #393e46;
-  --color-brand-cyan: #00adb5;
-  --color-brand-light: #eeeeee;
+  /* Brand palette — soft, low-glare; gradients only on due progress bar fills */
+  --color-brand-ink: #4a4540;
+  --color-brand-muted: #7a736c;
+  --color-brand-accent: #6d8f7a;
+  --color-brand-warn: #c9a96a;
+  --color-brand-surface: #f3f0ea;
+  --color-brand-danger: #a85d52;
 
   /*
-   * Semantic scales (mapped to brand colors)
-   * cream  = surfaces & text neutrals (light gray + charcoal)
-   * sage   = primary actions & safe states (cyan)
-   * walnut = secondary accent (slate / charcoal)
+   * Semantic scales
+   * cream  = warm neutrals (linen surfaces + soft charcoal text)
+   * sage   = calm green accent (primary / safe)
+   * walnut = warm honey & taupe (warnings / secondary CTAs)
    */
 
-  --color-cream-50: #eeeeee;
-  --color-cream-100: #eeeeee;
-  --color-cream-200: #eeeeee;
-  --color-cream-300: #eeeeee;
-  --color-cream-400: #393e46;
-  --color-cream-500: #393e46;
-  --color-cream-600: #393e46;
-  --color-cream-700: #393e46;
-  --color-cream-800: #222831;
-  --color-cream-900: #222831;
-  --color-cream-950: #222831;
+  --color-cream-50: #faf8f4;
+  --color-cream-100: #f6f3ed;
+  --color-cream-200: #f0ece4;
+  --color-cream-300: #e8e2d8;
+  --color-cream-400: #ddd5c8;
+  --color-cream-500: #b8aea0;
+  --color-cream-600: #9a9088;
+  --color-cream-700: #7a736c;
+  --color-cream-800: #5c564f;
+  --color-cream-900: #4a4540;
+  --color-cream-950: #3a3530;
 
-  --color-sage-100: #eeeeee;
-  --color-sage-300: #00adb5;
-  --color-sage-400: #00adb5;
-  --color-sage-500: #00adb5;
-  --color-sage-600: #00adb5;
-  --color-sage-700: #393e46;
-  --color-sage-800: #222831;
-  --color-sage-900: #222831;
+  --color-sage-100: #e8f0eb;
+  --color-sage-300: #a8c4b0;
+  --color-sage-400: #8aab96;
+  --color-sage-500: #6d8f7a;
+  --color-sage-600: #5a7866;
+  --color-sage-700: #4a6354;
+  --color-sage-800: #3d5246;
+  --color-sage-900: #334439;
 
-  --color-walnut-100: #eeeeee;
-  --color-walnut-300: #393e46;
-  --color-walnut-500: #393e46;
-  --color-walnut-600: #222831;
-  --color-walnut-800: #222831;
+  --color-walnut-100: #f5ebe0;
+  --color-walnut-300: #d4b896;
+  --color-walnut-500: #c9a96a;
+  --color-walnut-600: #9a7b5f;
+  --color-walnut-800: #6d5540;
 }
 
 html,
@@ -54,7 +56,7 @@ body {
   margin: 0;
   font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif;
   color: var(--color-cream-900);
-  background-color: var(--color-brand-light);
+  background-color: var(--color-brand-surface);
 }
 
 @layer components {
@@ -78,7 +80,7 @@ body {
   }
 
   .sk-btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-sage-500 text-brand-light hover:bg-sage-700;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-sage-500 text-cream-50 hover:bg-sage-600;
   }
 
   .sk-btn-secondary {
@@ -90,11 +92,11 @@ body {
   }
 
   .sk-btn-danger {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 border border-brand-ink/40 bg-brand-ink/10 text-cream-950 hover:bg-brand-ink/18;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 border border-brand-danger/35 bg-brand-danger/10 text-cream-950 hover:bg-brand-danger/16;
   }
 
   .sk-btn-warm {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-walnut-600 text-brand-light hover:bg-walnut-500;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-walnut-600 text-cream-50 hover:bg-walnut-500;
   }
 
   .sk-card {
@@ -102,7 +104,7 @@ body {
   }
 
   .sk-alert {
-    @apply rounded-lg border border-brand-ink/40 bg-brand-ink/10 px-3 py-2.5 text-sm text-cream-950;
+    @apply rounded-lg border border-brand-danger/35 bg-brand-danger/10 px-3 py-2.5 text-sm text-cream-950;
   }
 
   .sk-chip {
@@ -147,20 +149,20 @@ body {
     @apply rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950;
   }
 
-  /** Warning callout — cyan tint */
+  /** Warning callout — soft honey tint */
   .sk-callout-warning {
     @apply rounded-lg border px-3 py-2 text-sm leading-relaxed;
-    @apply border-brand-cyan/45 bg-brand-cyan/12 text-cream-950;
+    @apply border-brand-warn/40 bg-brand-warn/14 text-cream-950;
   }
 
   /** Danger / delete callout */
   .sk-callout-danger {
-    @apply space-y-3 rounded-xl border border-brand-ink/35 bg-brand-ink/8 p-4 text-cream-950 shadow-sm ring-1 ring-brand-ink/18;
+    @apply space-y-3 rounded-xl border border-brand-danger/32 bg-brand-danger/8 p-4 text-cream-950 shadow-sm ring-1 ring-brand-danger/14;
   }
 
   /** Full “danger zone” block in settings */
   .sk-section-danger {
-    @apply rounded-xl border border-brand-ink/38 bg-brand-ink/10 p-4 shadow-sm ring-1 ring-brand-ink/16;
+    @apply rounded-xl border border-brand-danger/35 bg-brand-danger/8 p-4 shadow-sm ring-1 ring-brand-danger/12;
     @apply space-y-4;
   }
 
@@ -174,34 +176,34 @@ body {
 
   /** Danger option row in a choice group (no fixed rose text color) */
   .sk-choice-row-danger {
-    @apply flex cursor-pointer gap-3 rounded-lg border border-brand-ink/35 bg-brand-ink/8 px-3 py-2 ring-1 ring-brand-ink/14;
+    @apply flex cursor-pointer gap-3 rounded-lg border border-brand-danger/32 bg-brand-danger/8 px-3 py-2 ring-1 ring-brand-danger/12;
     @apply text-cream-950;
   }
 
-  /** Modal overlay — neutral scrim so `.dark` doesn’t skew cream-950 panels */
+  /** Modal overlay — soft scrim */
   .sk-modal-overlay {
-    @apply fixed inset-0 z-[200] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm;
+    @apply fixed inset-0 z-[200] flex items-center justify-center bg-black/38 p-4 backdrop-blur-sm;
   }
 
   /** Due-date bar tone utilities */
   .sk-tone-due-bar-critical {
-    @apply text-brand-ink;
+    @apply text-brand-danger;
   }
 
   .sk-tone-due-bar-warn {
-    @apply text-brand-slate;
+    @apply text-walnut-600;
   }
 
   .sk-tone-due-urgent {
-    @apply text-brand-cyan;
+    @apply text-brand-warn;
   }
 
   .sk-tone-due-safe {
-    @apply text-brand-cyan;
+    @apply text-sage-600;
   }
 
   .sk-text-error {
-    @apply text-brand-ink;
+    @apply text-brand-danger;
   }
 
   .sk-text-success {
@@ -215,7 +217,7 @@ body {
 
   /** Small error / code panel */
   .sk-code-error {
-    @apply rounded-lg border border-brand-ink/35 bg-brand-ink/10 px-3 py-2 text-xs text-cream-950;
+    @apply rounded-lg border border-brand-danger/32 bg-brand-danger/8 px-3 py-2 text-xs text-cream-950;
   }
 
   /** Scrollable lists inside a callout */
@@ -224,17 +226,17 @@ body {
   }
 
   .sk-danger-code-box {
-    @apply rounded-lg border border-brand-ink/30 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-cream-950;
+    @apply rounded-lg border border-brand-danger/28 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-cream-950;
   }
 
   /** Card-width warning banner (e.g. payment needed) */
   .sk-banner-warn-card {
-    @apply space-y-4 rounded-xl border border-brand-cyan/45 bg-brand-cyan/12 p-4 text-cream-950 shadow-sm ring-1 ring-brand-cyan/25;
+    @apply space-y-4 rounded-xl border border-brand-warn/40 bg-brand-warn/14 p-4 text-cream-950 shadow-sm ring-1 ring-brand-warn/20;
   }
 
   /** Highlight ring for subscriptions that need payment */
   .sk-ring-needs-pay {
-    @apply ring-2 ring-brand-cyan/75;
+    @apply ring-2 ring-brand-warn/55;
   }
 
   /** Interactive list row — same as sk-card with hover wash */
@@ -250,86 +252,88 @@ body {
 
   /** Soft row tint by due urgency (list views) */
   .sk-due-row-warn {
-    @apply bg-brand-cyan/10;
+    @apply bg-brand-warn/12;
   }
   .sk-due-row-urgent {
-    @apply bg-brand-slate/10;
+    @apply bg-brand-warn/16;
   }
   .sk-due-row-due {
-    @apply bg-brand-slate/14;
+    @apply bg-brand-danger/10;
   }
   .sk-due-row-overdue {
-    @apply bg-brand-ink/12;
+    @apply bg-brand-danger/14;
   }
 
-  /** Due progress bar — solid tracks; gradient fills only */
+  /** Due progress bar — soft tracks; gentle gradient fills only */
   .sk-due-bar-track-safe,
   .sk-due-bar-track-warn,
   .sk-due-bar-track-urgent,
   .sk-due-bar-track-due,
   .sk-due-bar-track-overdue {
-    @apply bg-brand-light;
+    @apply bg-cream-200;
   }
 
   .sk-due-bar-fill-safe {
-    background: linear-gradient(90deg, #00adb5, #eeeeee);
+    background: linear-gradient(90deg, #6d8f7a, #a8c4b0);
   }
 
   .sk-due-bar-fill-warn {
-    background: linear-gradient(90deg, #00adb5, #393e46);
+    background: linear-gradient(90deg, #8aab96, #c9a96a);
   }
 
   .sk-due-bar-fill-urgent {
-    background: linear-gradient(90deg, #393e46, #00adb5);
+    background: linear-gradient(90deg, #c9a96a, #9a7b5f);
   }
 
   .sk-due-bar-fill-due {
-    background: linear-gradient(90deg, #393e46, #222831);
+    background: linear-gradient(90deg, #9a7b5f, #a85d52);
   }
 
   .sk-due-bar-fill-overdue {
-    background: linear-gradient(90deg, #222831, #393e46);
+    background: linear-gradient(90deg, #a85d52, #6d5540);
   }
 }
 
-/* Dark theme: charcoal surfaces, light gray text, cyan accents */
+/* Dark theme — soft charcoal base, warm off-white text, muted sage accents */
 .dark {
-  --color-brand-ink: #eeeeee;
-  --color-brand-slate: #393e46;
-  --color-brand-cyan: #00adb5;
-  --color-brand-light: #eeeeee;
+  --color-brand-ink: #e8e4dc;
+  --color-brand-muted: #b0aaa2;
+  --color-brand-accent: #7fa892;
+  --color-brand-warn: #d4b87a;
+  --color-brand-surface: #1c1f23;
+  --color-brand-danger: #c47a6e;
 
-  --color-cream-50: #222831;
-  --color-cream-100: #222831;
-  --color-cream-200: #393e46;
-  --color-cream-300: #393e46;
-  --color-cream-400: #393e46;
-  --color-cream-500: #393e46;
-  --color-cream-600: #00adb5;
-  --color-cream-700: #eeeeee;
-  --color-cream-800: #eeeeee;
-  --color-cream-900: #eeeeee;
-  --color-cream-950: #eeeeee;
+  --color-cream-50: #1c1f23;
+  --color-cream-100: #22262b;
+  --color-cream-200: #25292e;
+  --color-cream-300: #2e3339;
+  --color-cream-400: #3d4349;
+  --color-cream-500: #525962;
+  --color-cream-600: #7a838c;
+  --color-cream-700: #b0aaa2;
+  --color-cream-800: #d4cec6;
+  --color-cream-900: #e8e4dc;
+  --color-cream-950: #f5f2ec;
 
-  --color-sage-100: #393e46;
-  --color-sage-300: #00adb5;
-  --color-sage-400: #00adb5;
-  --color-sage-500: #00adb5;
-  --color-sage-600: #00adb5;
-  --color-sage-700: #eeeeee;
-  --color-sage-800: #eeeeee;
-  --color-sage-900: #eeeeee;
+  --color-sage-100: #2a3530;
+  --color-sage-300: #5a7866;
+  --color-sage-400: #6d8f7a;
+  --color-sage-500: #7fa892;
+  --color-sage-600: #96b8a4;
+  --color-sage-700: #b4d0c0;
+  --color-sage-800: #d0e6da;
+  --color-sage-900: #e8f4ee;
 
-  --color-walnut-100: #393e46;
-  --color-walnut-300: #393e46;
-  --color-walnut-500: #393e46;
-  --color-walnut-600: #00adb5;
-  --color-walnut-800: #eeeeee;
+  --color-walnut-100: #3a3028;
+  --color-walnut-300: #9a7b5f;
+  --color-walnut-500: #c9a96a;
+  --color-walnut-600: #d4b87a;
+  --color-walnut-800: #ecd9b8;
 }
 
 .dark body {
   color: var(--color-cream-900);
-  background-color: #222831;
+  background-color: var(--color-brand-surface);
 }
 
 .dark .sk-panel-nested {
@@ -349,15 +353,15 @@ body {
 }
 
 .dark .sk-callout-warning {
-  @apply border-brand-cyan/50 bg-brand-cyan/18 text-cream-950;
+  @apply border-brand-warn/45 bg-brand-warn/16 text-cream-950;
 }
 
 .dark .sk-callout-danger {
-  @apply border-brand-ink/42 bg-brand-ink/18 text-cream-950 ring-brand-ink/22;
+  @apply border-brand-danger/40 bg-brand-danger/14 text-cream-950 ring-brand-danger/18;
 }
 
 .dark .sk-section-danger {
-  @apply border-brand-ink/42 bg-brand-ink/22 ring-brand-ink/18;
+  @apply border-brand-danger/40 bg-brand-danger/14 ring-brand-danger/14;
 }
 
 .dark .sk-section-danger > p {
@@ -365,23 +369,23 @@ body {
 }
 
 .dark .sk-choice-row-danger {
-  @apply border-brand-ink/42 bg-brand-ink/20 ring-brand-ink/20 text-cream-950;
+  @apply border-brand-danger/40 bg-brand-danger/14 ring-brand-danger/14 text-cream-950;
 }
 
 .dark .sk-modal-overlay {
-  @apply bg-black/60;
+  @apply bg-black/52;
 }
 
 .dark .sk-tone-due-bar-critical {
-  @apply text-brand-ink;
+  @apply text-brand-danger;
 }
 
 .dark .sk-tone-due-bar-warn {
-  @apply text-brand-slate;
+  @apply text-walnut-600;
 }
 
 .dark .sk-tone-due-urgent {
-  @apply text-brand-cyan;
+  @apply text-brand-warn;
 }
 
 .dark .sk-tone-due-safe {
@@ -389,7 +393,7 @@ body {
 }
 
 .dark .sk-text-error {
-  @apply text-brand-ink;
+  @apply text-brand-danger;
 }
 
 .dark .sk-text-success {
@@ -401,7 +405,7 @@ body {
 }
 
 .dark .sk-code-error {
-  @apply border-brand-ink/42 bg-brand-ink/22 text-cream-950;
+  @apply border-brand-danger/40 bg-brand-danger/14 text-cream-950;
 }
 
 .dark .sk-list-in-callout {
@@ -409,15 +413,15 @@ body {
 }
 
 .dark .sk-danger-code-box {
-  @apply border-brand-ink/38 bg-cream-200/22 text-cream-950;
+  @apply border-brand-danger/35 bg-cream-200/22 text-cream-950;
 }
 
 .dark .sk-banner-warn-card {
-  @apply border-brand-cyan/50 bg-brand-cyan/18 ring-brand-cyan/30 text-cream-950;
+  @apply border-brand-warn/45 bg-brand-warn/16 ring-brand-warn/22 text-cream-950;
 }
 
 .dark .sk-ring-needs-pay {
-  @apply ring-brand-cyan/55;
+  @apply ring-brand-warn/45;
 }
 
 .dark .sk-card-interactive {
@@ -429,19 +433,19 @@ body {
 }
 
 .dark .sk-due-row-warn {
-  @apply bg-brand-cyan/14;
+  @apply bg-brand-warn/14;
 }
 
 .dark .sk-due-row-urgent {
-  @apply bg-brand-slate/22;
+  @apply bg-brand-warn/18;
 }
 
 .dark .sk-due-row-due {
-  @apply bg-brand-slate/28;
+  @apply bg-brand-danger/14;
 }
 
 .dark .sk-due-row-overdue {
-  @apply bg-brand-ink/10;
+  @apply bg-brand-danger/18;
 }
 
 .dark .sk-due-bar-track-safe,
@@ -449,27 +453,27 @@ body {
 .dark .sk-due-bar-track-urgent,
 .dark .sk-due-bar-track-due,
 .dark .sk-due-bar-track-overdue {
-  @apply bg-brand-slate/55;
+  @apply bg-cream-300/70;
 }
 
 .dark .sk-due-bar-fill-safe {
-  background: linear-gradient(90deg, #00adb5, #eeeeee);
+  background: linear-gradient(90deg, #7fa892, #b4d0c0);
 }
 
 .dark .sk-due-bar-fill-warn {
-  background: linear-gradient(90deg, #00adb5, #393e46);
+  background: linear-gradient(90deg, #96b8a4, #d4b87a);
 }
 
 .dark .sk-due-bar-fill-urgent {
-  background: linear-gradient(90deg, #393e46, #00adb5);
+  background: linear-gradient(90deg, #d4b87a, #c9a96a);
 }
 
 .dark .sk-due-bar-fill-due {
-  background: linear-gradient(90deg, #393e46, #222831);
+  background: linear-gradient(90deg, #c9a96a, #c47a6e);
 }
 
 .dark .sk-due-bar-fill-overdue {
-  background: linear-gradient(90deg, #222831, #393e46);
+  background: linear-gradient(90deg, #c47a6e, #9a7b5f);
 }
 
 .dark .sk-chip {
@@ -521,7 +525,7 @@ body {
 }
 
 .dark .sk-btn-primary {
-  @apply bg-sage-500 text-brand-light hover:bg-sage-700;
+  @apply bg-sage-500 text-cream-50 hover:bg-sage-400;
 }
 
 .dark .sk-btn-warm {
@@ -529,9 +533,9 @@ body {
 }
 
 .dark .sk-btn-danger {
-  @apply border-brand-ink/48 bg-brand-ink/24 text-cream-950 hover:bg-brand-ink/32;
+  @apply border-brand-danger/45 bg-brand-danger/16 text-cream-950 hover:bg-brand-danger/24;
 }
 
 .dark .sk-alert {
-  @apply border-brand-ink/45 bg-brand-ink/22 text-cream-950;
+  @apply border-brand-danger/42 bg-brand-danger/16 text-cream-950;
 }
