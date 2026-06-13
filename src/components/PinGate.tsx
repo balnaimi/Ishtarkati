@@ -56,15 +56,22 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="sk-modal-overlay p-6">
-      <div className="sk-card w-full max-w-sm rounded-2xl border-cream-400/40 p-8 shadow-2xl">
-        <p className="text-center text-lg font-semibold text-cream-950">{t("pin.title")}</p>
+    <div className="sk-modal-overlay p-4">
+      <div
+        className="sk-dialog-panel w-full max-w-sm p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pin-gate-title"
+      >
+        <p id="pin-gate-title" className="text-center text-lg font-semibold text-cream-950">
+          {t("pin.title")}
+        </p>
         <p className="sk-text-hint mt-2 text-center text-sm">{t("pin.subtitle")}</p>
         <input
           type="password"
           inputMode="numeric"
           autoFocus
-          className="sk-input mt-6 text-center text-2xl tracking-[0.4em]"
+          className="sk-input mt-5 text-center text-2xl tracking-[0.4em]"
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 12))}
           onKeyDown={(e) => {
@@ -73,7 +80,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
           aria-label={t("pin.title")}
         />
         {err ? <p className="sk-text-error mt-3 text-center text-sm">{err}</p> : null}
-        <button type="button" className="sk-btn-primary mt-6 w-full py-3" onClick={() => void tryUnlock()}>
+        <button type="button" className="sk-btn-primary mt-5 w-full" onClick={() => void tryUnlock()}>
           {t("pin.unlock")}
         </button>
       </div>

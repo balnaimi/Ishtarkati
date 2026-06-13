@@ -21,9 +21,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div
           dir={document.documentElement.dir === "ltr" ? "ltr" : "rtl"}
-          className="flex min-h-full flex-col items-center justify-center gap-4 bg-cream-100 p-8 text-center text-cream-900"
+          className="flex min-h-full flex-col items-center justify-center gap-4 bg-dash-bg p-8 text-center"
         >
-          <p className="text-lg font-semibold">{i18n.t("errorBoundary.title")}</p>
+          <p className="text-lg font-semibold text-cream-950">{i18n.t("errorBoundary.title")}</p>
           <p className="max-w-md text-sm leading-relaxed text-cream-800">{i18n.t("errorBoundary.hint")}</p>
           <button type="button" className="sk-btn-primary" onClick={() => window.location.reload()}>
             {i18n.t("errorBoundary.reload")}

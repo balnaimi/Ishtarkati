@@ -305,28 +305,20 @@ export function SubscriptionForm({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              isFree
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-            }`}
+            className={isFree ? "sk-choice-active" : "sk-choice-idle"}
             onClick={() => applyPayMode("free")}
           >
             {t("form.accountPayFree")}
           </button>
           <button
             type="button"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              !isFree
-                ? "bg-cream-800 text-cream-50"
-                : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-            }`}
+            className={!isFree ? "sk-choice-active" : "sk-choice-idle"}
             onClick={() => applyPayMode("paid")}
           >
             {t("form.accountPayPaid")}
           </button>
         </div>
-        <p className="text-xs text-cream-600">
+        <p className="text-xs sk-text-hint">
           {isFree ? t("form.accountPayFreeHint") : t("form.accountPayPaidHint")}
         </p>
       </div>

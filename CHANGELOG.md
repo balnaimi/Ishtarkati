@@ -8,6 +8,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.29.0] - 2026-06-13
+
+### Changed
+- Unified button styles app-wide: violet primary, outline secondary, consistent danger/muted/toggle classes in light and dark themes.
+- PIN screen, onboarding, and all dialogs use theme-aware `sk-dialog-panel` with readable text colors.
 ## [4.28.0] - 2026-06-13
 
 ### Changed

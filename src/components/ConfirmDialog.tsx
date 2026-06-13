@@ -44,7 +44,7 @@ export function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "sk-confirm-title" : undefined}
-        className="sk-card max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto border-cream-500/70 shadow-xl"
+        className="sk-dialog-panel max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto p-5"
         onClick={(e) => e.stopPropagation()}
       >
         {title ? (

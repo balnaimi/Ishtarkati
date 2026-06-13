@@ -596,22 +596,14 @@ export function SettingsPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                className={`min-h-11 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                  appLanguage === "ar"
-                    ? "bg-cream-800 text-cream-50 shadow-sm"
-                    : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                }`}
+                className={appLanguage === "ar" ? "sk-choice-active" : "sk-choice-idle"}
                 onClick={() => void changeAppLanguage("ar")}
               >
                 {t("settings.languageArabic")}
               </button>
               <button
                 type="button"
-                className={`min-h-11 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                  appLanguage === "en"
-                    ? "bg-cream-800 text-cream-50 shadow-sm"
-                    : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                }`}
+                className={appLanguage === "en" ? "sk-choice-active" : "sk-choice-idle"}
                 onClick={() => void changeAppLanguage("en")}
               >
                 {t("settings.languageEnglish")}
@@ -627,11 +619,7 @@ export function SettingsPage() {
                 <button
                   key={mode}
                   type="button"
-                  className={`min-h-11 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                    themeMode === mode
-                      ? "bg-cream-800 text-cream-50 shadow-sm"
-                      : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                  }`}
+                  className={themeMode === mode ? "sk-choice-active" : "sk-choice-idle"}
                   onClick={() => void changeThemeMode(mode)}
                 >
                   {t(`settings.themeMode.${mode}`)}

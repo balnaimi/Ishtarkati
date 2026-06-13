@@ -19,7 +19,7 @@ export function ShortcutsHelpDialog({ open, onClose }: ShortcutsHelpDialogProps)
   return (
     <div className="sk-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="sk-card w-full max-w-md border-cream-500/70 shadow-xl"
+        className="sk-dialog-panel w-full max-w-md p-5 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={t("shortcuts.title")}

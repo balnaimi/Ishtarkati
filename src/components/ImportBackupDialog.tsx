@@ -26,13 +26,13 @@ export function ImportBackupDialog({
     <div className="sk-modal-overlay">
       <div
         dir={dir}
-        className="sk-card max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto border-cream-500/70 shadow-xl"
+        className="sk-dialog-panel max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto p-5"
       >
         <h3 className="text-lg font-semibold text-cream-950">{t("backup.restoreConfirmTitle")}</h3>
 
         <p className="text-sm leading-relaxed text-cream-800">{t("backup.restoreConfirmBody")}</p>
 
-        <p className="text-xs text-cream-700">
+        <p className="text-xs sk-text-hint">
           <span dir="ltr" className="font-mono break-all">
             {preview.filePath}
           </span>

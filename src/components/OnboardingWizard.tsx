@@ -119,21 +119,21 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const stepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
 
   return (
-    <div className="fixed inset-0 z-[150] overflow-y-auto bg-cream-50" dir={dir}>
+    <div className="fixed inset-0 z-[150] overflow-y-auto bg-dash-bg" dir={dir}>
       <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-5 py-10">
         <div className="mb-6 flex justify-center gap-2">
           {ONBOARDING_STEPS.map((s, i) => (
             <span
               key={s}
-              className={`h-2 w-8 rounded-full ${i <= stepIndex ? "bg-sage-600" : "bg-cream-400"}`}
+              className={`h-2 w-8 rounded-full ${i <= stepIndex ? "bg-violet-500" : "bg-cream-400"}`}
             />
           ))}
         </div>
 
-        <div className="sk-card space-y-5 border-cream-400/80 shadow-lg">
+        <div className="sk-dialog-panel space-y-5 p-5">
           {step === "language" ? (
             <>
-              <h1 className="text-center text-2xl font-bold text-cream-900">
+              <h1 className="text-center text-2xl font-bold text-cream-950">
                 {t("onboarding.languageTitle")}
               </h1>
               <p className="text-center text-sm leading-relaxed text-cream-800">
@@ -172,7 +172,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                   decoding="async"
                 />
               </div>
-              <h1 className="text-center text-2xl font-bold text-cream-900">{t("onboarding.welcomeTitle")}</h1>
+              <h1 className="text-center text-2xl font-bold text-cream-950">{t("onboarding.welcomeTitle")}</h1>
               <p className="text-center text-sm leading-relaxed text-cream-800">{t("onboarding.welcomeBody")}</p>
               <button type="button" className="sk-btn-primary w-full py-3 text-base" onClick={() => setStep("currency")}>
                 {t("onboarding.start")}
@@ -182,7 +182,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
           {step === "currency" ? (
             <>
-              <h2 className="text-xl font-semibold text-cream-900">{t("onboarding.currencyTitle")}</h2>
+              <h2 className="text-xl font-semibold text-cream-950">{t("onboarding.currencyTitle")}</h2>
               <p className="text-sm leading-relaxed text-cream-800">{t("onboarding.currencyHint")}</p>
               <select
                 className="sk-select text-base"
@@ -212,7 +212,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
           {step === "pin" ? (
             <>
-              <h2 className="text-xl font-semibold text-cream-900">{t("onboarding.pinTitle")}</h2>
+              <h2 className="text-xl font-semibold text-cream-950">{t("onboarding.pinTitle")}</h2>
               <p className="text-sm leading-relaxed text-cream-800">{t("onboarding.pinHint")}</p>
               <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
                 <input
@@ -270,7 +270,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
           {step === "payment" ? (
             <>
-              <h2 className="text-xl font-semibold text-cream-900">{t("onboarding.paymentTitle")}</h2>
+              <h2 className="text-xl font-semibold text-cream-950">{t("onboarding.paymentTitle")}</h2>
               <p className="text-sm leading-relaxed text-cream-800">{t("onboarding.paymentHint")}</p>
               <div>
                 <label className="sk-label">{t("payment.serviceName")}</label>

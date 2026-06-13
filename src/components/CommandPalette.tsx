@@ -91,7 +91,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       onClick={onClose}
     >
       <div
-        className="sk-card w-full max-w-lg overflow-hidden border-cream-500/70 p-0 shadow-xl"
+        className="sk-dialog-panel w-full max-w-lg overflow-hidden p-0 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={t("commandPalette.title")}
