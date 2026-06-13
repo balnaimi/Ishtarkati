@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.21.0] - 2026-06-13
+
+### Fixed
+- Backup import now restores subscription `tags`, `trial_ends_on`, and `renewal_cancelled` (previously dropped on restore).
+
+### Added
+- Unit tests for scheduled and manual auto-backup (`electron/autoBackup.test.ts`) and v13 field round-trip in backup tests.
 ## [4.20.0] - 2026-06-13
 
 ### Fixed

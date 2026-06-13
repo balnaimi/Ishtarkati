@@ -237,6 +237,9 @@ type NormalizedImportSubscription = {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
+  tags: string | null;
+  trial_ends_on: string | null;
+  renewal_cancelled: number;
   credit_card_id: number | null;
   wallet_method_id: number | null;
   account_label: string | null;
@@ -299,6 +302,16 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
     next_due_date: row.next_due_date == null ? null : String(row.next_due_date),
     end_date: row.end_date == null ? null : String(row.end_date),
     is_domain: Number(row.is_domain ?? 0),
+    tags:
+      row.tags == null || String(row.tags).trim() === "" ? null : String(row.tags).trim(),
+    trial_ends_on:
+      "trial_ends_on" in row &&
+      row.trial_ends_on != null &&
+      String(row.trial_ends_on).trim() !== ""
+        ? String(row.trial_ends_on).trim().slice(0, 10)
+        : null,
+    renewal_cancelled:
+      "renewal_cancelled" in row && Number(row.renewal_cancelled) === 1 ? 1 : 0,
     credit_card_id:
       "credit_card_id" in row && row.credit_card_id != null && row.credit_card_id !== ""
         ? Number(row.credit_card_id)
@@ -528,11 +541,13 @@ function subscriptionRowParams(
     r.next_due_date,
     r.end_date,
     r.is_domain,
-    null,
+    r.tags,
     r.credit_card_id,
     r.wallet_method_id,
     r.account_label,
     r.cancelled_at,
+    r.trial_ends_on,
+    r.renewal_cancelled,
     r.created_at,
     r.updated_at,
   ];
@@ -600,8 +615,8 @@ function insertBackupPayloadSnapshot(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, cancelled_at, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
   for (const row of data.subscriptions) {
     if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -840,8 +855,8 @@ function mergeImportIntoDb(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, cancelled_at, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     const updSub = database.prepare(`
       UPDATE subscriptions SET
@@ -849,7 +864,7 @@ function mergeImportIntoDb(
         interval_months = ?, interval_count = ?, auto_renew = ?, amount_original = ?, currency_code = ?,
         amount_qar_snapshot = ?, fx_rate_used = ?, fx_quote_at = ?, start_date = ?, next_due_date = ?,
         end_date = ?, is_domain = ?, tags = ?, credit_card_id = ?, wallet_method_id = ?,
-        account_label = ?, cancelled_at = ?, created_at = ?, updated_at = ?
+        account_label = ?, cancelled_at = ?, trial_ends_on = ?, renewal_cancelled = ?, created_at = ?, updated_at = ?
       WHERE id = ?
     `);
     const delSub = database.prepare("DELETE FROM subscriptions WHERE id = ?");
@@ -877,11 +892,13 @@ function mergeImportIntoDb(
           imp.next_due_date,
           imp.end_date,
           imp.is_domain,
-          null,
+          imp.tags,
           imp.credit_card_id,
           imp.wallet_method_id,
           imp.account_label,
           imp.cancelled_at,
+          imp.trial_ends_on,
+          imp.renewal_cancelled,
           imp.created_at,
           imp.updated_at,
           imp.sourceId,

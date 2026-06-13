@@ -67,6 +67,8 @@ function createTestDatabase(): Database.Database {
       wallet_method_id INTEGER REFERENCES wallet_methods(id) ON DELETE SET NULL,
       account_label TEXT,
       cancelled_at TEXT,
+      trial_ends_on TEXT,
+      renewal_cancelled INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -572,5 +574,85 @@ describe("export payload shape", () => {
     expect((payload.subscriptions[0] as BackupPayload["subscriptions"][0] & { title: string }).title).toBe(
       "Netflix",
     );
+  });
+});
+
+describe("v13 subscription fields round-trip", () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = createTestDatabase();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it("preserves tags, trial_ends_on, and renewal_cancelled on full replace", () => {
+    db.prepare(
+      `INSERT INTO subscriptions (
+        id, title, billing_model, amount_original, currency_code, interval_count, auto_renew, is_domain,
+        tags, trial_ends_on, renewal_cancelled, created_at, updated_at
+      ) VALUES (1, 'Trial SaaS', 'recurring', 29, 'USD', 1, 1, 0, 'work, priority', '2026-08-01', 1, ?, ?)`,
+    ).run(NOW, NOW);
+
+    const payload = buildBackupPayloadFromDatabase(db, "full");
+    const sub = payload.subscriptions[0] as Record<string, unknown>;
+    expect(sub.tags).toBe("work, priority");
+    expect(sub.trial_ends_on).toBe("2026-08-01");
+    expect(sub.renewal_cancelled).toBe(1);
+
+    const restored = createTestDatabase();
+    try {
+      applyBackupImport(restored, payload, {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+      const row = restored
+        .prepare(
+          "SELECT tags, trial_ends_on, renewal_cancelled FROM subscriptions WHERE id = 1",
+        )
+        .get() as { tags: string; trial_ends_on: string; renewal_cancelled: number };
+      expect(row.tags).toBe("work, priority");
+      expect(row.trial_ends_on).toBe("2026-08-01");
+      expect(row.renewal_cancelled).toBe(1);
+    } finally {
+      restored.close();
+    }
+  });
+
+  it("preserves tags on merge prefer_import", () => {
+    db.prepare(
+      `INSERT INTO subscriptions (
+        id, title, billing_model, amount_original, currency_code, interval_count, auto_renew, is_domain,
+        tags, created_at, updated_at
+      ) VALUES (1, 'Tagged', 'one_time', 10, 'QAR', 1, 0, 0, 'alpha,beta', ?, ?)`,
+    ).run(NOW, NOW);
+    const payload = buildBackupPayloadFromDatabase(db, "full");
+
+    const deviceB = createTestDatabase();
+    try {
+      deviceB.prepare(
+        `INSERT INTO subscriptions (
+          id, title, billing_model, amount_original, currency_code, interval_count, auto_renew, is_domain,
+          tags, created_at, updated_at
+        ) VALUES (1, 'Local', 'one_time', 5, 'QAR', 1, 0, 0, NULL, ?, ?)`,
+      ).run(NOW, NOW);
+
+      applyBackupImport(deviceB, payload, {
+        strategy: "merge",
+        onDuplicateId: "prefer_import",
+        onSimilarSubscription: "keep_both",
+      });
+
+      const row = deviceB
+        .prepare("SELECT title, tags FROM subscriptions WHERE id = 1")
+        .get() as { title: string; tags: string };
+      expect(row.title).toBe("Tagged");
+      expect(row.tags).toBe("alpha,beta");
+    } finally {
+      deviceB.close();
+    }
   });
 });

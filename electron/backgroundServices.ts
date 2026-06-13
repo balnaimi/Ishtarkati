@@ -2,7 +2,7 @@ import { app, BrowserWindow, Menu, Notification, Tray, dialog, nativeImage, type
 import type Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import { buildBackupPayloadFromDatabase } from "./backup";
+import { runAutoBackupIfDue, runManualAutoBackup } from "./autoBackup";
 import { readUiLocale } from "./uiLocale";
 import localeAr from "../src/locales/ar.json";
 import localeEn from "../src/locales/en.json";
@@ -223,36 +223,6 @@ function runBackgroundReminders(database: Database.Database): void {
   }
 }
 
-function runAutoBackupIfDue(database: Database.Database): { ran: boolean; path?: string; error?: string } {
-  if (dbGetSetting(database, "auto_backup_enabled") !== "1") {
-    return { ran: false };
-  }
-  const dir = dbGetSetting(database, "auto_backup_dir")?.trim();
-  if (!dir) return { ran: false, error: "no-dir" };
-
-  const daysStr = dbGetSetting(database, "auto_backup_days");
-  const intervalDays = Math.max(1, Math.min(90, parseInt(daysStr ?? "7", 10) || 7));
-  const lastAt = dbGetSetting(database, "last_auto_backup_at");
-  if (lastAt) {
-    const last = new Date(lastAt).getTime();
-    const elapsed = Date.now() - last;
-    if (elapsed < intervalDays * 86400000) return { ran: false };
-  }
-
-  try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const filePath = path.join(dir, `ishtarkati-auto-${stamp}.json`);
-    const payload = buildBackupPayloadFromDatabase(database, "full");
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
-    dbSetSetting(database, "last_auto_backup_at", new Date().toISOString());
-    return { ran: true, path: filePath };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ran: false, error: msg };
-  }
-}
-
 export function tickBackgroundServices(getDb: () => Database.Database | null): void {
   const database = getDb();
   if (!database) return;
@@ -271,20 +241,7 @@ export async function runAutoBackupNow(
 ): Promise<{ ok: true; path: string } | { ok: false; error?: string; skipped?: boolean }> {
   const database = getDb();
   if (!database) return { ok: false, error: "no-database" };
-  const dir = dbGetSetting(database, "auto_backup_dir")?.trim();
-  if (!dir) return { ok: false, error: "no-dir" };
-  try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const filePath = path.join(dir, `ishtarkati-manual-${stamp}.json`);
-    const payload = buildBackupPayloadFromDatabase(database, "full");
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
-    dbSetSetting(database, "last_auto_backup_at", new Date().toISOString());
-    return { ok: true, path: filePath };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg };
-  }
+  return runManualAutoBackup(database);
 }
 
 export async function chooseAutoBackupDir(
