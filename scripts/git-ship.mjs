@@ -17,8 +17,17 @@ function sh(cmd, args, inherit = true) {
   });
 }
 
+import { writeReleaseNotesFile } from "./release-notes.mjs";
+
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const v = pkg.version;
+
+try {
+  writeReleaseNotesFile(v);
+} catch (e) {
+  console.error(e instanceof Error ? e.message : String(e));
+  process.exit(1);
+}
 
 try {
   sh("git", ["add", "-A"]);

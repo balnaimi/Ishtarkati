@@ -1,0 +1,29 @@
+---
+description: Document user-facing changes in CHANGELOG before every versioned release
+alwaysApply: true
+---
+
+# Ishtarkati — release notes for GitHub Releases
+
+End users read **what changed** on each GitHub Release. Do not ship a version without notes.
+
+## Before `npm run build:release`
+
+1. Update **`CHANGELOG.md`** under `## [Unreleased]` with clear bullets (Arabic or English):
+   - Use headings: `### Added`, `### Changed`, `### Fixed`, `### Removed` when relevant.
+   - Describe **user-visible** behavior (screens, tray, reminders, settings, DB migrations), not internal refactors only.
+
+2. Run `npm run build:release` as usual. **`scripts/git-ship.mjs`** will:
+   - Promote `[Unreleased]` → `[X.Y.Z]` with today’s date (if not already present).
+   - Write **`release-notes/vX.Y.Z.md`** for the GitHub workflow `body_path`.
+
+3. If `[Unreleased]` is empty, **ship fails** — fill it first.
+
+## Retroactive / rebuild only
+
+- Rebuild without new features: `SKIP_VERSION_BUMP=1` or clean tree rebuild — keep existing `## [version]` section; do not wipe notes.
+- Editing an already-published release on GitHub: update `CHANGELOG.md` + `release-notes/vX.Y.Z.md`, then `gh release edit vX.Y.Z --notes-file release-notes/vX.Y.Z.md` if needed.
+
+## Do not rely on
+
+- `generate_release_notes: true` (disabled) — commit messages are `Release X.Y.Z — workspace` and are not useful to users.

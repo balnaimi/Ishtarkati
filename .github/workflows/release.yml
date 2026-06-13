@@ -91,6 +91,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Ishtarkati ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: release-notes/${{ github.ref_name }}.md
           files: upload/*
           fail_on_unmatched_files: true

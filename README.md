@@ -94,9 +94,10 @@ Updates `package.json` and `src/version.ts`.
 Push a version tag to build Linux, Windows, and Mac on GitHub Actions and publish a Release:
 
 ```bash
-git tag v4.9.0
-git push origin v4.9.0
+npm run build:release   # bumps version, builds AppImage, writes release-notes/vX.Y.Z.md, pushes tag
 ```
+
+**Release notes:** before `build:release`, list user-facing changes under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md). The workflow attaches [`release-notes/vX.Y.Z.md`](release-notes/) as the GitHub Release description.
 
 Artifacts also appear under the workflow run when using **Actions → Release → Run workflow**.
 
