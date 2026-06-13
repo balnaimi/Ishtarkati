@@ -50,9 +50,11 @@ export function NewSubscriptionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-cream-900">{t("form.newTitle")}</h2>
-      <p className="text-sm text-cream-700">{t("form.newUnifiedHint")}</p>
+    <div className="dash-page">
+      <header>
+        <h1 className="dash-page-title">{t("form.newTitle")}</h1>
+        <p className="dash-page-sub">{t("form.newUnifiedHint")}</p>
+      </header>
 
       {paymentMethodCount === null ? (
         <p className="sk-text-hint text-sm">{t("common.loading")}</p>

@@ -70,8 +70,10 @@ export function EditSubscriptionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-cream-900">{t("form.editTitle")}</h2>
+    <div className="dash-page">
+      <header>
+        <h1 className="dash-page-title">{t("form.editTitle")}</h1>
+      </header>
       {cancelledAt ? (
         <div className="sk-callout-muted text-sm">
           <p className="font-medium text-cream-900">{t("form.editCancelledHint", { date: cancelledAt })}</p>

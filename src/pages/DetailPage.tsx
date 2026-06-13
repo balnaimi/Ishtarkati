@@ -320,7 +320,7 @@ export function DetailPage() {
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
-      <div className="space-y-8">
+      <div className="dash-page space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1 flex flex-col gap-3 text-start">
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start">
@@ -328,7 +328,7 @@ export function DetailPage() {
               <SiteFavicon websiteUrl={sub.website_url} size="lg" className="sm:mt-0.5" />
             ) : null}
             <div className="min-w-0 flex-1 space-y-2 text-start">
-              <h2 className="text-xl font-semibold text-cream-900">{sub.title}</h2>
+              <h1 className="dash-page-title">{sub.title}</h1>
               {sub.cancelled_at ? (
                 <div className="sk-callout-muted text-sm">
                   <p className="font-medium text-cream-900">{t("detail.cancelledBannerTitle")}</p>

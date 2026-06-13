@@ -23,7 +23,7 @@ import {
   statsSummary,
   type SubscriptionListRow,
 } from "../db/repo";
-import { CashflowSummaryGrid } from "../components/CashflowSummaryGrid";
+import { HomeCashflowCompact } from "../components/HomeCashflowCompact";
 import { StatsGridSkeleton } from "../components/LoadingSkeleton";
 import { mapSubsDueByDayInMonth, projectedTotalsByMonthIndex } from "../lib/cashflowProjection";
 import {
@@ -40,6 +40,10 @@ type HistSort = "desc" | "asc";
 
 function weekdayHeaderKeys(): string[] {
   return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+}
+
+function chipClass(active: boolean): string {
+  return `dash-chip ${active ? "dash-chip-active" : "dash-chip-idle"}`;
 }
 
 export function InsightsPage() {
@@ -154,7 +158,6 @@ export function InsightsPage() {
 
   const monthAnchor = new Date(calYear, calMonth0, 1);
   const gridStart = startOfMonth(monthAnchor);
-  /** Sunday-aligned 6×7 grid start */
   const calStart = new Date(gridStart);
   const lead = getDay(gridStart);
   calStart.setDate(calStart.getDate() - lead);
@@ -163,7 +166,6 @@ export function InsightsPage() {
   const daysGrid = eachDayOfInterval({ start: calStart, end: calEnd });
 
   const primary = summary?.primaryCode ?? primaryCode;
-
   const monthTitle = format(monthAnchor, "MMMM yyyy", { locale: dateLocale });
 
   const histSubsWithPayments = useMemo(() => {
@@ -197,19 +199,26 @@ export function InsightsPage() {
     [filteredHistPayments],
   );
 
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-cream-900">{t("insights.title")}</h2>
-          <p className="sk-text-hint mt-1 text-sm">{t("insights.subtitle")}</p>
-        </div>
-        <Link to="/" className="sk-btn-secondary px-4 py-2.5 text-center text-sm">
-          {t("insights.backHome")}
-        </Link>
-      </div>
+  function shiftCalendar(delta: -1 | 1) {
+    if (calMode === "year") {
+      setCalYear((y) => y + delta);
+      return;
+    }
+    const d = delta < 0
+      ? subMonths(new Date(calYear, calMonth0, 1), 1)
+      : addMonths(new Date(calYear, calMonth0, 1), 1);
+    setCalYear(d.getFullYear());
+    setCalMonth0(d.getMonth());
+  }
 
-      <div className="flex flex-wrap gap-2 border-b border-cream-400 pb-3">
+  return (
+    <div className="dash-page">
+      <header>
+        <h1 className="dash-page-title">{t("insights.title")}</h1>
+        <p className="dash-page-sub">{t("insights.subtitle")}</p>
+      </header>
+
+      <div className="flex flex-wrap gap-1.5">
         {(
           [
             ["summary", t("insights.tabSummary")] as const,
@@ -217,142 +226,144 @@ export function InsightsPage() {
             ["history", t("insights.tabHistory")] as const,
           ] as const
         ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              tab === id ? "bg-cream-800 text-cream-50" : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-            }`}
-            onClick={() => setTab(id)}
-          >
+          <button key={id} type="button" className={chipClass(tab === id)} onClick={() => setTab(id)}>
             {label}
           </button>
         ))}
       </div>
 
       {tab === "summary" ? (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              disabled={busy}
-              className="sk-btn-secondary"
-              onClick={() => void recalcFxSnapshots()}
-            >
-              {t("stats.refreshFx")}
-            </button>
-            {msg ? <span className="text-sm font-medium text-sage-800">{msg}</span> : null}
-          </div>
-
+        <div className="space-y-4">
           {!summary ? (
             <StatsGridSkeleton />
           ) : (
             <>
-              <p className="mb-4 text-sm text-cream-700">{t("insights.cashflowExplain")}</p>
-              <CashflowSummaryGrid summary={summary} primaryCode={primary} />
+              <div className="dash-home-stat-row">
+                <article className="dash-home-stat">
+                  <p className="dash-stat-label">{t("insights.dueThisMonth")}</p>
+                  <p className="dash-stat-value">{summary.currentMonth.dueCount}</p>
+                  <p className="mt-0.5 text-[11px] sk-text-hint">
+                    {summary.currentMonth.totalPrimary.toFixed(0)} {primary}
+                  </p>
+                </article>
+                <article className="dash-home-stat">
+                  <p className="dash-stat-label">{t("insights.dueNextMonth")}</p>
+                  <p className="dash-stat-value">{summary.nextMonth.dueCount}</p>
+                  <p className="mt-0.5 text-[11px] sk-text-hint">
+                    {summary.nextMonth.totalPrimary.toFixed(0)} {primary}
+                  </p>
+                </article>
+                <article className="dash-home-stat">
+                  <p className="dash-stat-label">{t("insights.due30")}</p>
+                  <p className="dash-stat-value">{summary.due30Projected.dueCount}</p>
+                  <p className="mt-0.5 text-[11px] sk-text-hint">
+                    {summary.due30Projected.totalPrimary.toFixed(0)} {primary}
+                  </p>
+                </article>
+                <article className="dash-home-stat">
+                  <p className="dash-stat-label">{t("stats.subscriptions")}</p>
+                  <p className="dash-stat-value">{summary.recurringCount}</p>
+                </article>
+              </div>
+
+              <div className="dash-home-grid">
+                <HomeCashflowCompact summary={summary} primaryCode={primary} />
+                <section className="dash-home-panel">
+                  <div className="dash-home-panel-head">
+                    <div>
+                      <h2 className="dash-card-title">{t("stats.refreshFx")}</h2>
+                      <p className="mt-0.5 text-xs sk-text-hint">{t("insights.cashflowExplain")}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="dash-btn-ghost !min-h-8 text-xs"
+                      onClick={() => void recalcFxSnapshots()}
+                    >
+                      {t("stats.refreshFx")}
+                    </button>
+                  </div>
+                  {msg ? <p className="px-3 pb-3 text-xs font-medium text-sage-800">{msg}</p> : null}
+                  {summary.byCategory.length > 0 ? (
+                    <div className="border-t border-cream-400/40 px-3 py-2.5">
+                      <p className="text-[11px] font-semibold sk-text-hint">{t("insights.byCategoryThisMonth")}</p>
+                      <ul className="mt-1.5 max-h-48 space-y-1 overflow-y-auto">
+                        {summary.byCategory.map((row) => (
+                          <li key={row.name} className="flex justify-between gap-2 text-xs">
+                            <span className="truncate text-cream-800">{row.name}</span>
+                            <span className="shrink-0 font-medium text-cream-950">
+                              {row.amountPrimary.toFixed(0)} {primary}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </section>
+              </div>
             </>
           )}
         </div>
       ) : null}
 
       {tab === "calendar" ? (
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                calMode === "year"
-                  ? "bg-cream-800 text-cream-50"
-                  : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-              }`}
-              onClick={() => setCalMode("year")}
-            >
-              {t("insights.calYear")}
-            </button>
-            <button
-              type="button"
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                calMode === "month"
-                  ? "bg-cream-800 text-cream-50"
-                  : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-              }`}
-              onClick={() => setCalMode("month")}
-            >
-              {t("insights.calMonth")}
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="sk-btn-secondary text-sm"
-              onClick={() => {
-                if (calMode === "year") setCalYear((y) => y - 1);
-                else {
-                  const d = subMonths(new Date(calYear, calMonth0, 1), 1);
-                  setCalYear(d.getFullYear());
-                  setCalMonth0(d.getMonth());
-                }
-              }}
-            >
-              {t("insights.prev")}
-            </button>
-            <button
-              type="button"
-              className="sk-btn-secondary text-sm"
-              onClick={() => {
-                if (calMode === "year") setCalYear((y) => y + 1);
-                else {
-                  const d = addMonths(new Date(calYear, calMonth0, 1), 1);
-                  setCalYear(d.getFullYear());
-                  setCalMonth0(d.getMonth());
-                }
-              }}
-            >
-              {t("insights.next")}
-            </button>
-            <span className="text-sm font-medium text-cream-800">
-              {calMode === "year"
-                ? t("insights.yearLabel", { year: calYear })
-                : monthTitle}
-            </span>
-          </div>
-
-          {calMode === "year" ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {monthTotals.map((tot, i) => {
-                const label = format(new Date(calYear, i, 1), "MMMM", { locale: dateLocale });
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    className="sk-card text-right transition hover:border-sage-500/50"
-                    onClick={() => {
-                      setCalMonth0(i);
-                      setCalMode("month");
-                    }}
-                  >
-                    <p className="text-sm font-medium leading-snug text-cream-800">{label}</p>
-                    <p className="mt-2 text-lg font-semibold text-sage-800">
-                      {tot.toFixed(2)} {primaryCode}
-                    </p>
-                    <p className="sk-text-hint mt-1 text-xs">{t("insights.tapForMonth")}</p>
-                  </button>
-                );
-              })}
+        <div className="space-y-3">
+          <div className="dash-home-panel">
+            <div className="dash-home-panel-head">
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" className={chipClass(calMode === "year")} onClick={() => setCalMode("year")}>
+                  {t("insights.calYear")}
+                </button>
+                <button type="button" className={chipClass(calMode === "month")} onClick={() => setCalMode("month")}>
+                  {t("insights.calMonth")}
+                </button>
+              </div>
+              <div className="dash-toolbar">
+                <button type="button" className="dash-btn-ghost !min-h-8 px-2 text-xs" onClick={() => shiftCalendar(-1)}>
+                  {t("insights.prev")}
+                </button>
+                <span className="text-xs font-medium text-cream-900">
+                  {calMode === "year" ? t("insights.yearLabel", { year: calYear }) : monthTitle}
+                </span>
+                <button type="button" className="dash-btn-ghost !min-h-8 px-2 text-xs" onClick={() => shiftCalendar(1)}>
+                  {t("insights.next")}
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-cream-700">{t("insights.monthGridHint")}</p>
-              <div className="sk-card overflow-x-auto">
-                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-cream-600">
+
+            {calMode === "year" ? (
+              <div className="dash-insights-year-grid p-3">
+                {monthTotals.map((tot, i) => {
+                  const label = format(new Date(calYear, i, 1), "MMMM", { locale: dateLocale });
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className="dash-insights-year-cell"
+                      onClick={() => {
+                        setCalMonth0(i);
+                        setCalMode("month");
+                      }}
+                    >
+                      <p className="text-xs font-medium text-cream-800">{label}</p>
+                      <p className="mt-0.5 text-sm font-bold text-cream-950">
+                        {tot.toFixed(0)} {primaryCode}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-2">
+                <p className="mb-2 px-1 text-[11px] sk-text-hint">{t("insights.monthGridHint")}</p>
+                <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium sk-text-hint">
                   {weekdayHeaderKeys().map((k) => (
-                    <div key={k} className="py-1">
+                    <div key={k} className="py-0.5">
                       {t(`insights.weekday.${k}`)}
                     </div>
                   ))}
                 </div>
-                <div className="mt-1 grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-0.5">
                   {daysGrid.map((d) => {
                     const iso = format(d, "yyyy-MM-dd");
                     const inMonth = isSameMonth(d, monthAnchor);
@@ -361,23 +372,19 @@ export function InsightsPage() {
                     return (
                       <div
                         key={iso}
-                        className={`sk-cal-day ${inMonth ? "" : "sk-cal-day-outside"} ${hasDue ? "sk-cal-day-due" : ""}`}
+                        className={`sk-cal-day sk-cal-day-compact ${inMonth ? "" : "sk-cal-day-outside"} ${hasDue ? "sk-cal-day-due" : ""}`}
                       >
                         <div className="font-semibold text-cream-900">{format(d, "d")}</div>
-                        <ul className="mt-0.5 space-y-0.5">
-                          {entries.slice(0, 3).map((e) => (
-                            <li key={`${e.subId}-${e.title}`} className="truncate leading-tight text-cream-700">
+                        <ul className="mt-0.5 space-y-0">
+                          {entries.slice(0, 2).map((e) => (
+                            <li key={`${e.subId}-${e.title}`} className="truncate leading-tight">
                               <Link className="text-sage-800 underline-offset-2 hover:underline" to={`/sub/${e.subId}`}>
                                 {e.title}
                               </Link>
-                              <span className="text-cream-600">
-                                {" "}
-                                {e.amountPrimary.toFixed(0)} {primaryCode}
-                              </span>
                             </li>
                           ))}
-                          {entries.length > 3 ? (
-                            <li className="text-cream-600">+{entries.length - 3}</li>
+                          {entries.length > 2 ? (
+                            <li className="sk-text-hint">+{entries.length - 2}</li>
                           ) : null}
                         </ul>
                       </div>
@@ -385,53 +392,34 @@ export function InsightsPage() {
                   })}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : null}
 
       {tab === "history" ? (
-        <div className="space-y-6">
-          <p className="text-sm text-cream-700">{t("insights.historyExplain")}</p>
-
+        <div className="space-y-3">
           {histPayments.length === 0 ? (
-            <p className="sk-callout-muted">{t("insights.historyEmpty")}</p>
+            <p className="dash-home-panel px-4 py-6 text-sm sk-text-hint">{t("insights.historyEmpty")}</p>
           ) : (
             <>
-              <section className="sk-card space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                      histFilter === "month"
-                        ? "bg-cream-800 text-cream-50"
-                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                    }`}
-                    onClick={() => setHistFilter("month")}
-                  >
-                    {t("insights.historyFilterMonth")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                      histFilter === "subscription"
-                        ? "bg-cream-800 text-cream-50"
-                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                    }`}
-                    onClick={() => setHistFilter("subscription")}
-                  >
-                    {t("insights.historyFilterSub")}
-                  </button>
+              <section className="dash-home-panel">
+                <div className="dash-home-panel-head">
+                  <p className="text-xs sk-text-hint">{t("insights.historyExplain")}</p>
                 </div>
-
-                {histFilter === "month" ? (
-                  <div>
-                    <label className="sk-label" htmlFor="hist-month-pick">
-                      {t("insights.historyPickMonth")}
-                    </label>
+                <div className="space-y-2 border-b border-cream-400/40 px-3 py-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" className={chipClass(histFilter === "month")} onClick={() => setHistFilter("month")}>
+                      {t("insights.historyFilterMonth")}
+                    </button>
+                    <button type="button" className={chipClass(histFilter === "subscription")} onClick={() => setHistFilter("subscription")}>
+                      {t("insights.historyFilterSub")}
+                    </button>
+                  </div>
+                  {histFilter === "month" ? (
                     <select
                       id="hist-month-pick"
-                      className="sk-select max-w-xs"
+                      className="sk-select !min-h-9 text-sm"
                       value={histMonth}
                       onChange={(e) => setHistMonth(e.target.value)}
                     >
@@ -446,15 +434,10 @@ export function InsightsPage() {
                         );
                       })}
                     </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="sk-label" htmlFor="hist-sub-pick">
-                      {t("insights.historyPickSub")}
-                    </label>
+                  ) : (
                     <select
                       id="hist-sub-pick"
-                      className="sk-select max-w-md"
+                      className="sk-select !min-h-9 text-sm"
                       value={histSubId === "" ? "" : String(histSubId)}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -468,53 +451,35 @@ export function InsightsPage() {
                         </option>
                       ))}
                     </select>
+                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" className={chipClass(histSort === "desc")} onClick={() => setHistSort("desc")}>
+                      {t("insights.historySortNewest")}
+                    </button>
+                    <button type="button" className={chipClass(histSort === "asc")} onClick={() => setHistSort("asc")}>
+                      {t("insights.historySortOldest")}
+                    </button>
                   </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                      histSort === "desc"
-                        ? "bg-sage-700 text-cream-50"
-                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                    }`}
-                    onClick={() => setHistSort("desc")}
-                  >
-                    {t("insights.historySortNewest")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                      histSort === "asc"
-                        ? "bg-sage-700 text-cream-50"
-                        : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-                    }`}
-                    onClick={() => setHistSort("asc")}
-                  >
-                    {t("insights.historySortOldest")}
-                  </button>
+                  <p className="text-xs text-cream-800">
+                    {t("insights.historyPaymentsCount", { count: filteredHistPayments.length })}
+                    {filteredHistPayments.length > 0 ? (
+                      <>
+                        {" — "}
+                        {t("insights.historyPaymentsTotal", {
+                          amount: filteredHistTotal.toFixed(2),
+                          code: primaryCode,
+                        })}
+                      </>
+                    ) : null}
+                  </p>
                 </div>
 
-                <p className="text-sm text-cream-800">
-                  {t("insights.historyPaymentsCount", { count: filteredHistPayments.length })}
-                  {filteredHistPayments.length > 0 ? (
-                    <>
-                      {" — "}
-                      {t("insights.historyPaymentsTotal", {
-                        amount: filteredHistTotal.toFixed(2),
-                        code: primaryCode,
-                      })}
-                    </>
-                  ) : null}
-                </p>
-
                 {filteredHistPayments.length === 0 ? (
-                  <p className="text-sm text-cream-600">{t("insights.historyEmptyFilter")}</p>
+                  <p className="px-4 py-4 text-sm sk-text-hint">{t("insights.historyEmptyFilter")}</p>
                 ) : (
-                  <ul className="max-h-[28rem] space-y-2 overflow-y-auto">
+                  <ul className="max-h-[22rem] divide-y divide-cream-400/40 overflow-y-auto">
                     {filteredHistPayments.map((p) => {
-                      const paidLabel = format(new Date(p.paid_at.slice(0, 10)), "d MMMM yyyy", {
+                      const paidLabel = format(new Date(p.paid_at.slice(0, 10)), "d MMM yyyy", {
                         locale: dateLocale,
                       });
                       const primaryAmt = p.amount_qar ?? p.amount_original ?? 0;
@@ -523,34 +488,21 @@ export function InsightsPage() {
                         p.currency &&
                         p.currency.toUpperCase() !== primaryCode.toUpperCase();
                       return (
-                        <li
-                          key={p.id}
-                          className="rounded-lg border border-cream-400/70 bg-cream-100/40 px-3 py-2.5 text-sm dark:bg-cream-200/20"
-                        >
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <span className="font-medium text-cream-900">{paidLabel}</span>
-                            <span className="font-semibold text-sage-800">
-                              {primaryAmt.toFixed(2)} {primaryCode}
-                              {showOrig ? (
-                                <span className="ms-1 text-xs font-normal text-cream-600">
-                                  ({p.amount_original!.toFixed(2)} {p.currency})
-                                </span>
-                              ) : null}
-                            </span>
+                        <li key={p.id} className="dash-list-row">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-cream-950">{p.subscription_title}</p>
+                            <p className="sk-text-hint">{paidLabel}</p>
                           </div>
-                          <p className="mt-1">
-                            <Link
-                              className="font-medium text-sage-800 underline-offset-2 hover:underline"
-                              to={`/sub/${p.subscription_id}`}
-                            >
-                              {p.subscription_title}
-                            </Link>
-                          </p>
-                          {p.note?.trim() ? (
-                            <p className="sk-text-hint mt-1 text-xs">
-                              {t("insights.historyPaymentNote", { note: p.note.trim() })}
+                          <div className="shrink-0 text-end">
+                            <p className="font-semibold text-sage-800">
+                              {primaryAmt.toFixed(2)} {primaryCode}
                             </p>
-                          ) : null}
+                            {showOrig ? (
+                              <p className="sk-text-hint">
+                                {p.amount_original!.toFixed(2)} {p.currency}
+                              </p>
+                            ) : null}
+                          </div>
                         </li>
                       );
                     })}
@@ -558,16 +510,16 @@ export function InsightsPage() {
                 )}
               </section>
 
-              <details className="sk-card text-sm text-cream-800">
-                <summary className="cursor-pointer font-semibold text-cream-900">
+              <details className="dash-home-panel text-sm">
+                <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold text-cream-950">
                   {t("insights.historyTotalsFold")}
                 </summary>
-                <div className="mt-4 grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 border-t border-cream-400/40 px-3 py-2 sm:grid-cols-2">
                   <div>
-                    <h4 className="mb-2 font-medium text-cream-900">{t("insights.historyByYear")}</h4>
-                    <ul className="space-y-2">
+                    <h4 className="mb-1 text-xs font-semibold sk-text-hint">{t("insights.historyByYear")}</h4>
+                    <ul className="max-h-36 space-y-0.5 overflow-y-auto">
                       {histYears.map((row) => (
-                        <li key={row.year} className="flex justify-between gap-2 border-b border-cream-300/50 py-1">
+                        <li key={row.year} className="flex justify-between gap-2 text-xs py-0.5">
                           <span>{row.year}</span>
                           <span className="font-medium text-sage-800">
                             {row.total.toFixed(2)} {primaryCode}
@@ -577,11 +529,11 @@ export function InsightsPage() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="mb-2 font-medium text-cream-900">{t("insights.historyByMonth")}</h4>
-                    <ul className="max-h-48 space-y-1 overflow-y-auto">
+                    <h4 className="mb-1 text-xs font-semibold sk-text-hint">{t("insights.historyByMonth")}</h4>
+                    <ul className="max-h-36 space-y-0.5 overflow-y-auto">
                       {histMonths.map((row) => (
-                        <li key={row.ym} className="flex justify-between gap-2 border-b border-cream-300/50 py-1">
-                          <span dir="ltr" className="font-mono text-xs">
+                        <li key={row.ym} className="flex justify-between gap-2 text-xs py-0.5">
+                          <span dir="ltr" className="font-mono">
                             {row.ym}
                           </span>
                           <span className="font-medium text-sage-800">

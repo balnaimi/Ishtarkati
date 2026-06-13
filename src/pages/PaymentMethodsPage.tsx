@@ -5,11 +5,11 @@ export function PaymentMethodsPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-cream-900">{t("payment.pageTitle")}</h2>
-        <p className="sk-text-hint mt-1 text-sm">{t("payment.pageSubtitle")}</p>
-      </div>
+    <div className="dash-page">
+      <header>
+        <h1 className="dash-page-title">{t("payment.pageTitle")}</h1>
+        <p className="dash-page-sub">{t("payment.pageSubtitle")}</p>
+      </header>
       <PaymentMethodsPanel />
     </div>
   );

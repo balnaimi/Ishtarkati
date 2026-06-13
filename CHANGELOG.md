@@ -8,6 +8,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.28.0] - 2026-06-13
+
+### Changed
+- Insights (spending & calendar) redesigned to match the home dashboard: compact stats, panels, calendar grid, and payment history list.
+- Payment methods, settings, detail, and subscription forms use the same dash-page layout with tighter spacing.
 ## [4.27.0] - 2026-06-13
 
 ### Changed

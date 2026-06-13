@@ -742,6 +742,31 @@ body {
   @apply hover:bg-brand-warn/10;
 }
 
+/* Shared page shell (home, insights, payments, settings) */
+.dash-page {
+  @apply space-y-4;
+}
+
+.dash-toolbar {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.dash-insights-year-grid {
+  @apply grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4;
+}
+
+.dash-insights-year-cell {
+  @apply cursor-pointer rounded-lg border border-cream-400/50 bg-cream-200/25 px-2.5 py-2 text-start transition-colors hover:border-violet-500/30 hover:bg-cream-300/20;
+}
+
+.sk-cal-day-compact {
+  @apply min-h-[3.25rem] !p-0.5 text-[10px];
+}
+
+.dash-list-row {
+  @apply flex items-center justify-between gap-2 border-b border-cream-400/35 px-3 py-2 text-xs last:border-b-0;
+}
+
 .dash-tag {
   @apply inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold;
 }

@@ -563,7 +563,7 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="dash-page mx-auto max-w-2xl">
       <ConfirmDialog
         open={pinRemoveConfirmOpen}
         title={t("confirmDialog.pinRemoveTitle")}
@@ -573,16 +573,14 @@ export function SettingsPage() {
         onConfirm={() => void removeStoredPinFully()}
         onCancel={() => setPinRemoveConfirmOpen(false)}
       />
-      <h2 className="text-xl font-semibold text-cream-900">{t("settings.title")}</h2>
+      <h1 className="dash-page-title">{t("settings.title")}</h1>
 
-      <div className="flex flex-wrap gap-2 border-b border-cream-400 pb-3">
+      <div className="flex flex-wrap gap-1.5">
         {tabs.map((x) => (
           <button
             key={x.id}
             type="button"
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              tab === x.id ? "bg-cream-800 text-cream-50" : "bg-cream-200/70 text-cream-900 hover:bg-cream-300"
-            }`}
+            className={`dash-chip ${tab === x.id ? "dash-chip-active" : "dash-chip-idle"}`}
             onClick={() => selectTab(x.id)}
           >
             {x.label}
@@ -591,7 +589,7 @@ export function SettingsPage() {
       </div>
 
       {tab === "app" ? (
-        <div className="space-y-8">
+        <div className="space-y-4">
           <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("settings.languageTitle")}</h3>
             <p className="text-sm leading-relaxed text-cream-700">{t("settings.languageHint")}</p>

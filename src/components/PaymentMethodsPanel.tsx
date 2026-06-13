@@ -34,18 +34,18 @@ export function PaymentMethodsPanel() {
   }, [reload]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
-          className={tab === "wallet" ? "sk-btn-primary" : "sk-btn-secondary"}
+          className={`dash-chip ${tab === "wallet" ? "dash-chip-active" : "dash-chip-idle"}`}
           onClick={() => setTab("wallet")}
         >
           {t("payment.walletTab")}
         </button>
         <button
           type="button"
-          className={tab === "card" ? "sk-btn-primary" : "sk-btn-secondary"}
+          className={`dash-chip ${tab === "card" ? "dash-chip-active" : "dash-chip-idle"}`}
           onClick={() => setTab("card")}
         >
           {t("payment.cardTab")}
@@ -89,8 +89,8 @@ function WalletSection({
   }
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={add} className="sk-card space-y-4">
+    <div className="space-y-4">
+      <form onSubmit={add} className="dash-home-panel space-y-3 p-3">
         <h3 className="font-semibold text-cream-900">{t("payment.addWallet")}</h3>
         <div>
           <label className="sk-label">{t("payment.serviceName")}</label>
@@ -123,9 +123,9 @@ function WalletSection({
         </button>
       </form>
 
-      <ul className="space-y-3">
+      <ul className="dash-home-panel divide-y divide-cream-400/40 overflow-hidden">
         {wallets.length === 0 ? (
-          <li className="text-cream-600">{t("payment.noWallets")}</li>
+          <li className="px-4 py-3 text-sm sk-text-hint">{t("payment.noWallets")}</li>
         ) : (
           wallets.map((w) => (
             <WalletRow key={w.id} w={w} cards={cards} onChanged={onChanged} />
@@ -229,7 +229,7 @@ function WalletRow({
         onConfirm={() => void del()}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
-      <li className="sk-card flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <li className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold text-cream-900">{svc}</p>
           <p className="text-sm text-cream-800">{w.account_text}</p>
@@ -295,8 +295,8 @@ function CardSection({
   }
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={add} className="sk-card space-y-4">
+    <div className="space-y-4">
+      <form onSubmit={add} className="dash-home-panel space-y-3 p-3">
         <h3 className="font-semibold text-cream-900">{t("payment.addCard")}</h3>
         <div>
           <label className="sk-label">{t("payment.cardBrand")}</label>
@@ -357,9 +357,9 @@ function CardSection({
         </button>
       </form>
 
-      <ul className="space-y-4">
+      <ul className="dash-home-panel divide-y divide-cream-400/40 overflow-hidden">
         {cards.length === 0 ? (
-          <li className="text-cream-600">{t("payment.noCards")}</li>
+          <li className="px-4 py-3 text-sm sk-text-hint">{t("payment.noCards")}</li>
         ) : (
           cards.map((c) => <CardRow key={c.id} c={c} onChanged={onChanged} />)
         )}
@@ -476,7 +476,7 @@ function CardRow({ c, onChanged }: { c: CreditCard; onChanged: () => void }) {
         onConfirm={() => void del()}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
-      <li className="sk-card space-y-3">
+      <li className="space-y-2 px-3 py-2.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-semibold text-cream-900">
