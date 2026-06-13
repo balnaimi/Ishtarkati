@@ -134,7 +134,22 @@
     "cashflowPeriod": "هذا الشهر",
     "cashflowPaid": "مستحق هذا الشهر",
     "cashflowRemaining": "الشهر القادم",
-    "cashflowSpent": "خلال ٣٠ يومًا"
+    "cashflowSpent": "خلال ٣٠ يومًا",
+    "actionsTitle": "يحتاج انتباهك",
+    "actionsSubtitle": "دفعات للتأكيد، استحقاقات قريبة، وتجديد بطاقات.",
+    "actionsEmpty": "كل شيء على ما يرام — لا يوجد إجراء مطلوب الآن.",
+    "dueSoonLine": "يستحق {{date}}",
+    "cardExpiryLine": "بطاقة تنتهي قريباً — راجع طرق الدفع",
+    "addAccount": "إضافة اشتراك",
+    "viewAccounts": "كل الحسابات",
+    "viewInsights": "المصروفات والتقويم",
+    "viewPayments": "طرق الدفع",
+    "statDue30": "مستحق خلال ٣٠ يوماً",
+    "statRecurring": "متكررة",
+    "topCategories": "أعلى الفئات هذا الشهر",
+    "paymentsSnapshot": "طرق الدفع",
+    "paymentsEmpty": "لا توجد طرق دفع بعد.",
+    "budgetAdjust": "تعديل الميزانية"
   },
   "layout": {
     "desktopOnly": "تطبيق سطح مكتب",

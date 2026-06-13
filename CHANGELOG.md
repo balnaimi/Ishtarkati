@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.27.0] - 2026-06-13
+
+### Changed
+- Home page redesign: balanced two-column layout, compact stats, action-first attention panel (due today, due soon, expiring cards), streamlined cashflow and payment snapshots.
 ## [4.25.0] - 2026-06-13
 
 ### Changed

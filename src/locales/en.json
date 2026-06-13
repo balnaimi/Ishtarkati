@@ -134,7 +134,22 @@
     "cashflowPeriod": "This month",
     "cashflowPaid": "Due this month",
     "cashflowRemaining": "Next month",
-    "cashflowSpent": "Next 30 days"
+    "cashflowSpent": "Next 30 days",
+    "actionsTitle": "Needs your attention",
+    "actionsSubtitle": "Payments to confirm, upcoming due dates, and card renewals.",
+    "actionsEmpty": "All clear — nothing needs action right now.",
+    "dueSoonLine": "Due {{date}}",
+    "cardExpiryLine": "Card expiring soon — review payment methods",
+    "addAccount": "Add subscription",
+    "viewAccounts": "All accounts",
+    "viewInsights": "Spending & calendar",
+    "viewPayments": "Payment methods",
+    "statDue30": "Due in 30 days",
+    "statRecurring": "Recurring",
+    "topCategories": "Top categories this month",
+    "paymentsSnapshot": "Payment methods",
+    "paymentsEmpty": "No payment methods yet.",
+    "budgetAdjust": "Adjust budget"
   },
   "layout": {
     "desktopOnly": "Desktop app",
