@@ -81,7 +81,7 @@ function normalizeBackupExportScope(raw: unknown): BackupExportScope {
   return "full";
 }
 
-/** Legacy «بدون إعدادات»: ملفات قديمة بلا مصفوفات بطاقات/محافظ — نصفّر ربط الاشتراك بوسيلة الدفع عند الاستيراد. */
+/** Legacy "settings excluded" backups: clear subscription payment links on import. */
 function withoutSettingsNeedsStripPaymentLinks(data: BackupPayload): boolean {
   if (data.exportScope !== "without_settings") return false;
   return data.credit_cards.length === 0 && data.wallet_methods.length === 0;

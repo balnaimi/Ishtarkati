@@ -1,13 +1,12 @@
 /**
- * يحدّث SemVer في package.json و src/version.ts قبل كل `npm run build`.
+ * Bumps SemVer in package.json and src/version.ts before each `npm run build`.
  *
- * - MAJOR: breaking، أو تغيير ضخم جدًا، أو رسالة تتضمن BREAKING / !:
- * - MINOR: ميزة جديدة/إزالة ميزة، أو رسالة feat:/feature، أو حجم عمل متوسط
- * - PATCH: إصلاحات بسيطة وتعديلات طفيفة
+ * - MAJOR: breaking change, very large diff, or commit message with BREAKING / !:
+ * - MINOR: new feature, feat:/feature commit, or medium-sized change
+ * - PATCH: small fixes and minor edits
  *
- * تجاوز يدوي: VERSION_BUMP=major|minor|patch
- * بدون رفع: SKIP_VERSION_BUMP=1
- *
+ * Manual override: VERSION_BUMP=major|minor|patch
+ * Skip bump: SKIP_VERSION_BUMP=1
  */
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -80,7 +79,7 @@ function decideBumpKind() {
   }
 
   if (!hasGitRepo()) {
-    console.warn("[version] ليس مستودع git — استُخدم patch");
+    console.warn("[version] not a git repo — using patch");
     return "patch";
   }
 
@@ -90,17 +89,13 @@ function decideBumpKind() {
   const dirtyNames = new Set([...unstaged]);
   const hasUncommittedChanges = dirtyNames.size > 0;
 
-  /**
-   * تخطّي الرفع فقط عندما لا يوجد أي تغيير غير مُلتزم به.
-   * سابقًا كان الشرط يُنفَّذ قبل فحص الملفات المعدّلة فيطابق «Release X = الإصدار الحالي»
-   * ويُلغي الرفع حتى مع وجود تعديلات محلية — فلا يفرّق المستخدم بين البنيات.
-   */
+  /** Skip bump only when the tree is clean and HEAD already matches package.json Release tag. */
   if (!hasUncommittedChanges) {
     const subject = git("log -1 --format=%s") || "";
     const releaseMatch = /^Release (\d+\.\d+\.\d+)/.exec(subject);
     if (releaseMatch && releaseMatch[1] === version) {
       console.log(
-        `[version] الإصدار ${version} يطابق آخر commit إصدار والفرع نظيف — لم يُرفع الرقم (إعادة بناء نفس النسخة).`,
+        `[version] version ${version} matches last Release commit and tree is clean — skip bump (rebuild only).`,
       );
       return "skip";
     }
@@ -109,7 +104,7 @@ function decideBumpKind() {
   const onlyMetaDirty =
     dirtyNames.size > 0 && [...dirtyNames].every((f) => VERSION_FILES.has(f));
   if (onlyMetaDirty) {
-    console.log("[version] التغييرات على ملفات الإصدار فقط — تخطي رفع الإصدار.");
+    console.log("[version] only version files changed — skip bump.");
     return "skip";
   }
 
@@ -126,41 +121,35 @@ function decideBumpKind() {
 
   const s = (git("log -1 --format=%s") || "").trim();
   if (/\bBREAKING\b|!:/.test(s)) {
-    console.log("[version] قرار: major — breaking في رسالة الـ commit.");
+    console.log("[version] decision: major — breaking in commit message.");
     return "major";
   }
 
   if (/^(feat|feature)(\(.+\))?:/i.test(s)) {
-    console.log("[version] قرار: minor — feat/feature في رسالة الـ commit.");
+    console.log("[version] decision: minor — feat/feature in commit message.");
     return "minor";
   }
 
   if (/^(fix|hotfix|bugfix)(\(.+\))?:/i.test(s)) {
     if (lines > 800 || files > 30) {
-      console.log("[version] قرار: minor — fix لكن حجم التغيير كبير.");
+      console.log("[version] decision: minor — fix with large diff.");
       return "minor";
     }
-    console.log("[version] قرار: patch — إصلاح بحجم معقول.");
+    console.log("[version] decision: patch — reasonably sized fix.");
     return "patch";
   }
 
   if (lines >= 1500 || files >= 45) {
-    console.log(
-      `[version] قرار: major — حجم كبير (~${lines} سطر، ${files} ملف تقريبًا).`,
-    );
+    console.log(`[version] decision: major — large change (~${lines} lines, ~${files} files).`);
     return "major";
   }
 
   if (lines >= 90 || files >= 7) {
-    console.log(
-      `[version] قرار: minor — حجم متوسط (~${lines} سطر، ${files} ملف).`,
-    );
+    console.log(`[version] decision: minor — medium change (~${lines} lines, ~${files} files).`);
     return "minor";
   }
 
-  console.log(
-    `[version] قرار: patch — تغيير بسيط (~${lines} سطر، ${files} ملف).`,
-  );
+  console.log(`[version] decision: patch — small change (~${lines} lines, ~${files} files).`);
   return "patch";
 }
 
@@ -171,14 +160,14 @@ function applySemver(major, minor, patch, kind) {
 }
 
 if (process.env.SKIP_VERSION_BUMP === "1") {
-  console.log("SKIP_VERSION_BUMP=1 — الإصدار دون تعديل");
+  console.log("SKIP_VERSION_BUMP=1 — version unchanged");
   process.exit(0);
 }
 
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
 const parts = pkg.version.split(".").map((x) => parseInt(x, 10));
 if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) {
-  console.error(`package.json version غير صالح: ${pkg.version} (يلزم major.minor.patch)`);
+  console.error(`invalid package.json version: ${pkg.version} (expected major.minor.patch)`);
   process.exit(1);
 }
 

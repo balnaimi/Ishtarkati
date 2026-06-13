@@ -54,7 +54,7 @@ function payBadgeClass(status: ReturnType<typeof accountPaymentStatus>): string 
   return "bg-sage-100/90 text-sage-900";
 }
 
-/** Unified accounts list — table with due progress (formerly «كل السجلات» + «حساباتي»). */
+/** Unified accounts list with due progress bar. */
 export function SubscriptionsListPage() {
   const { t } = useTranslation();
   const nav = useNavigate();

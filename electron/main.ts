@@ -586,7 +586,7 @@ function openDatabase(): void {
     runMigrations(db);
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
-    console.error(`[ishtarkati] فشل فتح قاعدة البيانات (${fp}): ${detail}`);
+    console.error(`[ishtarkati] failed to open database (${fp}): ${detail}`);
     throw e;
   }
 }
@@ -770,7 +770,7 @@ const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
   console.error(
-    "[ishtarkati] نسخة أخرى تعمل بالفعل، أو بقيت قفل قديم. أغلق البرنامج أو احذف مجلد Singleton* من:",
+    "[ishtarkati] another instance is running, or a stale lock remains. Close the app or remove Singleton* under:",
   );
   console.error(`  ${app.getPath("userData")}`);
   app.quit();

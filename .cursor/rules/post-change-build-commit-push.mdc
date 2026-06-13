@@ -1,24 +1,26 @@
 ---
-description: بعد تعديلات كود إشتراكاتي — بناء بإصدار جديد ثم commit وpush تلقائياً
+description: After substantive Ishtarkati code changes — versioned production build then git commit and push
 alwaysApply: true
 ---
 
-# إشتراكاتي — نهاية كل جلسة تعديل
+# Ishtarkati — end of substantive edit sessions
 
-المستخدم يطلب **دفع تلقائي (`git push`) بعد كل تعديل جوهري** من الوكيل؛ لا تنتظر طلبًا منفصلًا لـ «إنهاء المهمة».
+The user expects **automatic `git push` after every substantive agent edit**; do not wait for a separate "finish task" request.
 
-بعد **أي تعديل يمس سلوك التطبيق أو الواجهة أو Electron أو البناء أو خادم المزامنة** (وليس تغييرات README فقط إن طلب المستخدم خلاف ذلك):
+After **any change that affects app behavior, UI, Electron, build, or sync-server** (not README-only unless the user says otherwise):
 
-1. **بناء إنتاج ورفع المستودع** — من جذر المشروع شغّل مرة واحدة:
+1. **Production build and ship** — once from project root:
    - `npm run build:release`
-   - يشغّل `npm run build` (يستدعي `scripts/bump-version-for-build.mjs` فيقدّر حجم التغيير من git ويرفع **major** أو **minor** أو **patch** في `package.json` و`src/version.ts` عند الحاجة، ثم يبني الـ AppImage تحت `release/`).
-   - **تخطّي رفع الرقم** يحدث فقط إذا كان الفرع **نظيفًا** وآخر commit هو `Release X.Y.Z` والإصدار الحالي يطابق **نفس** X.Y.Z (إعادة بناء دون تعديل). عند وجود **تغييرات غير مُلتزَم بها** يُحسب الرفع من حجم الـ diff ولا يُلغى بسبب رسالة الـ Release السابقة.
-   - ثم `scripts/git-ship.mjs`: `git add -A`، commit `Release X.Y.Z — workspace` إن وُجدت تغييرات، ثم `git push origin HEAD`.
+   - Runs `npm run build` (calls `scripts/bump-version-for-build.mjs`, bumps **major/minor/patch** in `package.json` and `src/version.ts` when needed, builds AppImage under `release/`).
+   - **Skip version bump** only when the branch is **clean**, HEAD is `Release X.Y.Z`, and `package.json` already matches that X.Y.Z (rebuild without code changes). **Uncommitted changes** always get a bump from diff size, even if the last commit was a Release.
+   - Then `scripts/git-ship.mjs`: `git add -A`, commit `Release X.Y.Z — workspace` if there are changes, `git push origin HEAD`.
 
-2. **بدائل** (عند الحاجة فقط):
-   - طلب المستخدم **بناء بدون رفع إصدار**: `npm run build:pack`.
-   - طلب المستخدم **بناء فقط** دون commit/push: `npm run build` دون تشغيل `git-ship`.
+2. **Alternatives** (only when needed):
+   - User asks **build without version bump**: `npm run build:pack`.
+   - User asks **build only** without commit/push: `npm run build` without `git-ship`.
 
-لا تستخدم `npm run build:pack` كخطوة إنهاء افتراضية عندما يطلب المستخدم **تمييز النسخ برقم جديد**؛ استخدم `build:pack` فقط إذا طُلب صراحة بناء بدون رفع إصدار.
+Do not use `npm run build:pack` as the default finish step when the user wants **new version numbers** on builds; use `build:pack` only when explicitly requested.
 
-إذا فشل `git push` (شبكة/مفاتيح SSH)، أبلغ المستخدم بالخطأ ولا تفترض نجاح الدفع.
+If `git push` fails (network/SSH), report the error; do not assume success.
+
+**Commit messages must be in English** (see `english-code-arabic-ui.mdc`).

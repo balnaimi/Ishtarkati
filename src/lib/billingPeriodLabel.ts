@@ -4,7 +4,7 @@ import type { Subscription } from "../types";
 type BillingPick = Pick<Subscription, "billing_model" | "interval_unit" | "interval_count">;
 
 /**
- * Second line for list UIs: يومي / شهري / سنوي… مع العدد عند الفترة اليومية (والأسبوعية/الشهرية/السنوية إن كان العدد > 1).
+ * Second line for list UIs: daily / monthly / yearly period label with interval count when > 1.
  */
 export function subscriptionBillingPeriodLine(sub: BillingPick, t: TFunction): string | null {
   if (sub.billing_model !== "recurring") return null;

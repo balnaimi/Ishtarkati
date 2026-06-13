@@ -69,18 +69,17 @@ SQLite database **`ishtarkati.db`** is stored under the Electron **userData** di
 
 ## Versioning
 
-**كل مرة تشغّل إنتاج build** (`npm run build`) يتم **رفع رقم PATCH تلقائياً** (مثلاً `1.0.0` → `1.0.1`) وتحديث `package.json` و`src/version.ts` قبل التجميع، فيتطابق اسم الـ AppImage مع ما يظهر في التطبيق.
+Each production **`npm run build`** auto-bumps **PATCH** (e.g. `1.0.0` → `1.0.1`) in `package.json` and `src/version.ts` before packaging, so the AppImage name matches the in-app version.
 
-- لتجاوز الرفع وإعادة تجهيز AppImage دون تغيير رقم الإصدار (مناسب للتكرار أثناء التطوير):  
-  **`npm run build:pack`**
+- Rebuild without bumping (handy while iterating): **`npm run build:pack`**
 
-**بناء تلقائي عند كل حفظ للملفات المصدرية** (مراقبة `src/` و`electron/` ثم تشغيل `build:pack` بعد ثوانٍ من آخر تعديل):
+**Auto-rebuild on save** (watches `src/` and `electron/`, runs `build:pack` after a short debounce):
 
 ```bash
 npm run watch:build
 ```
 
-يدويًا:
+Manual bump:
 
 ```bash
 npm run version:bump -- patch   # or minor | major

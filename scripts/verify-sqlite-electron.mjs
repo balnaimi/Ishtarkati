@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * يتحقق أن better-sqlite3 مُجمَّع لـ Electron وليس لـ Node النظام.
+ * Verifies better-sqlite3 is built for Electron, not system Node.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -18,9 +18,9 @@ const el = spawnSync(electronBin, [probePath], { cwd: root, encoding: "utf8", en
 if (el.status !== 0) {
   const nodeMod = process.versions.modules;
   console.error(
-    `[verify-sqlite] فشل التحقق (Node system ABI ${nodeMod}). stderr:\n${el.stderr || ""}\nstdout:\n${el.stdout || ""}`,
+    `[verify-sqlite] verification failed (Node system ABI ${nodeMod}). stderr:\n${el.stderr || ""}\nstdout:\n${el.stdout || ""}`,
   );
-  console.error("شغّل: npx electron-builder install-app-deps");
+  console.error("Run: npx electron-builder install-app-deps");
   process.exit(1);
 }
 

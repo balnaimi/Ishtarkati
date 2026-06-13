@@ -1,0 +1,57 @@
+---
+description: English-only source code and comments; Arabic only in locales and user-facing UI strings
+alwaysApply: true
+---
+
+# Language split — code vs UI
+
+The dev team works in **English only** for everything in the repository except end-user Arabic copy.
+
+## English only
+
+- Source code identifiers (variables, functions, types, file names)
+- **All comments** (`//`, `/* */`, JSDoc, block headers in `.ts`, `.tsx`, `.mjs`, `.go`, etc.)
+- **Console / log / stderr** messages in scripts and Electron main (developer-facing)
+- **Git commit messages** and PR descriptions
+- **Cursor rules** and internal docs aimed at developers
+- README technical sections (user-facing Arabic marketing copy is optional elsewhere)
+
+## Arabic only
+
+- `src/locales/ar.json` and any future locale files
+- User-visible strings in the React UI (via `t("…")` / i18n keys)
+- Arabic **test fixture data** when explicitly testing Arabic search or RTL behavior (not comments)
+
+## Do not
+
+- Mix Arabic into code comments or commit messages
+- Hard-code Arabic UI strings in components when a translation key exists
+- Add Arabic explanations in scripts (`bump-version`, `git-ship`, etc.)
+
+## Examples
+
+```typescript
+// ❌ BAD
+/** قائمة الحسابات الموحّدة */
+
+// ✅ GOOD
+/** Unified accounts list with due progress bar */
+```
+
+```javascript
+// ❌ BAD
+console.log("[ship] تمّ push");
+
+// ✅ GOOD
+console.log("[ship] pushed to current branch");
+```
+
+```bash
+# ❌ BAD
+git commit -m "إصلاح الصفحة الرئيسية"
+
+# ✅ GOOD
+git commit -m "fix(home): reorganize stats into tabs"
+```
+
+When touching legacy Arabic comments or logs, translate them to English in the same change.

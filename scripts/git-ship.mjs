@@ -1,6 +1,6 @@
 /**
- * git add -A → commit (إن وُجدت تغييرات) → git push origin HEAD
- * يُفترض أن يكون الإصدار في package.json محدثًا مسبقًا (مثلًا عبر bump-version-for-build.mjs).
+ * git add -A → commit (if changes) → git push origin HEAD
+ * Expects package.json version to already be bumped (e.g. via bump-version-for-build.mjs).
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -33,7 +33,7 @@ const staged = execFileSync("git", ["diff", "--cached", "--name-only"], {
 }).trim();
 
 if (!staged) {
-  console.log("[ship] لا شيء في الـ index للالتزام — يُجرى push فقط");
+  console.log("[ship] nothing staged — pushing only");
 } else {
   try {
     sh("git", ["commit", "-m", `Release ${v} — workspace`]);
@@ -46,8 +46,8 @@ if (!staged) {
 try {
   sh("git", ["push", "origin", "HEAD"]);
 } catch {
-  console.error("[ship] git push failed — تحقّق من الشبكة أو SSH");
+  console.error("[ship] git push failed — check network or SSH");
   process.exit(1);
 }
 
-console.log(`[ship] تمّ push للفرع الحالي (إصدار ${v})`);
+console.log(`[ship] pushed current branch (version ${v})`);
