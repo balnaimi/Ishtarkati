@@ -17,6 +17,7 @@ function sh(cmd, args, inherit = true) {
   });
 }
 
+import { gitCommitAuthorArgs } from "./git-ship-author.mjs";
 import { writeReleaseNotesFile } from "./release-notes.mjs";
 
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -45,7 +46,7 @@ if (!staged) {
   console.log("[ship] nothing staged — pushing only");
 } else {
   try {
-    sh("git", ["commit", "-m", `Release ${v} — workspace`]);
+    sh("git", ["commit", ...gitCommitAuthorArgs(), "-m", `Release ${v} — workspace`]);
   } catch {
     console.error("[ship] git commit failed");
     process.exit(1);
