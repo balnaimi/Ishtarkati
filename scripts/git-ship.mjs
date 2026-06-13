@@ -50,4 +50,20 @@ try {
   process.exit(1);
 }
 
+const tag = `v${v}`;
+try {
+  const existing = execFileSync("git", ["tag", "-l", tag], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  if (!existing) {
+    sh("git", ["tag", tag]);
+  }
+  sh("git", ["push", "origin", tag]);
+  console.log(`[ship] pushed tag ${tag} (triggers GitHub Release workflow)`);
+} catch {
+  console.error(`[ship] branch pushed but tag ${tag} failed — create manually: git tag ${tag} && git push origin ${tag}`);
+  process.exit(1);
+}
+
 console.log(`[ship] pushed current branch (version ${v})`);
