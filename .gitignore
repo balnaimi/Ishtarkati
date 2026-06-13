@@ -54,3 +54,5 @@ Thumbs.db
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+
+# Git hooks are tracked; enable with: git config core.hooksPath .githooks

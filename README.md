@@ -87,6 +87,8 @@ npm run version:bump -- patch   # or minor | major
 
 Updates `package.json` and `src/version.ts`.
 
+**Commit messages** must be **English only** (Arabic belongs in `src/locales/ar.json`). This repo sets `core.hooksPath` to `.githooks` to reject Arabic in commit messages.
+
 ---
 
 ## GitHub Releases (all platforms)
