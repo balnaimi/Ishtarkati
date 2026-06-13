@@ -19,33 +19,13 @@
 
 ## Download
 
-**Desktop only** — not for phones or tablets. Pick your platform (links always point to the **latest release**):
+**Desktop only** — not for phones or tablets. Links point to the **latest release**:
 
-<p align="center">
-  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-linux.AppImage" title="Linux AppImage">
-    <img src="docs/assets/download-linux.svg" width="52" alt="Linux" /><br>
-    <strong>Linux</strong><br>
-    <sub>AppImage</sub>
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-win-x64-setup.exe" title="Windows 64-bit installer">
-    <img src="docs/assets/download-windows.svg" width="52" alt="Windows" /><br>
-    <strong>Windows</strong><br>
-    <sub>x64 installer</sub>
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-mac-arm64.dmg" title="macOS Apple Silicon">
-    <img src="docs/assets/download-macos.svg" width="52" alt="macOS" /><br>
-    <strong>macOS</strong><br>
-    <sub>Apple Silicon (M1+)</sub>
-  </a>
-</p>
-
-| Platform | File | Notes |
-|----------|------|--------|
-| **Linux** | `Ishtarkati-linux.AppImage` | Most distros; make executable (`chmod +x`) then run. No `.deb` / Flatpak. |
-| **Windows** | `Ishtarkati-win-x64-setup.exe` | **64-bit only** (x64). |
-| **macOS** | `Ishtarkati-mac-arm64.dmg` | **Apple Silicon only** (M1/M2/M3…). Intel Macs are not supported. |
+| Platform | Download | Notes |
+|----------|----------|--------|
+| **Linux** | [Ishtarkati-linux.AppImage](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-linux.AppImage) | Most distros; `chmod +x` then run. No `.deb` / Flatpak. |
+| **Windows** | [Ishtarkati-win-x64-setup.exe](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-win-x64-setup.exe) | **64-bit only** (x64). |
+| **macOS** | [Ishtarkati-mac-arm64.dmg](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-mac-arm64.dmg) | **Apple Silicon only** (M1/M2/M3…). Intel Macs are not supported. |
 
 If a download fails, open the full [Releases](https://github.com/balnaimi/Ishtarkati/releases/latest) page.
 
@@ -56,28 +36,6 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./Ishtarkati-linux.AppImage
 ```
 
 Unsigned Windows/macOS builds may show SmartScreen or Gatekeeper warnings until code signing is configured.
-
----
-
-## Screenshots
-
-_Demo data — not real accounts._
-
-<p align="center">
-  <img src="docs/screenshots/screenshot-home.png" width="720" alt="Home dashboard with due-today card and stats" />
-</p>
-
-<p align="center">
-  <em>Home — overview, due today, cashflow, and payment methods</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/screenshot-accounts.png" width="720" alt="Subscriptions list with search and due dates" />
-</p>
-
-<p align="center">
-  <em>Accounts — recurring and one-time subscriptions with search and filters</em>
-</p>
 
 ---
 

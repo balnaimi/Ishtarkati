@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.29.1] - 2026-06-13
+
+### Changed
+- README download section: direct release links only (removed custom platform icons and outdated screenshots).
 ## [4.29.0] - 2026-06-13
 
 ### Changed
