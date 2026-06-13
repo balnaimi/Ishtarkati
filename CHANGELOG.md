@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+
+## [4.20.0] - 2026-06-13
+
+### Fixed
+- UI errors, backup failures, and desktop notifications now use the active interface language (via `formatUiError` and locale keys) instead of raw English internal messages.
+- Fatal startup dialog and lazy-page loading text follow the saved app language.
 ## [4.19.1] - 2026-06-13
 
 ### Added

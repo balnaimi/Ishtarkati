@@ -23,6 +23,7 @@ import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCurrency } from "../lib/i18nLabels";
+import { formatUiError } from "../lib/uiErrors";
 import type { BackupImportPreview } from "../types/backupIPC";
 import { type AppLocale, loadAppLocale, persistAppLocale } from "../lib/appLocale";
 import {
@@ -229,7 +230,7 @@ export function SettingsPage() {
         setLastAutoBackup(new Date().toISOString());
         await setSetting(LAST_AUTO_BACKUP_AT_KEY, new Date().toISOString());
       } else {
-        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+        setBackupMsg(`${t("backup.error")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setBackupBusy(false);
@@ -248,7 +249,7 @@ export function SettingsPage() {
           setUpdateMsg(t("settings.updateCurrent", { version: APP_VERSION }));
         }
       } else {
-        setUpdateMsg(`${t("settings.updateError")} — ${r.error}`);
+        setUpdateMsg(`${t("settings.updateError")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setUpdateBusy(false);
@@ -290,8 +291,7 @@ export function SettingsPage() {
       await syncFxAt();
       setFxMsg(t("fx.updated"));
     } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
-      setFxErrDetail(detail);
+      setFxErrDetail(formatUiError(t, e));
       setFxMsg(t("fx.fetchError"));
     } finally {
       setFxBusy(false);
@@ -331,7 +331,7 @@ export function SettingsPage() {
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
-        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+        setBackupMsg(`${t("backup.error")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setBackupBusy(false);
@@ -349,7 +349,7 @@ export function SettingsPage() {
       } else if (r.canceled) {
         setBackupMsg(t("backup.canceled"));
       } else {
-        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+        setBackupMsg(`${t("backup.error")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setBackupBusy(false);
@@ -369,7 +369,7 @@ export function SettingsPage() {
           window.location.reload();
         }, 600);
       } else {
-        setBackupMsg(`${t("backup.error")}${r.error ? ` — ${r.error}` : ""}`);
+        setBackupMsg(`${t("backup.error")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setImportApplying(false);
@@ -541,7 +541,7 @@ export function SettingsPage() {
           /* ignore */
         }
       } else {
-        setDangerMsg(`${t("settings.dangerResetFailed")}${r.error ? ` — ${r.error}` : ""}`);
+        setDangerMsg(`${t("settings.dangerResetFailed")} — ${formatUiError(t, r.error)}`);
       }
     } finally {
       setDangerBusy(false);

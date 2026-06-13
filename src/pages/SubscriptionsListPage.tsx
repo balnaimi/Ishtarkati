@@ -12,6 +12,7 @@ import {
   type AppCurrency,
   type SubscriptionListRow,
 } from "../db/repo";
+import { formatUiError } from "../lib/uiErrors";
 import { useFxManager } from "../hooks/useFx";
 import { CancelledAccountsTab } from "../components/CancelledAccountsTab";
 import { DueProgressBar } from "../components/DueProgressBar";
@@ -159,7 +160,7 @@ export function SubscriptionsListPage() {
       await confirmSubscriptionPaid(id);
       void reload();
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
+      const detail = formatUiError(t, err);
       try {
         await window.ishtarkati.showNotification({
           title: t("home.markPaidErrorTitle"),

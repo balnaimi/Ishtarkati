@@ -23,6 +23,11 @@ The dev team works in **English only** for everything in the repository except e
 - User-visible strings in the React UI (via `t("…")` / i18n keys)
 - Arabic **test fixture data** when explicitly testing Arabic search or RTL behavior (not comments)
 
+## User-facing errors
+
+- Map thrown errors, IPC codes, and internal English messages with **`formatUiError(t, err)`** from `src/lib/uiErrors.ts` — never show raw `error.message` in the UI.
+- Desktop notifications and alerts must use `t()` for title/body; details via `formatUiError`.
+
 ## Do not
 
 - Mix Arabic into code comments or commit messages

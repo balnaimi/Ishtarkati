@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import { formatUiError } from "../lib/uiErrors";
 import {
   cancelSubscription,
   confirmSubscriptionPaid,
@@ -227,7 +228,7 @@ export function DetailPage() {
       setBackfillMsg(t("detail.backfillDone", { count: isoDates.length }));
       void reload();
     } catch (e) {
-      setBackfillMsg(e instanceof Error ? e.message : String(e));
+      setBackfillMsg(formatUiError(t, e));
     } finally {
       setBackfillBusy(false);
     }
@@ -239,7 +240,7 @@ export function DetailPage() {
       await confirmSubscriptionPaid(parseInt(id, 10));
       void reload();
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
+      const detail = formatUiError(t, err);
       try {
         await window.ishtarkati.showNotification({
           title: t("home.markPaidErrorTitle"),

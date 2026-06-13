@@ -21,3 +21,15 @@ export function readUiLocale(database: Database.Database | null): UiLocale {
 export function electronUiStrings(database: Database.Database | null): (typeof localeAr)["electron"] {
   return readUiLocale(database) === "en" ? localeEn.electron : localeAr.electron;
 }
+
+export function electronFatalStartupDialog(
+  database: Database.Database | null,
+  detail: string,
+  dbPath: string,
+): { title: string; body: string } {
+  const e = electronUiStrings(database);
+  return {
+    title: e.fatalStartupTitle,
+    body: e.fatalStartupBody.replace("{{detail}}", detail).replace("{{dbPath}}", dbPath),
+  };
+}

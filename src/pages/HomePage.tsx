@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { formatUiError } from "../lib/uiErrors";
 import {
   confirmSubscriptionPaid,
   getSetting,
@@ -92,7 +93,7 @@ export function HomePage() {
       await confirmSubscriptionPaid(id);
       void reload();
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
+      const detail = formatUiError(t, err);
       try {
         await window.ishtarkati.showNotification({
           title: t("home.markPaidErrorTitle"),

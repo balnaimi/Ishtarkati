@@ -71,7 +71,24 @@
     "menuPaste": "Paste",
     "menuSelectAll": "Select All",
     "backupSaveTitle": "Save full backup",
-    "backupOpenTitle": "Restore backup"
+    "backupOpenTitle": "Restore backup",
+    "fatalStartupTitle": "Could not start Ishtarkati",
+    "fatalStartupBody": "{{detail}}\n\nYour data is usually stored here (not removed by app updates):\n{{dbPath}}"
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again or restart the app.",
+    "noDatabase": "The database is not ready yet. Restart the app.",
+    "noWindow": "The app window is not available.",
+    "noBackupDir": "Choose a backup folder first.",
+    "badPin": "PIN must be at least 4 digits.",
+    "database": "Could not save to the database. Try again.",
+    "network": "Could not reach the network. Check your connection.",
+    "updateCheckFailed": "Could not check for updates.",
+    "backupInvalidFile": "This backup file is invalid or corrupted.",
+    "backupUnsupportedVersion": "This backup version is not supported by the app.",
+    "backupCorruptRow": "The backup file contains invalid data.",
+    "backupImportInvalid": "Invalid restore options.",
+    "backupMissingSource": "No backup file was selected."
   },
   "home": {
     "title": "Home",

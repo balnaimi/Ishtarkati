@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
+import { formatUiError } from "../lib/uiErrors";
 import { addCategory, findSimilarSubscriptions, loadCreditCards, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
@@ -171,9 +172,7 @@ export function SubscriptionForm({
       setNewCatName("");
       setAddCatOpen(false);
     } catch (e) {
-      const m = e instanceof Error ? e.message : String(e);
-      if (/UNIQUE|constraint/i.test(m)) setErr(t("categories.duplicate"));
-      else setErr(m);
+      setErr(formatUiError(t, e));
     } finally {
       setAddCatBusy(false);
     }
@@ -232,7 +231,7 @@ export function SubscriptionForm({
       try {
         await onSubmit(v, { primary: 0, fxFactor: 1, fxAt: new Date().toISOString() });
       } catch (er) {
-        setErr(er instanceof Error ? er.message : String(er));
+        setErr(formatUiError(t, er));
       } finally {
         setBusy(false);
       }
@@ -288,7 +287,7 @@ export function SubscriptionForm({
     try {
       await onSubmit(v, { primary: pr, fxFactor, fxAt });
     } catch (er) {
-      setErr(er instanceof Error ? er.message : String(er));
+      setErr(formatUiError(t, er));
     } finally {
       setBusy(false);
     }

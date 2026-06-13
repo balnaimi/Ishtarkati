@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import i18n from "./i18n";
 import { Layout } from "./components/Layout";
 import { LocaleBootstrap } from "./components/LocaleBootstrap";
 import { OnboardingGate } from "./components/OnboardingGate";
@@ -33,7 +34,7 @@ const SettingsPage = lazy(() =>
 function PageFallback() {
   return (
     <p className="sk-text-hint py-8 text-center text-sm" aria-busy="true">
-      …
+      {i18n.t("common.loading")}
     </p>
   );
 }

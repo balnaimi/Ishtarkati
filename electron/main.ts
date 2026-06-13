@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
-import { electronUiStrings } from "./uiLocale";
+import { electronUiStrings, electronFatalStartupDialog } from "./uiLocale";
 import {
   checkForAppUpdate,
   chooseAutoBackupDir,
@@ -867,10 +867,12 @@ if (!gotSingleInstanceLock) {
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       const userData = app.getPath("userData");
-      reportFatalStartup(
-        "Could not start Ishtarkati",
-        `${detail}\n\nYour data is usually stored here (not removed by app updates):\n${path.join(userData, "ishtarkati.db")}`,
+      const fatal = electronFatalStartupDialog(
+        db,
+        detail,
+        path.join(userData, "ishtarkati.db"),
       );
+      reportFatalStartup(fatal.title, fatal.body);
       app.exit(1);
     }
   });
