@@ -3,46 +3,45 @@
 @theme {
   --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
-  /* Brand palette */
-  --color-brand-ink: #031d44;
-  --color-brand-deep: #04395e;
-  --color-brand-muted: #70a288;
-  --color-brand-tan: #dab785;
-  --color-brand-peach: #d5896f;
+  /* Brand palette — flat UI; gradients only on due progress bar fills */
+  --color-brand-ink: #222831;
+  --color-brand-slate: #393e46;
+  --color-brand-cyan: #00adb5;
+  --color-brand-light: #eeeeee;
 
   /*
    * Semantic scales (mapped to brand colors)
-   * cream  = surfaces & text neutrals (tan + prussian blue)
-   * sage   = primary actions & safe states (muted teal)
-   * walnut = warm accent CTAs (burnt peach)
+   * cream  = surfaces & text neutrals (light gray + charcoal)
+   * sage   = primary actions & safe states (cyan)
+   * walnut = secondary accent (slate / charcoal)
    */
 
-  --color-cream-50: #dab785;
-  --color-cream-100: #e8d4b8;
-  --color-cream-200: #e0cca8;
-  --color-cream-300: #d4c09a;
-  --color-cream-400: #c8b490;
-  --color-cream-500: #a89878;
-  --color-cream-600: #70a288;
-  --color-cream-700: #5a7d6a;
-  --color-cream-800: #2a4a62;
-  --color-cream-900: #031d44;
-  --color-cream-950: #021228;
+  --color-cream-50: #eeeeee;
+  --color-cream-100: #eeeeee;
+  --color-cream-200: #eeeeee;
+  --color-cream-300: #eeeeee;
+  --color-cream-400: #393e46;
+  --color-cream-500: #393e46;
+  --color-cream-600: #393e46;
+  --color-cream-700: #393e46;
+  --color-cream-800: #222831;
+  --color-cream-900: #222831;
+  --color-cream-950: #222831;
 
-  --color-sage-100: #e8f2ec;
-  --color-sage-300: #9bc4ae;
-  --color-sage-400: #85b398;
-  --color-sage-500: #70a288;
-  --color-sage-600: #5d8a72;
-  --color-sage-700: #4a735e;
-  --color-sage-800: #04395e;
-  --color-sage-900: #031d44;
+  --color-sage-100: #eeeeee;
+  --color-sage-300: #00adb5;
+  --color-sage-400: #00adb5;
+  --color-sage-500: #00adb5;
+  --color-sage-600: #00adb5;
+  --color-sage-700: #393e46;
+  --color-sage-800: #222831;
+  --color-sage-900: #222831;
 
-  --color-walnut-100: #f8e8dc;
-  --color-walnut-300: #e8b89a;
-  --color-walnut-500: #d5896f;
-  --color-walnut-600: #c07860;
-  --color-walnut-800: #8a5040;
+  --color-walnut-100: #eeeeee;
+  --color-walnut-300: #393e46;
+  --color-walnut-500: #393e46;
+  --color-walnut-600: #222831;
+  --color-walnut-800: #222831;
 }
 
 html,
@@ -55,13 +54,7 @@ body {
   margin: 0;
   font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif;
   color: var(--color-cream-900);
-  background: linear-gradient(
-    165deg,
-    var(--color-brand-tan) 0%,
-    var(--color-cream-200) 38%,
-    #d8e8de 100%
-  );
-  background-attachment: fixed;
+  background-color: var(--color-brand-light);
 }
 
 @layer components {
@@ -85,7 +78,7 @@ body {
   }
 
   .sk-btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-sage-600 text-cream-50 hover:bg-sage-700;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-sage-500 text-brand-light hover:bg-sage-700;
   }
 
   .sk-btn-secondary {
@@ -101,7 +94,7 @@ body {
   }
 
   .sk-btn-warm {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-walnut-600 text-cream-50 hover:bg-walnut-500;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 bg-walnut-600 text-brand-light hover:bg-walnut-500;
   }
 
   .sk-card {
@@ -154,10 +147,10 @@ body {
     @apply rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950;
   }
 
-  /** Warning callout — burnt peach tint */
+  /** Warning callout — cyan tint */
   .sk-callout-warning {
     @apply rounded-lg border px-3 py-2 text-sm leading-relaxed;
-    @apply border-brand-peach/42 bg-brand-peach/16 text-cream-950;
+    @apply border-brand-cyan/45 bg-brand-cyan/12 text-cream-950;
   }
 
   /** Danger / delete callout */
@@ -196,15 +189,15 @@ body {
   }
 
   .sk-tone-due-bar-warn {
-    @apply text-brand-peach;
+    @apply text-brand-slate;
   }
 
   .sk-tone-due-urgent {
-    @apply text-brand-deep;
+    @apply text-brand-cyan;
   }
 
   .sk-tone-due-safe {
-    @apply text-sage-700;
+    @apply text-brand-cyan;
   }
 
   .sk-text-error {
@@ -236,12 +229,12 @@ body {
 
   /** Card-width warning banner (e.g. payment needed) */
   .sk-banner-warn-card {
-    @apply space-y-4 rounded-xl border border-brand-peach/42 bg-brand-peach/18 p-4 text-cream-950 shadow-sm ring-1 ring-brand-peach/24;
+    @apply space-y-4 rounded-xl border border-brand-cyan/45 bg-brand-cyan/12 p-4 text-cream-950 shadow-sm ring-1 ring-brand-cyan/25;
   }
 
   /** Highlight ring for subscriptions that need payment */
   .sk-ring-needs-pay {
-    @apply ring-2 ring-brand-peach/72;
+    @apply ring-2 ring-brand-cyan/75;
   }
 
   /** Interactive list row — same as sk-card with hover wash */
@@ -257,95 +250,86 @@ body {
 
   /** Soft row tint by due urgency (list views) */
   .sk-due-row-warn {
-    @apply bg-brand-peach/14;
+    @apply bg-brand-cyan/10;
   }
   .sk-due-row-urgent {
-    @apply bg-brand-deep/12;
+    @apply bg-brand-slate/10;
   }
   .sk-due-row-due {
-    @apply bg-brand-deep/18;
+    @apply bg-brand-slate/14;
   }
   .sk-due-row-overdue {
-    @apply bg-brand-ink/14;
+    @apply bg-brand-ink/12;
   }
 
-  /** Due progress bar track & fill — readable in light & dark */
-  .sk-due-bar-track-safe {
-    @apply bg-sage-100;
-  }
-  .sk-due-bar-fill-safe {
-    @apply bg-sage-500;
-  }
-  .sk-due-bar-track-warn {
-    @apply bg-brand-peach/28;
-  }
-  .sk-due-bar-fill-warn {
-    @apply bg-brand-peach;
-  }
-  .sk-due-bar-track-urgent {
-    @apply bg-brand-muted/32;
-  }
-  .sk-due-bar-fill-urgent {
-    @apply bg-brand-deep;
-  }
-  .sk-due-bar-track-due {
-    @apply bg-brand-deep/22;
-  }
-  .sk-due-bar-fill-due {
-    @apply bg-brand-deep;
-  }
+  /** Due progress bar — solid tracks; gradient fills only */
+  .sk-due-bar-track-safe,
+  .sk-due-bar-track-warn,
+  .sk-due-bar-track-urgent,
+  .sk-due-bar-track-due,
   .sk-due-bar-track-overdue {
-    @apply bg-brand-ink/18;
+    @apply bg-brand-light;
   }
+
+  .sk-due-bar-fill-safe {
+    background: linear-gradient(90deg, #00adb5, #eeeeee);
+  }
+
+  .sk-due-bar-fill-warn {
+    background: linear-gradient(90deg, #00adb5, #393e46);
+  }
+
+  .sk-due-bar-fill-urgent {
+    background: linear-gradient(90deg, #393e46, #00adb5);
+  }
+
+  .sk-due-bar-fill-due {
+    background: linear-gradient(90deg, #393e46, #222831);
+  }
+
   .sk-due-bar-fill-overdue {
-    @apply bg-brand-ink;
+    background: linear-gradient(90deg, #222831, #393e46);
   }
 }
 
-/* Dark theme: prussian blue surfaces with tan & muted-teal accents */
+/* Dark theme: charcoal surfaces, light gray text, cyan accents */
 .dark {
-  --color-brand-ink: #dab785;
-  --color-brand-deep: #70a288;
-  --color-brand-muted: #85b398;
-  --color-brand-tan: #dab785;
-  --color-brand-peach: #e8a080;
+  --color-brand-ink: #eeeeee;
+  --color-brand-slate: #393e46;
+  --color-brand-cyan: #00adb5;
+  --color-brand-light: #eeeeee;
 
-  --color-cream-50: #020c1c;
-  --color-cream-100: #031d44;
-  --color-cream-200: #04395e;
-  --color-cream-300: #0a4a6e;
-  --color-cream-400: #1a5a7a;
-  --color-cream-500: #3a6a78;
-  --color-cream-600: #70a288;
-  --color-cream-700: #dab785;
-  --color-cream-800: #e8d4b8;
-  --color-cream-900: #f5efe6;
-  --color-cream-950: #fdf8f0;
+  --color-cream-50: #222831;
+  --color-cream-100: #222831;
+  --color-cream-200: #393e46;
+  --color-cream-300: #393e46;
+  --color-cream-400: #393e46;
+  --color-cream-500: #393e46;
+  --color-cream-600: #00adb5;
+  --color-cream-700: #eeeeee;
+  --color-cream-800: #eeeeee;
+  --color-cream-900: #eeeeee;
+  --color-cream-950: #eeeeee;
 
-  --color-sage-100: #0a3048;
-  --color-sage-300: #5d8a72;
-  --color-sage-400: #70a288;
-  --color-sage-500: #85b398;
-  --color-sage-600: #a8d0b8;
-  --color-sage-700: #c8e4d4;
-  --color-sage-800: #e0f0e8;
-  --color-sage-900: #f0f8f4;
+  --color-sage-100: #393e46;
+  --color-sage-300: #00adb5;
+  --color-sage-400: #00adb5;
+  --color-sage-500: #00adb5;
+  --color-sage-600: #00adb5;
+  --color-sage-700: #eeeeee;
+  --color-sage-800: #eeeeee;
+  --color-sage-900: #eeeeee;
 
-  --color-walnut-100: #3a2830;
-  --color-walnut-300: #c07860;
-  --color-walnut-500: #d5896f;
-  --color-walnut-600: #e8a080;
-  --color-walnut-800: #f8d8c8;
+  --color-walnut-100: #393e46;
+  --color-walnut-300: #393e46;
+  --color-walnut-500: #393e46;
+  --color-walnut-600: #00adb5;
+  --color-walnut-800: #eeeeee;
 }
 
 .dark body {
   color: var(--color-cream-900);
-  background: linear-gradient(
-    165deg,
-    var(--color-cream-100) 0%,
-    var(--color-cream-300) 44%,
-    #021228 100%
-  );
+  background-color: #222831;
 }
 
 .dark .sk-panel-nested {
@@ -365,7 +349,7 @@ body {
 }
 
 .dark .sk-callout-warning {
-  @apply border-brand-peach/48 bg-brand-peach/22 text-cream-950;
+  @apply border-brand-cyan/50 bg-brand-cyan/18 text-cream-950;
 }
 
 .dark .sk-callout-danger {
@@ -393,11 +377,11 @@ body {
 }
 
 .dark .sk-tone-due-bar-warn {
-  @apply text-brand-peach;
+  @apply text-brand-slate;
 }
 
 .dark .sk-tone-due-urgent {
-  @apply text-brand-deep;
+  @apply text-brand-cyan;
 }
 
 .dark .sk-tone-due-safe {
@@ -429,11 +413,11 @@ body {
 }
 
 .dark .sk-banner-warn-card {
-  @apply border-brand-peach/48 bg-brand-peach/24 ring-brand-peach/30 text-cream-950;
+  @apply border-brand-cyan/50 bg-brand-cyan/18 ring-brand-cyan/30 text-cream-950;
 }
 
 .dark .sk-ring-needs-pay {
-  @apply ring-brand-peach/55;
+  @apply ring-brand-cyan/55;
 }
 
 .dark .sk-card-interactive {
@@ -445,59 +429,47 @@ body {
 }
 
 .dark .sk-due-row-warn {
-  @apply bg-brand-peach/18;
+  @apply bg-brand-cyan/14;
 }
 
 .dark .sk-due-row-urgent {
-  @apply bg-brand-deep/18;
+  @apply bg-brand-slate/22;
 }
 
 .dark .sk-due-row-due {
-  @apply bg-brand-deep/24;
+  @apply bg-brand-slate/28;
 }
 
 .dark .sk-due-row-overdue {
-  @apply bg-brand-ink/20;
+  @apply bg-brand-ink/10;
 }
 
-.dark .sk-due-bar-track-safe {
-  @apply bg-sage-100/75;
+.dark .sk-due-bar-track-safe,
+.dark .sk-due-bar-track-warn,
+.dark .sk-due-bar-track-urgent,
+.dark .sk-due-bar-track-due,
+.dark .sk-due-bar-track-overdue {
+  @apply bg-brand-slate/55;
 }
 
 .dark .sk-due-bar-fill-safe {
-  @apply bg-sage-400;
-}
-
-.dark .sk-due-bar-track-warn {
-  @apply bg-brand-peach/22;
+  background: linear-gradient(90deg, #00adb5, #eeeeee);
 }
 
 .dark .sk-due-bar-fill-warn {
-  @apply bg-brand-peach;
-}
-
-.dark .sk-due-bar-track-urgent {
-  @apply bg-brand-deep/22;
+  background: linear-gradient(90deg, #00adb5, #393e46);
 }
 
 .dark .sk-due-bar-fill-urgent {
-  @apply bg-brand-deep;
-}
-
-.dark .sk-due-bar-track-due {
-  @apply bg-brand-deep/28;
+  background: linear-gradient(90deg, #393e46, #00adb5);
 }
 
 .dark .sk-due-bar-fill-due {
-  @apply bg-brand-deep;
-}
-
-.dark .sk-due-bar-track-overdue {
-  @apply bg-brand-ink/24;
+  background: linear-gradient(90deg, #393e46, #222831);
 }
 
 .dark .sk-due-bar-fill-overdue {
-  @apply bg-brand-tan;
+  background: linear-gradient(90deg, #222831, #393e46);
 }
 
 .dark .sk-chip {
@@ -549,7 +521,7 @@ body {
 }
 
 .dark .sk-btn-primary {
-  @apply bg-sage-500 text-cream-50 hover:bg-sage-400;
+  @apply bg-sage-500 text-brand-light hover:bg-sage-700;
 }
 
 .dark .sk-btn-warm {

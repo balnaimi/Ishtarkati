@@ -99,7 +99,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[150] overflow-y-auto bg-gradient-to-b from-cream-200 via-cream-100 to-cream-200"
+      className="fixed inset-0 z-[150] overflow-y-auto bg-cream-50"
       dir="rtl"
     >
       <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center px-5 py-10">
