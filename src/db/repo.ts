@@ -909,3 +909,177 @@ export async function loadPaymentHistoryDetails(): Promise<PaymentHistoryDetailR
      LIMIT ${HISTORY_DETAIL_CAP}`,
   );
 }
+
+export type HomeWalletStat = {
+  id: number;
+  service_code: string;
+  account_text: string;
+  linked_card_id: number | null;
+  linked_card_brand: string | null;
+  linked_card_last4: string | null;
+  linked_card_description: string | null;
+  paidLastMonth: number;
+  projectedNextMonth: number;
+};
+
+export type HomeCardStat = {
+  id: number;
+  brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  description: string | null;
+  paidLastMonth: number;
+  projectedNextMonth: number;
+};
+
+export type HomeRecentPaymentRow = {
+  id: number;
+  paid_at: string;
+  subscription_title: string;
+  amount_qar: number | null;
+  amount_original: number | null;
+  currency: string | null;
+  wallet_method_id: number | null;
+  credit_card_id: number | null;
+  wallet_service_code: string | null;
+  wallet_account_text: string | null;
+  card_brand: string | null;
+  card_last4: string | null;
+};
+
+const HOME_RECENT_PAYMENTS_LIMIT = 8;
+
+async function loadPaidTotalsByWallet(
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.select<{ id: number; total: number }>(
+    `SELECT s.wallet_method_id AS id, SUM(COALESCE(pe.amount_qar, 0)) AS total
+     FROM payment_events pe
+     INNER JOIN subscriptions s ON s.id = pe.subscription_id
+     WHERE s.wallet_method_id IS NOT NULL
+       AND pe.paid_at >= $1 AND pe.paid_at <= $2
+     GROUP BY s.wallet_method_id`,
+    [rangeStart, rangeEnd],
+  );
+  return new Map(rows.map((r) => [r.id, r.total]));
+}
+
+async function loadPaidTotalsByCard(
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<Map<number, number>> {
+  const db = await getDb();
+  const rows = await db.select<{ id: number; total: number }>(
+    `SELECT s.credit_card_id AS id, SUM(COALESCE(pe.amount_qar, 0)) AS total
+     FROM payment_events pe
+     INNER JOIN subscriptions s ON s.id = pe.subscription_id
+     WHERE s.credit_card_id IS NOT NULL
+       AND s.wallet_method_id IS NULL
+       AND pe.paid_at >= $1 AND pe.paid_at <= $2
+     GROUP BY s.credit_card_id`,
+    [rangeStart, rangeEnd],
+  );
+  return new Map(rows.map((r) => [r.id, r.total]));
+}
+
+function projectedForWallet(
+  subs: SubscriptionListRow[],
+  walletId: number,
+  rangeStart: string,
+  rangeEnd: string,
+): number {
+  const filtered = subs.filter((s) => s.wallet_method_id === walletId);
+  return countAndSumCashflowInRange(filtered, rangeStart, rangeEnd).totalPrimary;
+}
+
+function projectedForCard(
+  subs: SubscriptionListRow[],
+  cardId: number,
+  rangeStart: string,
+  rangeEnd: string,
+): number {
+  const filtered = subs.filter((s) => s.credit_card_id === cardId && s.wallet_method_id == null);
+  return countAndSumCashflowInRange(filtered, rangeStart, rangeEnd).totalPrimary;
+}
+
+export async function loadHomePaymentMethodsStats(): Promise<{
+  primaryCode: string;
+  wallets: HomeWalletStat[];
+  cards: HomeCardStat[];
+  recentPayments: HomeRecentPaymentRow[];
+}> {
+  const now = new Date();
+  const cy = now.getFullYear();
+  const cm = now.getMonth();
+  const lastM = cm === 0 ? 11 : cm - 1;
+  const lastY = cm === 0 ? cy - 1 : cy;
+  const nextM = cm === 11 ? 0 : cm + 1;
+  const nextY = cm === 11 ? cy + 1 : cy;
+
+  const lastMonth = isoCalendarMonthBounds(lastY, lastM);
+  const nextMonth = isoCalendarMonthBounds(nextY, nextM);
+
+  const [primaryCode, walletRows, cardRows, cashflowSubs, paidWallets, paidCards, recentPayments] =
+    await Promise.all([
+      getPrimaryCurrencyCode(),
+      loadWalletMethods(),
+      loadCreditCards(),
+      loadSubscriptionsForCashflow(),
+      loadPaidTotalsByWallet(lastMonth.start, lastMonth.end),
+      loadPaidTotalsByCard(lastMonth.start, lastMonth.end),
+      getDb().then((db) =>
+        db.select<HomeRecentPaymentRow>(
+          `SELECT pe.id, pe.paid_at, pe.amount_qar, pe.amount_original, pe.currency,
+                  s.title AS subscription_title,
+                  s.wallet_method_id, s.credit_card_id,
+                  wm.service_code AS wallet_service_code,
+                  wm.account_text AS wallet_account_text,
+                  cc.brand AS card_brand, cc.last4 AS card_last4
+           FROM payment_events pe
+           INNER JOIN subscriptions s ON s.id = pe.subscription_id
+           LEFT JOIN wallet_methods wm ON wm.id = s.wallet_method_id
+           LEFT JOIN credit_cards cc ON cc.id = s.credit_card_id
+           ORDER BY pe.paid_at DESC, pe.id DESC
+           LIMIT ${HOME_RECENT_PAYMENTS_LIMIT}`,
+        ),
+      ),
+    ]);
+
+  const cardById = new Map(cardRows.map((c) => [c.id, c]));
+
+  const wallets: HomeWalletStat[] = walletRows.map((w) => {
+    const linked = w.linked_card_id ? cardById.get(w.linked_card_id) : undefined;
+    return {
+      id: w.id,
+      service_code: w.service_code,
+      account_text: w.account_text,
+      linked_card_id: w.linked_card_id,
+      linked_card_brand: linked?.brand ?? null,
+      linked_card_last4: linked?.last4 ?? null,
+      linked_card_description: linked?.description ?? null,
+      paidLastMonth: paidWallets.get(w.id) ?? 0,
+      projectedNextMonth: projectedForWallet(
+        cashflowSubs,
+        w.id,
+        nextMonth.start,
+        nextMonth.end,
+      ),
+    };
+  });
+
+  const cards: HomeCardStat[] = cardRows.map((c) => ({
+    id: c.id,
+    brand: c.brand,
+    last4: c.last4,
+    exp_month: c.exp_month,
+    exp_year: c.exp_year,
+    description: c.description,
+    paidLastMonth: paidCards.get(c.id) ?? 0,
+    projectedNextMonth: projectedForCard(cashflowSubs, c.id, nextMonth.start, nextMonth.end),
+  }));
+
+  return { primaryCode, wallets, cards, recentPayments };
+}

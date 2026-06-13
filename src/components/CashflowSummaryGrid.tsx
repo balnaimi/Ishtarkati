@@ -6,16 +6,16 @@ type Summary = Awaited<ReturnType<typeof statsSummary>>;
 type Props = {
   summary: Summary;
   primaryCode: string;
-  topHint?: React.ReactNode;
+  /** Hide recurring count and category breakdown (home general tab). */
+  compact?: boolean;
 };
 
-export function CashflowSummaryGrid({ summary, primaryCode, topHint }: Props) {
+export function CashflowSummaryGrid({ summary, primaryCode, compact = false }: Props) {
   const { t } = useTranslation();
   const primary = primaryCode;
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      {topHint ? <div className="sk-card md:col-span-2">{topHint}</div> : null}
       <div className="sk-card">
         <p className="sk-text-hint text-sm font-medium">{t("insights.dueThisMonth")}</p>
         <p className="mt-1 text-xs text-cream-600">
@@ -67,30 +67,34 @@ export function CashflowSummaryGrid({ summary, primaryCode, topHint }: Props) {
           {t("insights.dueEvents", { count: summary.due30Projected.dueCount })}
         </p>
       </div>
-      <div className="md:col-span-2 sk-card">
-        <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.subscriptions")}</p>
-        <p className="text-sm text-cream-800">{summary.recurringCount}</p>
-      </div>
-      <div className="md:col-span-2 sk-card">
-        <p className="sk-text-hint mb-3 text-sm font-medium">{t("insights.byCategoryThisMonth")}</p>
-        <ul className="space-y-2">
-          {summary.byCategory.length === 0 ? (
-            <li className="sk-text-hint">{t("common.none")}</li>
-          ) : (
-            summary.byCategory.map((row) => (
-              <li
-                key={row.name}
-                className="flex flex-wrap justify-between gap-2 text-sm text-cream-800"
-              >
-                <span>{row.name}</span>
-                <span className="font-medium text-sage-800">
-                  {row.amountPrimary.toFixed(2)} {primary}
-                </span>
-              </li>
-            ))
-          )}
-        </ul>
-      </div>
+      {!compact ? (
+        <>
+          <div className="md:col-span-2 sk-card">
+            <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.subscriptions")}</p>
+            <p className="text-sm text-cream-800">{summary.recurringCount}</p>
+          </div>
+          <div className="md:col-span-2 sk-card">
+            <p className="sk-text-hint mb-3 text-sm font-medium">{t("insights.byCategoryThisMonth")}</p>
+            <ul className="space-y-2">
+              {summary.byCategory.length === 0 ? (
+                <li className="sk-text-hint">{t("common.none")}</li>
+              ) : (
+                summary.byCategory.map((row) => (
+                  <li
+                    key={row.name}
+                    className="flex flex-wrap justify-between gap-2 text-sm text-cream-800"
+                  >
+                    <span>{row.name}</span>
+                    <span className="font-medium text-sage-800">
+                      {row.amountPrimary.toFixed(2)} {primary}
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
