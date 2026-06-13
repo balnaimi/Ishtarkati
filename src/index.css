@@ -4,45 +4,45 @@
   --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
 
   /* Brand palette */
-  --color-brand-lava: #780000;
-  --color-brand-red: #c1121f;
-  --color-brand-cream: #fdf0d5;
-  --color-brand-navy: #003049;
-  --color-brand-steel: #669bbc;
+  --color-brand-ink: #031926;
+  --color-brand-teal: #468189;
+  --color-brand-muted: #77aca2;
+  --color-brand-ash: #9dbebb;
+  --color-brand-cream: #f4e9cd;
 
   /*
    * Semantic scales (mapped to brand colors)
-   * cream = surfaces & text neutrals (papaya whip + deep space navy)
-   * sage  = primary actions & safe states (steel blue)
-   * walnut = warm accent & CTAs (brick red / molten lava)
+   * cream  = surfaces & text neutrals (vanilla cream + ink black)
+   * sage   = primary actions & safe states (teal / muted teal)
+   * walnut = accent CTAs (deep teal / ink)
    */
 
-  --color-cream-50: #fdf0d5;
-  --color-cream-100: #f8e9c6;
-  --color-cream-200: #f0ddbc;
-  --color-cream-300: #e2cfa8;
-  --color-cream-400: #cdb892;
-  --color-cream-500: #b09a78;
-  --color-cream-600: #6b7f8f;
-  --color-cream-700: #33506a;
-  --color-cream-800: #1a3d56;
-  --color-cream-900: #003049;
-  --color-cream-950: #001d2e;
+  --color-cream-50: #f4e9cd;
+  --color-cream-100: #efe6c8;
+  --color-cream-200: #e8dfc4;
+  --color-cream-300: #ddd4be;
+  --color-cream-400: #c5cfc9;
+  --color-cream-500: #9dbebb;
+  --color-cream-600: #77aca2;
+  --color-cream-700: #5d9489;
+  --color-cream-800: #2a4548;
+  --color-cream-900: #031926;
+  --color-cream-950: #021219;
 
-  --color-sage-100: #e8f2f8;
-  --color-sage-300: #94bdd4;
-  --color-sage-400: #7aadc8;
-  --color-sage-500: #669bbc;
-  --color-sage-600: #4f86a8;
-  --color-sage-700: #3d6d8f;
-  --color-sage-800: #003049;
-  --color-sage-900: #002538;
+  --color-sage-100: #e8f2f0;
+  --color-sage-300: #9dbebb;
+  --color-sage-400: #77aca2;
+  --color-sage-500: #468189;
+  --color-sage-600: #3a6d73;
+  --color-sage-700: #2f585e;
+  --color-sage-800: #031926;
+  --color-sage-900: #021219;
 
-  --color-walnut-100: #fce8ea;
-  --color-walnut-300: #f0a8b0;
-  --color-walnut-500: #c1121f;
-  --color-walnut-600: #780000;
-  --color-walnut-800: #5c0000;
+  --color-walnut-100: #dcebe8;
+  --color-walnut-300: #77aca2;
+  --color-walnut-500: #468189;
+  --color-walnut-600: #031926;
+  --color-walnut-800: #021219;
 }
 
 html,
@@ -58,8 +58,8 @@ body {
   background: linear-gradient(
     165deg,
     var(--color-brand-cream) 0%,
-    var(--color-cream-200) 42%,
-    #d8e8f2 100%
+    var(--color-cream-200) 40%,
+    #d8ebe8 100%
   );
   background-attachment: fixed;
 }
@@ -97,7 +97,7 @@ body {
   }
 
   .sk-btn-danger {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 border border-brand-lava/45 bg-brand-lava/12 text-cream-950 hover:bg-brand-lava/22;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 border border-brand-ink/40 bg-brand-ink/10 text-cream-950 hover:bg-brand-ink/18;
   }
 
   .sk-btn-warm {
@@ -109,7 +109,7 @@ body {
   }
 
   .sk-alert {
-    @apply rounded-lg border border-brand-lava/40 bg-brand-lava/10 px-3 py-2.5 text-sm text-cream-950;
+    @apply rounded-lg border border-brand-ink/40 bg-brand-ink/10 px-3 py-2.5 text-sm text-cream-950;
   }
 
   .sk-chip {
@@ -154,20 +154,20 @@ body {
     @apply rounded-lg border border-cream-400/70 bg-cream-200/55 px-3 py-2 text-sm leading-relaxed text-cream-950;
   }
 
-  /** Warning callout — brick-red tint */
+  /** Warning callout — muted teal tint */
   .sk-callout-warning {
     @apply rounded-lg border px-3 py-2 text-sm leading-relaxed;
-    @apply border-brand-red/35 bg-brand-red/10 text-cream-950;
+    @apply border-brand-teal/38 bg-brand-muted/18 text-cream-950;
   }
 
-  /** Danger / delete callout — contrasting border & bg in light & dark */
+  /** Danger / delete callout */
   .sk-callout-danger {
-    @apply space-y-3 rounded-xl border border-red-800/35 bg-red-950/10 p-4 text-cream-950 shadow-sm ring-1 ring-red-900/22;
+    @apply space-y-3 rounded-xl border border-brand-ink/35 bg-brand-ink/8 p-4 text-cream-950 shadow-sm ring-1 ring-brand-ink/18;
   }
 
   /** Full “danger zone” block in settings */
   .sk-section-danger {
-    @apply rounded-xl border border-red-800/38 bg-red-950/14 p-4 shadow-sm ring-1 ring-red-900/20;
+    @apply rounded-xl border border-brand-ink/38 bg-brand-ink/10 p-4 shadow-sm ring-1 ring-brand-ink/16;
     @apply space-y-4;
   }
 
@@ -181,7 +181,7 @@ body {
 
   /** Danger option row in a choice group (no fixed rose text color) */
   .sk-choice-row-danger {
-    @apply flex cursor-pointer gap-3 rounded-lg border border-red-800/35 bg-red-950/10 px-3 py-2 ring-1 ring-red-900/18;
+    @apply flex cursor-pointer gap-3 rounded-lg border border-brand-ink/35 bg-brand-ink/8 px-3 py-2 ring-1 ring-brand-ink/14;
     @apply text-cream-950;
   }
 
@@ -192,15 +192,15 @@ body {
 
   /** Due-date bar tone utilities */
   .sk-tone-due-bar-critical {
-    @apply text-brand-lava;
+    @apply text-brand-ink;
   }
 
   .sk-tone-due-bar-warn {
-    @apply text-brand-red;
+    @apply text-brand-teal;
   }
 
   .sk-tone-due-urgent {
-    @apply text-walnut-600;
+    @apply text-sage-700;
   }
 
   .sk-tone-due-safe {
@@ -208,7 +208,7 @@ body {
   }
 
   .sk-text-error {
-    @apply text-brand-lava;
+    @apply text-brand-ink;
   }
 
   .sk-text-success {
@@ -222,7 +222,7 @@ body {
 
   /** Small error / code panel */
   .sk-code-error {
-    @apply rounded-lg border border-red-800/35 bg-red-950/15 px-3 py-2 text-xs text-cream-950;
+    @apply rounded-lg border border-brand-ink/35 bg-brand-ink/10 px-3 py-2 text-xs text-cream-950;
   }
 
   /** Scrollable lists inside a callout */
@@ -231,17 +231,17 @@ body {
   }
 
   .sk-danger-code-box {
-    @apply rounded-lg border border-red-800/32 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-cream-950;
+    @apply rounded-lg border border-brand-ink/30 bg-cream-50 px-4 py-3 text-center font-mono text-3xl font-bold tracking-[0.2em] text-cream-950;
   }
 
   /** Card-width warning banner (e.g. payment needed) */
   .sk-banner-warn-card {
-    @apply space-y-4 rounded-xl border border-brand-red/38 bg-brand-red/12 p-4 text-cream-950 shadow-sm ring-1 ring-brand-red/22;
+    @apply space-y-4 rounded-xl border border-brand-teal/40 bg-brand-muted/20 p-4 text-cream-950 shadow-sm ring-1 ring-brand-teal/22;
   }
 
   /** Highlight ring for subscriptions that need payment */
   .sk-ring-needs-pay {
-    @apply ring-2 ring-brand-red/75;
+    @apply ring-2 ring-brand-teal/70;
   }
 
   /** Interactive list row — same as sk-card with hover wash */
@@ -257,16 +257,16 @@ body {
 
   /** Soft row tint by due urgency (list views) */
   .sk-due-row-warn {
-    @apply bg-brand-red/10;
+    @apply bg-brand-muted/16;
   }
   .sk-due-row-urgent {
-    @apply bg-brand-red/14;
+    @apply bg-brand-teal/12;
   }
   .sk-due-row-due {
-    @apply bg-brand-red/16;
+    @apply bg-brand-teal/18;
   }
   .sk-due-row-overdue {
-    @apply bg-brand-lava/18;
+    @apply bg-brand-ink/14;
   }
 
   /** Due progress bar track & fill — readable in light & dark */
@@ -277,65 +277,65 @@ body {
     @apply bg-sage-500;
   }
   .sk-due-bar-track-warn {
-    @apply bg-walnut-100;
+    @apply bg-brand-ash/55;
   }
   .sk-due-bar-fill-warn {
-    @apply bg-brand-red/75;
+    @apply bg-brand-muted;
   }
   .sk-due-bar-track-urgent {
-    @apply bg-walnut-100/90;
+    @apply bg-brand-muted/35;
   }
   .sk-due-bar-fill-urgent {
-    @apply bg-brand-red;
+    @apply bg-brand-teal;
   }
   .sk-due-bar-track-due {
-    @apply bg-brand-red/18;
+    @apply bg-brand-teal/22;
   }
   .sk-due-bar-fill-due {
-    @apply bg-brand-red;
+    @apply bg-brand-teal;
   }
   .sk-due-bar-track-overdue {
-    @apply bg-brand-lava/22;
+    @apply bg-brand-ink/18;
   }
   .sk-due-bar-fill-overdue {
-    @apply bg-brand-lava;
+    @apply bg-brand-ink;
   }
 }
 
-/* Dark theme: deep-space navy surfaces with papaya-whip & steel-blue accents */
+/* Dark theme: ink-black surfaces with vanilla cream & teal accents */
 .dark {
-  --color-brand-lava: #e85d6a;
-  --color-brand-red: #f0707a;
-  --color-brand-cream: #fdf0d5;
-  --color-brand-navy: #003049;
-  --color-brand-steel: #669bbc;
+  --color-brand-ink: #9dbebb;
+  --color-brand-teal: #77aca2;
+  --color-brand-muted: #9dbebb;
+  --color-brand-ash: #b8d4d0;
+  --color-brand-cream: #f4e9cd;
 
-  --color-cream-50: #001018;
-  --color-cream-100: #001a28;
-  --color-cream-200: #002538;
-  --color-cream-300: #003049;
-  --color-cream-400: #1a4a63;
-  --color-cream-500: #335d73;
-  --color-cream-600: #4d7589;
-  --color-cream-700: #669bbc;
-  --color-cream-800: #a8c8dc;
-  --color-cream-900: #e8f0f5;
-  --color-cream-950: #fdf0d5;
+  --color-cream-50: #020f14;
+  --color-cream-100: #031926;
+  --color-cream-200: #0a2830;
+  --color-cream-300: #123640;
+  --color-cream-400: #1e4a52;
+  --color-cream-500: #2d5f66;
+  --color-cream-600: #468189;
+  --color-cream-700: #77aca2;
+  --color-cream-800: #9dbebb;
+  --color-cream-900: #e8f0ef;
+  --color-cream-950: #f4e9cd;
 
-  --color-sage-100: #0a2a3d;
-  --color-sage-300: #4f86a8;
-  --color-sage-400: #669bbc;
-  --color-sage-500: #7aadc8;
-  --color-sage-600: #94bdd4;
-  --color-sage-700: #b8d4e6;
-  --color-sage-800: #d4e8f2;
-  --color-sage-900: #e8f4fa;
+  --color-sage-100: #0a2830;
+  --color-sage-300: #468189;
+  --color-sage-400: #77aca2;
+  --color-sage-500: #9dbebb;
+  --color-sage-600: #b5d4cf;
+  --color-sage-700: #d0e8e4;
+  --color-sage-800: #e8f4f2;
+  --color-sage-900: #f4faf9;
 
-  --color-walnut-100: #3d0a0f;
-  --color-walnut-300: #780000;
-  --color-walnut-500: #c1121f;
-  --color-walnut-600: #e63946;
-  --color-walnut-800: #fce8ea;
+  --color-walnut-100: #0a2830;
+  --color-walnut-300: #2d5f66;
+  --color-walnut-500: #468189;
+  --color-walnut-600: #77aca2;
+  --color-walnut-800: #9dbebb;
 }
 
 .dark body {
@@ -343,8 +343,8 @@ body {
   background: linear-gradient(
     165deg,
     var(--color-cream-100) 0%,
-    var(--color-cream-300) 48%,
-    #001d2e 100%
+    var(--color-cream-300) 46%,
+    #021219 100%
   );
 }
 
@@ -365,15 +365,15 @@ body {
 }
 
 .dark .sk-callout-warning {
-  @apply border-brand-red/42 bg-brand-red/18 text-cream-950;
+  @apply border-brand-teal/45 bg-brand-teal/22 text-cream-950;
 }
 
 .dark .sk-callout-danger {
-  @apply border-red-400/40 bg-red-950/50 text-cream-950 ring-red-400/25;
+  @apply border-brand-ink/42 bg-brand-ink/18 text-cream-950 ring-brand-ink/22;
 }
 
 .dark .sk-section-danger {
-  @apply border-red-400/38 bg-red-950/45 ring-red-400/22;
+  @apply border-brand-ink/42 bg-brand-ink/22 ring-brand-ink/18;
 }
 
 .dark .sk-section-danger > p {
@@ -381,7 +381,7 @@ body {
 }
 
 .dark .sk-choice-row-danger {
-  @apply border-red-400/40 bg-red-950/45 ring-red-400/25 text-cream-950;
+  @apply border-brand-ink/42 bg-brand-ink/20 ring-brand-ink/20 text-cream-950;
 }
 
 .dark .sk-modal-overlay {
@@ -389,15 +389,15 @@ body {
 }
 
 .dark .sk-tone-due-bar-critical {
-  @apply text-brand-lava;
+  @apply text-brand-ink;
 }
 
 .dark .sk-tone-due-bar-warn {
-  @apply text-brand-red;
+  @apply text-brand-teal;
 }
 
 .dark .sk-tone-due-urgent {
-  @apply text-walnut-600;
+  @apply text-sage-400;
 }
 
 .dark .sk-tone-due-safe {
@@ -405,7 +405,7 @@ body {
 }
 
 .dark .sk-text-error {
-  @apply text-brand-lava;
+  @apply text-brand-ink;
 }
 
 .dark .sk-text-success {
@@ -417,7 +417,7 @@ body {
 }
 
 .dark .sk-code-error {
-  @apply border-red-400/40 bg-red-950/40 text-cream-950;
+  @apply border-brand-ink/42 bg-brand-ink/22 text-cream-950;
 }
 
 .dark .sk-list-in-callout {
@@ -425,15 +425,15 @@ body {
 }
 
 .dark .sk-danger-code-box {
-  @apply border-red-400/38 bg-cream-200/22 text-cream-950;
+  @apply border-brand-ink/38 bg-cream-200/22 text-cream-950;
 }
 
 .dark .sk-banner-warn-card {
-  @apply border-brand-red/42 bg-brand-red/20 ring-brand-red/28 text-cream-950;
+  @apply border-brand-teal/45 bg-brand-teal/24 ring-brand-teal/28 text-cream-950;
 }
 
 .dark .sk-ring-needs-pay {
-  @apply ring-brand-red/55;
+  @apply ring-brand-teal/50;
 }
 
 .dark .sk-card-interactive {
@@ -445,23 +445,23 @@ body {
 }
 
 .dark .sk-due-row-warn {
-  @apply bg-brand-red/16;
+  @apply bg-brand-muted/20;
 }
 
 .dark .sk-due-row-urgent {
-  @apply bg-brand-red/20;
+  @apply bg-brand-teal/18;
 }
 
 .dark .sk-due-row-due {
-  @apply bg-brand-red/24;
+  @apply bg-brand-teal/24;
 }
 
 .dark .sk-due-row-overdue {
-  @apply bg-brand-lava/28;
+  @apply bg-brand-ink/22;
 }
 
 .dark .sk-due-bar-track-safe {
-  @apply bg-sage-100/80;
+  @apply bg-sage-100/75;
 }
 
 .dark .sk-due-bar-fill-safe {
@@ -469,35 +469,35 @@ body {
 }
 
 .dark .sk-due-bar-track-warn {
-  @apply bg-walnut-100/70;
+  @apply bg-brand-ink/18;
 }
 
 .dark .sk-due-bar-fill-warn {
-  @apply bg-brand-red;
+  @apply bg-brand-muted;
 }
 
 .dark .sk-due-bar-track-urgent {
-  @apply bg-walnut-100/65;
+  @apply bg-brand-teal/22;
 }
 
 .dark .sk-due-bar-fill-urgent {
-  @apply bg-brand-red;
+  @apply bg-brand-teal;
 }
 
 .dark .sk-due-bar-track-due {
-  @apply bg-brand-red/28;
+  @apply bg-brand-teal/28;
 }
 
 .dark .sk-due-bar-fill-due {
-  @apply bg-brand-red;
+  @apply bg-brand-teal;
 }
 
 .dark .sk-due-bar-track-overdue {
-  @apply bg-brand-lava/32;
+  @apply bg-brand-ink/28;
 }
 
 .dark .sk-due-bar-fill-overdue {
-  @apply bg-brand-lava;
+  @apply bg-brand-cream;
 }
 
 .dark .sk-chip {
@@ -557,9 +557,9 @@ body {
 }
 
 .dark .sk-btn-danger {
-  @apply border-brand-lava/50 bg-brand-lava/22 text-cream-950 hover:bg-brand-lava/32;
+  @apply border-brand-ink/48 bg-brand-ink/24 text-cream-950 hover:bg-brand-ink/32;
 }
 
 .dark .sk-alert {
-  @apply border-brand-lava/45 bg-brand-lava/22 text-cream-950;
+  @apply border-brand-ink/45 bg-brand-ink/22 text-cream-950;
 }

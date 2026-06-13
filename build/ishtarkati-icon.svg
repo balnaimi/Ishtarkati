@@ -1,25 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Ishtarkati">
   <defs>
     <linearGradient id="bg" x1="8%" y1="6%" x2="92%" y2="94%">
-      <stop offset="0%" stop-color="#669bbc"/>
-      <stop offset="55%" stop-color="#003049"/>
-      <stop offset="100%" stop-color="#001d2e"/>
+      <stop offset="0%" stop-color="#77aca2"/>
+      <stop offset="55%" stop-color="#468189"/>
+      <stop offset="100%" stop-color="#031926"/>
     </linearGradient>
     <filter id="s" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#001018" flood-opacity=".25"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#031926" flood-opacity=".25"/>
     </filter>
   </defs>
   <rect width="512" height="512" rx="120" ry="120" fill="url(#bg)"/>
   <g filter="url(#s)">
-    <rect x="76" y="98" width="360" height="316" rx="40" ry="40" fill="#fdf0d5"/>
-    <rect x="128" y="168" width="256" height="22" rx="11" fill="#003049" opacity=".18"/>
-    <rect x="128" y="214" width="200" height="22" rx="11" fill="#003049" opacity=".12"/>
-    <rect x="128" y="260" width="220" height="22" rx="11" fill="#669bbc" opacity=".55"/>
-    <rect x="128" y="306" width="156" height="22" rx="11" fill="#c1121f"/>
+    <rect x="76" y="98" width="360" height="316" rx="40" ry="40" fill="#f4e9cd"/>
+    <rect x="128" y="168" width="256" height="22" rx="11" fill="#031926" opacity=".18"/>
+    <rect x="128" y="214" width="200" height="22" rx="11" fill="#031926" opacity=".12"/>
+    <rect x="128" y="260" width="220" height="22" rx="11" fill="#468189" opacity=".55"/>
+    <rect x="128" y="306" width="156" height="22" rx="11" fill="#77aca2"/>
   </g>
-  <g fill="none" stroke="#fdf0d5" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#f4e9cd" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
     <path d="M352 328a56 56 0 1 0 0-80" opacity=".95"/>
     <path d="M352 248v-24h24M352 368h24v-24" opacity=".95"/>
   </g>
-  <circle cx="352" cy="328" r="56" stroke="#669bbc" stroke-width="10" fill="none" opacity=".45"/>
+  <circle cx="352" cy="328" r="56" stroke="#9dbebb" stroke-width="10" fill="none" opacity=".55"/>
 </svg>
