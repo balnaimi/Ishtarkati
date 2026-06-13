@@ -165,6 +165,7 @@
     "name": "الاسم",
     "colAccount": "الحساب",
     "colPayDue": "الدفع والاستحقاق",
+    "colStatus": "الحالة",
     "nextDue": "الاستحقاق التالي",
     "amount": "المبلغ",
     "amountAndApprox": "المبلغ والتقريب ({{code}})",

@@ -8,6 +8,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.25.0] - 2026-06-13
+
+### Changed
+- Sidebar stays fixed to the viewport height; main content scrolls independently (theme toggle always visible).
+- Accounts list uses compact table-style rows with sticky search/filters and summary bar for easier browsing of many subscriptions.
 ## [4.23.0] - 2026-06-13
 
 ### Fixed

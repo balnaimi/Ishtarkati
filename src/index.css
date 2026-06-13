@@ -568,24 +568,28 @@ body {
 
 /* ——— Dashboard shell (sidebar layout) ——— */
 .dash-shell {
-  @apply flex min-h-full bg-dash-bg text-cream-900;
+  @apply flex h-full min-h-0 overflow-hidden bg-dash-bg text-cream-900;
 }
 
 .dash-sidebar {
-  @apply flex w-60 shrink-0 flex-col border-cream-400/80 bg-cream-100;
+  @apply flex h-full w-60 shrink-0 flex-col overflow-hidden border-cream-400/80 bg-cream-100;
   border-inline-end-width: 1px;
 }
 
 .dash-sidebar-brand {
-  @apply flex items-center gap-3 border-b border-cream-400/60 px-4 py-5;
+  @apply flex shrink-0 items-center gap-3 border-b border-cream-400/60 px-4 py-4;
 }
 
 .dash-sidebar-nav {
-  @apply flex flex-1 flex-col gap-1 px-3 py-4;
+  @apply flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-3;
+}
+
+.dash-sidebar-footer {
+  @apply shrink-0 space-y-2 border-t border-cream-400/60 px-3 py-3;
 }
 
 .dash-nav-item {
-  @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-cream-700 transition-colors;
+  @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-cream-700 transition-colors;
   @apply hover:bg-cream-300/40 hover:text-cream-950;
 }
 
@@ -598,15 +602,19 @@ body {
 }
 
 .dash-main {
-  @apply flex min-w-0 flex-1 flex-col;
+  @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden;
+}
+
+.dash-main-scroll {
+  @apply min-h-0 flex-1 overflow-y-auto overflow-x-hidden;
 }
 
 .dash-main-inner {
-  @apply mx-auto w-full max-w-6xl flex-1 px-5 py-6 md:px-8 md:py-8;
+  @apply mx-auto w-full max-w-6xl px-5 py-5 md:px-8 md:py-6;
 }
 
 .dash-footer {
-  @apply flex items-center justify-between gap-3 border-t border-cream-400/60 px-5 py-2 text-xs text-cream-600;
+  @apply flex shrink-0 items-center justify-between gap-3 border-t border-cream-400/60 px-5 py-2 text-xs text-cream-600;
 }
 
 .dash-page-title {
@@ -674,7 +682,27 @@ body {
 }
 
 .dash-sub-row {
-  @apply grid grid-cols-1 gap-3 rounded-2xl border border-cream-400/60 bg-cream-200/35 p-4 transition-colors hover:border-violet-500/35 hover:bg-cream-300/25;
+  @apply grid grid-cols-1 gap-2 rounded-xl border border-cream-400/60 bg-cream-200/35 px-3 py-2 transition-colors hover:border-violet-500/35 hover:bg-cream-300/25;
+}
+
+.dash-accounts-panel {
+  @apply overflow-hidden rounded-xl border border-cream-400/55 bg-cream-200/20;
+}
+
+.dash-accounts-head {
+  @apply hidden border-b border-cream-400/50 bg-cream-300/25 px-3 py-1.5 text-[11px] font-semibold text-cream-600 lg:grid lg:grid-cols-[minmax(0,1fr)_5.5rem_6rem_4.75rem_4.25rem_1.25rem] lg:gap-x-3;
+}
+
+.dash-sub-row-compact {
+  @apply grid cursor-pointer grid-cols-1 gap-1.5 border-b border-cream-400/35 px-3 py-2 transition-colors last:border-b-0 hover:bg-cream-300/20 lg:grid-cols-[minmax(0,1fr)_5.5rem_6rem_4.75rem_4.25rem_1.25rem] lg:items-center lg:gap-x-3 lg:gap-y-0;
+}
+
+.dash-accounts-sticky-top {
+  @apply sticky top-0 z-10 -mx-1 space-y-3 bg-dash-bg/95 px-1 pb-3 backdrop-blur-sm;
+}
+
+.dash-summary-bar-compact {
+  @apply sticky bottom-0 z-10 -mx-1 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cream-400/70 bg-cream-200/90 px-4 py-2.5 shadow-sm backdrop-blur-sm;
 }
 
 .dash-tag {

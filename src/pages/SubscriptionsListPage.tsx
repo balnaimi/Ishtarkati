@@ -238,8 +238,8 @@ export function SubscriptionsListPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="dash-page-title">{t("accounts.title")}</h1>
           <p className="dash-page-sub">{t("accounts.subtitle")}</p>
@@ -277,42 +277,43 @@ export function SubscriptionsListPage() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <label className="dash-search max-w-xl flex-1">
-              <IconSearch className="size-4 shrink-0 text-cream-600" />
-              <input
-                ref={searchRef}
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("accounts.searchPlaceholder")}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["all", t("list.filterStatusAll")] as const,
-                  ["dueSoon", t("list.filterStatusDueSoon")] as const,
-                  ["overdue", t("list.filterStatusOverdue")] as const,
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`dash-chip ${statusChip === id ? "dash-chip-active" : "dash-chip-idle"}`}
-                  onClick={() => setStatusChip(id)}
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="dash-accounts-sticky-top">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <label className="dash-search max-w-xl flex-1">
+                <IconSearch className="size-4 shrink-0 text-cream-600" />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("accounts.searchPlaceholder")}
+                />
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ["all", t("list.filterStatusAll")] as const,
+                    ["dueSoon", t("list.filterStatusDueSoon")] as const,
+                    ["overdue", t("list.filterStatusOverdue")] as const,
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`dash-chip !px-2.5 !py-1 ${statusChip === id ? "dash-chip-active" : "dash-chip-idle"}`}
+                    onClick={() => setStatusChip(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <details ref={filterDetailsRef} className="dash-card overflow-hidden p-0">
-            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-cream-800 [&::-webkit-details-marker]:hidden">
-              {t("list.filtersToggle")}
-            </summary>
-            <div className="grid gap-3 border-t border-cream-400/60 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
+            <details ref={filterDetailsRef} className="dash-card overflow-hidden !p-0">
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-cream-800 [&::-webkit-details-marker]:hidden">
+                {t("list.filtersToggle")}
+              </summary>
+            <div className="grid gap-2 border-t border-cream-400/60 px-3 py-2 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="sk-label" htmlFor="list-email-filter">
                   {t("accounts.filterByEmail")}
@@ -422,6 +423,7 @@ export function SubscriptionsListPage() {
               </div>
             </div>
           </details>
+          </div>
 
           {loading ? (
             <p className="sk-text-hint">{t("common.loading")}</p>
@@ -430,19 +432,32 @@ export function SubscriptionsListPage() {
               {items.length === 0 ? t("accounts.empty") : t("accounts.noSearchResults")}
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="dash-accounts-panel">
+              <div className="dash-accounts-head">
+                <span>{t("list.colAccount")}</span>
+                <span className="text-center">{t("list.colPayDue")}</span>
+                <span className="text-center">{t("list.amountAndApprox", { code: primaryCode })}</span>
+                <span className="text-center">{t("list.sort.nextDue")}</span>
+                <span className="text-center">{t("list.colStatus")}</span>
+                <span aria-hidden />
+              </div>
               {visibleItems.map((s) => {
                 const free = isFreeAccount(s);
                 const prog = free ? null : computeDueProgress(progressInput(s));
                 const tone = prog ? dueProgressTone(prog) : null;
                 const needsPaid = subscriptionNeedsPaidAttention(s);
                 const tagClass = categoryTagClass(s.category_id);
+                const billingPeriod = subscriptionBillingPeriodLine(s, t);
+                const showApprox =
+                  !free &&
+                  s.amount_qar_snapshot != null &&
+                  s.currency_code.toUpperCase() !== primaryCode.toUpperCase();
                 return (
                   <div
                     key={s.id}
                     role="button"
                     tabIndex={0}
-                    className={`dash-sub-row cursor-pointer md:grid-cols-[minmax(0,1.6fr)_auto_auto_auto_auto] md:items-center ${needsPaid ? "sk-ring-needs-pay" : ""} ${tone ? dueListRowHighlightClass(tone) : ""}`.trim()}
+                    className={`dash-sub-row-compact ${needsPaid ? "sk-ring-needs-pay" : ""} ${tone ? dueListRowHighlightClass(tone) : ""}`.trim()}
                     onClick={() => nav(`/sub/${s.id}`)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -451,112 +466,115 @@ export function SubscriptionsListPage() {
                       }
                     }}
                   >
-                    <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex min-w-0 items-center gap-2 lg:col-span-1">
                       {s.website_url?.trim() ? (
-                        <SiteFavicon websiteUrl={s.website_url} size="sm" className="mt-0.5 shrink-0" />
+                        <SiteFavicon websiteUrl={s.website_url} size="sm" className="size-7 shrink-0" />
                       ) : (
-                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-cream-300/40 text-xs font-bold text-cream-700">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-cream-300/40 text-[10px] font-bold text-cream-700">
                           {s.title.trim().charAt(0).toUpperCase()}
                         </span>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-cream-950">{s.title}</div>
-                        {s.account_label?.trim() ? (
-                          <button
-                            type="button"
-                            dir="ltr"
-                            className="mt-0.5 block text-start text-xs text-cream-600 underline-offset-2 hover:underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEmailFilter(s.account_label!.trim());
-                              if (filterDetailsRef.current) filterDetailsRef.current.open = true;
-                            }}
-                          >
-                            {s.account_label.trim()}
-                          </button>
-                        ) : null}
-                        {s.category_name ? (
-                          <span className={`dash-tag mt-2 ${tagClass}`}>{s.category_name}</span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                          <span className="truncate text-sm font-medium text-cream-950">{s.title}</span>
+                          {s.category_name ? (
+                            <span className={`dash-tag shrink-0 ${tagClass}`}>{s.category_name}</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0 text-[11px] sk-text-hint">
+                          {s.account_label?.trim() ? (
+                            <button
+                              type="button"
+                              dir="ltr"
+                              className="max-w-full truncate underline-offset-2 hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEmailFilter(s.account_label!.trim());
+                                if (filterDetailsRef.current) filterDetailsRef.current.open = true;
+                              }}
+                            >
+                              {s.account_label.trim()}
+                            </button>
+                          ) : null}
+                          {!free ? (
+                            <span className="shrink-0">{billingLabel(s.billing_model)}</span>
+                          ) : null}
+                        </div>
+                        {!free && s.next_due_date ? (
+                          <div className="mt-1 max-w-xs">
+                            <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
+                          </div>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="text-sm text-cream-700 md:text-center">
+                    <div className="hidden text-center text-[11px] text-cream-800 lg:block">
                       {free ? (
                         <span className={`dash-tag ${payBadgeClass(accountPaymentStatus(s))}`}>
                           {t(accountPaymentStatusI18nKey(accountPaymentStatus(s)))}
                         </span>
                       ) : (
-                        <>
-                          <div className="font-medium text-cream-900">{billingLabel(s.billing_model)}</div>
-                          {subscriptionBillingPeriodLine(s, t) ? (
-                            <div className="text-xs text-cream-600">{subscriptionBillingPeriodLine(s, t)}</div>
-                          ) : null}
-                        </>
+                        <span className="line-clamp-2">{billingPeriod ?? billingLabel(s.billing_model)}</span>
                       )}
                     </div>
 
-                    <div className="md:text-center">
+                    <div className="flex items-center justify-between gap-2 lg:block lg:text-center">
                       {free ? (
-                        <span className="text-cream-500">—</span>
+                        <span className="text-cream-500 lg:text-center">—</span>
                       ) : (
                         <DualCurrencyAmounts
-                          size="sm"
+                          size="xs"
                           originalAmount={s.amount_original}
                           originalCode={s.currency_code}
-                          approxAmount={s.amount_qar_snapshot}
+                          approxAmount={showApprox ? s.amount_qar_snapshot : null}
                           approxCode={primaryCode}
+                          className="lg:items-center"
                         />
                       )}
                     </div>
 
-                    <div className="min-w-0 md:max-w-[10rem]">
-                      {free ? null : s.next_due_date ? (
-                        <>
-                          <div className="text-sm font-medium text-cream-900">{s.next_due_date}</div>
-                          {prog && tone ? (
-                            <div className={`text-xs font-medium ${dueToneTextClass(tone)}`}>
-                              {relativeDueCaption(t, prog)}
-                            </div>
-                          ) : null}
-                          <div className="mt-2">
-                            <DueProgressBar sub={progressInput(s)} size="sm" showCaption={false} />
-                          </div>
-                        </>
-                      ) : (
+                    <div className="flex items-center justify-between gap-2 text-[11px] lg:block lg:text-center">
+                      {free || !s.next_due_date ? (
                         <span className="text-cream-500">—</span>
+                      ) : (
+                        <div>
+                          <div className="font-medium text-cream-900">{s.next_due_date}</div>
+                          {prog && tone ? (
+                            <div className={`${dueToneTextClass(tone)}`}>{relativeDueCaption(t, prog)}</div>
+                          ) : null}
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 md:justify-end">
-                      <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
-                        {needsPaid ? (
-                          <button
-                            type="button"
-                            className="dash-btn-primary !min-h-8 px-3 py-1 text-xs"
-                            onClick={(e) => void onConfirmPaid(e, s.id)}
-                          >
-                            {t("home.markPaid")}
-                          </button>
-                        ) : free || !tone || tone === "safe" ? (
-                          <span className="dash-status-active">
-                            <span className="size-1.5 rounded-full bg-sage-400" aria-hidden />
-                            {t("list.summaryActive")}
-                          </span>
-                        ) : tone === "overdue" || tone === "due" ? (
-                          <span className="dash-status-danger">
-                            <span className="size-1.5 rounded-full bg-brand-danger" aria-hidden />
-                            {t("list.summaryOverdue")}
-                          </span>
-                        ) : (
-                          <span className="dash-status-warn">
-                            <span className="size-1.5 rounded-full bg-brand-warn" aria-hidden />
-                            {t("list.summaryDueSoon")}
-                          </span>
-                        )}
-                      </div>
-                      <IconChevron className="size-5 shrink-0 text-cream-600" />
+                    <div className="flex items-center justify-between gap-2 lg:justify-center" onClick={(e) => e.stopPropagation()}>
+                      {needsPaid ? (
+                        <button
+                          type="button"
+                          className="dash-btn-primary !min-h-7 px-2 py-0.5 text-[11px]"
+                          onClick={(e) => void onConfirmPaid(e, s.id)}
+                        >
+                          {t("home.markPaid")}
+                        </button>
+                      ) : free || !tone || tone === "safe" ? (
+                        <span className="dash-status-active !py-0.5 text-[10px]">
+                          <span className="size-1.5 rounded-full bg-sage-400" aria-hidden />
+                          {t("list.summaryActive")}
+                        </span>
+                      ) : tone === "overdue" || tone === "due" ? (
+                        <span className="dash-status-danger !py-0.5 text-[10px]">
+                          <span className="size-1.5 rounded-full bg-brand-danger" aria-hidden />
+                          {t("list.summaryOverdue")}
+                        </span>
+                      ) : (
+                        <span className="dash-status-warn !py-0.5 text-[10px]">
+                          <span className="size-1.5 rounded-full bg-brand-warn" aria-hidden />
+                          {t("list.summaryDueSoon")}
+                        </span>
+                      )}
+                      <IconChevron className="size-4 shrink-0 text-cream-600 lg:hidden" />
                     </div>
+
+                    <IconChevron className="hidden size-4 shrink-0 text-cream-600 lg:block" />
                   </div>
                 );
               })}
@@ -564,8 +582,8 @@ export function SubscriptionsListPage() {
           )}
 
           {pageTab === "active" && !loading && visibleItems.length > 0 ? (
-            <div className="dash-summary-bar">
-              <div className="flex flex-wrap gap-4 text-sm">
+            <div className="dash-summary-bar-compact">
+              <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
                 <span>
                   <span className="sk-text-hint">{t("list.summaryActive")}: </span>
                   <span className="font-semibold text-cream-950">{listSummary.active}</span>
@@ -580,8 +598,8 @@ export function SubscriptionsListPage() {
                 </span>
               </div>
               <div className="text-end">
-                <div className="text-xs sk-text-hint">{t("list.summaryMonthly")}</div>
-                <div className="text-lg font-bold text-cream-950">
+                <div className="text-[11px] sk-text-hint">{t("list.summaryMonthly")}</div>
+                <div className="text-base font-bold text-cream-950">
                   {listSummary.monthlyApprox.toFixed(2)} {primaryCode}
                 </div>
               </div>

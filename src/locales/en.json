@@ -165,6 +165,7 @@
     "name": "Name",
     "colAccount": "Account",
     "colPayDue": "Payment & due date",
+    "colStatus": "Status",
     "nextDue": "Next due",
     "amount": "Amount",
     "amountAndApprox": "Amount & estimate ({{code}})",

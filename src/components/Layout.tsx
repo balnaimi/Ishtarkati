@@ -110,7 +110,7 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="space-y-2 border-t border-cream-400/60 px-3 py-4">
+        <div className="dash-sidebar-footer">
           <button
             type="button"
             className="dash-btn-ghost w-full text-xs"
@@ -131,7 +131,7 @@ export function Layout() {
       </aside>
 
       <div className="dash-main">
-        <header className="flex items-center justify-between gap-3 border-b border-cream-400/60 px-4 py-3 md:hidden">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-cream-400/60 px-4 py-3 md:hidden">
           <div className="flex items-center gap-2">
             <img src={ISHTARKATI_MARK_SRC} alt="" className="size-8 rounded-lg" />
             <span className="font-semibold text-cream-950">{t("app.title")}</span>
@@ -150,8 +150,10 @@ export function Layout() {
           </select>
         </header>
 
-        <div className="dash-main-inner">
-          <Outlet />
+        <div className="dash-main-scroll">
+          <div className="dash-main-inner">
+            <Outlet />
+          </div>
         </div>
 
         <footer className="dash-footer">
