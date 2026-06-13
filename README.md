@@ -4,7 +4,7 @@ Arabic **desktop-only** app to track online subscriptions, renewals, and multi-c
 
 ## Prerequisites (build machine)
 
-You need **Node.js** (LTS 20+ recommended) and **npm**.
+You need **Node.js 24** (see `.nvmrc` / `package.json` `engines`) and **npm**.
 
 On minimal Linux distros, **electron-builder** may need **`xdg-utils`** (for `xdg-open`) when producing the AppImage. Example: `sudo apt install xdg-utils` on Debian/Ubuntu.
 
