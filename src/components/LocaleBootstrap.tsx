@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import i18n from "../i18n";
 import { applyDocumentLocale, loadAppLocale } from "../lib/appLocale";
+import { loadAndApplyTheme } from "../lib/theme";
 import { LoadingScreen } from "./LoadingScreen";
 
-/** Sync i18n + document lang/dir from DB/localStorage before the main UI. */
+/** Sync i18n + document lang/dir + theme from DB before the main UI. */
 export function LocaleBootstrap({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
@@ -14,6 +15,7 @@ export function LocaleBootstrap({ children }: { children: React.ReactNode }) {
         await i18n.changeLanguage(locale);
       }
       applyDocumentLocale(locale);
+      await loadAndApplyTheme();
       setReady(true);
     })();
   }, []);

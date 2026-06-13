@@ -88,6 +88,7 @@ export function EditSubscriptionPage() {
         onMetaUpdated={reloadMeta}
         onSubmit={onSubmit}
         onCancel={() => nav(-1)}
+        excludeId={existingId ?? undefined}
       />
     </div>
   );

@@ -29,6 +29,17 @@ declare global {
       clearPin: () => Promise<{ ok: boolean }>;
       verifyPin: (pin: string) => Promise<boolean>;
       resetLocalDatabase: () => Promise<{ ok: true } | { ok: false; error?: string }>;
+      showWindow: () => Promise<{ ok: boolean }>;
+      autoBackupRun: () => Promise<
+        { ok: true; path: string } | { ok: false; error?: string; skipped?: boolean }
+      >;
+      chooseAutoBackupDir: () => Promise<
+        { ok: true; path: string } | { ok: false; canceled?: boolean }
+      >;
+      checkForUpdates: () => Promise<
+        | { ok: true; latest: string; updateAvailable: boolean; url: string }
+        | { ok: false; error: string }
+      >;
     };
   }
 }

@@ -9,7 +9,17 @@ import {
   countAndSumCashflowInRange,
   isoCalendarMonthBounds,
 } from "../lib/cashflowProjection";
-import type { BillingModel, Category, CreditCard, IntervalUnit, PaymentEvent, Subscription, WalletMethod } from "../types";
+import type {
+  BillingModel,
+  Category,
+  CreditCard,
+  IntervalUnit,
+  PaymentEvent,
+  Subscription,
+  SubscriptionAuditEntry,
+  WalletMethod,
+} from "../types";
+import { findSimilarInList } from "../lib/subscriptionSimilarity";
 
 /** Machine note stored for quick «mark paid»; UI shows `detail.paymentNoteMarkPaid`. */
 export const PAYMENT_NOTE_MARK_PAID = "__ishtarkati_mark_paid__";
@@ -441,6 +451,9 @@ export async function insertSubscription(row: {
   account_label: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
+  tags: string | null;
+  trial_ends_on: string | null;
+  renewal_cancelled: number;
 }): Promise<number> {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -448,9 +461,10 @@ export async function insertSubscription(row: {
     `INSERT INTO subscriptions (
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
       interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
-      start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id, cancelled_at, created_at, updated_at
+      start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id,
+      cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
     )`,
     [
       row.title,
@@ -471,11 +485,13 @@ export async function insertSubscription(row: {
       row.next_due_date,
       row.end_date,
       row.is_domain,
-      null,
+      row.tags,
       row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
       null,
+      row.trial_ends_on,
+      row.renewal_cancelled,
       now,
       now,
     ],
@@ -513,18 +529,23 @@ export async function updateSubscription(
     account_label: string | null;
     credit_card_id: number | null;
     wallet_method_id: number | null;
+    tags: string | null;
+    trial_ends_on: string | null;
+    renewal_cancelled: number;
   },
 ): Promise<void> {
   const db = await getDb();
   const now = new Date().toISOString();
+  const prev = await getSubscription(id);
   await db.execute(
     `UPDATE subscriptions SET
       title = $1, notes = $2, website_url = $3, category_id = $4,
       billing_model = $5, interval_unit = $6, interval_months = $7, interval_count = $8, auto_renew = $9,
       amount_original = $10, currency_code = $11, amount_qar_snapshot = $12,
       fx_rate_used = $13, fx_quote_at = $14, start_date = $15, next_due_date = $16,
-      end_date = $17, is_domain = $18, tags = $19, account_label = $20, credit_card_id = $21, wallet_method_id = $22, updated_at = $23
-    WHERE id = $24`,
+      end_date = $17, is_domain = $18, tags = $19, account_label = $20, credit_card_id = $21,
+      wallet_method_id = $22, trial_ends_on = $23, renewal_cancelled = $24, updated_at = $25
+    WHERE id = $26`,
     [
       row.title,
       row.notes,
@@ -544,14 +565,74 @@ export async function updateSubscription(
       row.next_due_date,
       row.end_date,
       row.is_domain,
-      null,
+      row.tags,
       row.account_label,
       row.credit_card_id,
       row.wallet_method_id,
+      row.trial_ends_on,
+      row.renewal_cancelled,
       now,
       id,
     ],
   );
+  if (prev) {
+    await appendSubscriptionAuditChanges(id, prev, row, now);
+  }
+}
+
+const AUDIT_FIELDS = ["title", "amount_original", "currency_code"] as const;
+
+async function appendSubscriptionAuditChanges(
+  id: number,
+  prev: Subscription,
+  row: {
+    title: string;
+    amount_original: number;
+    currency_code: string;
+  },
+  changedAt: string,
+): Promise<void> {
+  const db = await getDb();
+  const ops: Array<{ sql: string; params: unknown[] }> = [];
+  for (const field of AUDIT_FIELDS) {
+    const oldVal = String(prev[field as keyof Subscription] ?? "");
+    const newVal = String(row[field] ?? "");
+    if (oldVal !== newVal) {
+      ops.push({
+        sql: `INSERT INTO subscription_audit_log (subscription_id, field_name, old_value, new_value, changed_at)
+              VALUES ($1, $2, $3, $4, $5)`,
+        params: [id, field, oldVal || null, newVal || null, changedAt],
+      });
+    }
+  }
+  if (ops.length > 0) await db.executeTransaction(ops);
+}
+
+export async function loadSubscriptionAuditLog(subId: number): Promise<SubscriptionAuditEntry[]> {
+  const db = await getDb();
+  return db.select<SubscriptionAuditEntry>(
+    `SELECT * FROM subscription_audit_log WHERE subscription_id = $1 ORDER BY changed_at DESC, id DESC`,
+    [subId],
+  );
+}
+
+/** Active subscriptions similar to the given title/url/account (duplicate warning). */
+export async function findSimilarSubscriptions(
+  probe: {
+    title: string;
+    website_url: string | null;
+    account_label?: string | null;
+  },
+  excludeId?: number,
+): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const rows = await db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL`,
+  );
+  return findSimilarInList(rows, probe, excludeId);
 }
 
 export async function cancelSubscription(id: number): Promise<void> {
@@ -763,6 +844,16 @@ export async function insertPaymentEventsBatch(
 /** When `'1'`, first-run onboarding has finished. */
 export const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 export const APP_LANGUAGE_KEY = "app_language";
+
+export {
+  THEME_MODE_KEY,
+  MONTHLY_BUDGET_LIMIT_KEY,
+  AUTO_BACKUP_ENABLED_KEY,
+  AUTO_BACKUP_DAYS_KEY,
+  AUTO_BACKUP_DIR_KEY,
+  LAST_AUTO_BACKUP_AT_KEY,
+  LAST_MANUAL_BACKUP_AT_KEY,
+} from "../lib/settingsKeys";
 
 export const PRIMARY_CURRENCY_KEY = "primary_currency";
 

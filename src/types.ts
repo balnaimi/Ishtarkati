@@ -52,6 +52,12 @@ export interface Subscription {
   next_due_date: string | null;
   end_date: string | null;
   is_domain: number;
+  /** Comma-separated tags (optional). */
+  tags: string | null;
+  /** Trial end date (YYYY-MM-DD) when subscription is in trial. */
+  trial_ends_on: string | null;
+  /** When 1, user cancelled auto-renewal but account may still be active until period ends. */
+  renewal_cancelled: number;
   /** User-defined label for the logged-in / family account (optional). */
   account_label: string | null;
   /** When set (YYYY-MM-DD), subscription is treated as cancelled / inactive (history). */
@@ -93,4 +99,16 @@ export interface SubscriptionFormValues {
   account_label: string;
   wallet_method_id: string;
   credit_card_id: string;
+  tags: string;
+  trial_ends_on: string;
+  renewal_cancelled: boolean;
+}
+
+export interface SubscriptionAuditEntry {
+  id: number;
+  subscription_id: number;
+  field_name: string;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string;
 }

@@ -105,7 +105,10 @@
     "cardsExpiringSoonHint": "بطاقات تحتاج تجديداً أو تحديثاً في طرق الدفع",
     "cardsExpiredCount": "بطاقات منتهية",
     "noCards": "لا توجد بطاقات مسجّلة بعد.",
-    "allCardsExpired": "كل البطاقات المسجّلة منتهية — راجع طرق الدفع."
+    "allCardsExpired": "كل البطاقات المسجّلة منتهية — راجع طرق الدفع.",
+    "dueTodayTitle": "مستحق الدفع اليوم",
+    "dueTodayCount": "{{count}} اشتراك/حساب وصل موعد استحقاقه",
+    "dueTodayView": "عرض الكل"
   },
   "list": {
     "title": "كل السجلات",
@@ -266,7 +269,14 @@
     "needsPaymentMethodBody": "أضف خدمة دفع أو محفظة، أو سجّل بطاقة ائتمانية من الإعدادات ← طرق الدفع حتى يمكن ربط الاشتراك بوسيلة الدفع عند الحفظ.",
     "goAddPaymentMethod": "إلى طرق الدفع",
     "editCancelledHint": "هذا الاشتراك في أرشيف الملغاة (منذ {{date}}). يمكنك تعديل البيانات للمراجعة؛ لإعادته للقوائم النشطة استخدم «إعادة تفعيل» من صفحة التفاصيل.",
-    "editCancelledHintBody": "لن يُحذف الإلغاء تلقائيًا عند الحفظ."
+    "editCancelledHintBody": "لن يُحذف الإلغاء تلقائيًا عند الحفظ.",
+    "tags": "وسوم",
+    "tagsPlaceholder": "عمل، عائلة، بث…",
+    "trialEndsOn": "انتهاء التجربة",
+    "trialEndsOnHint": "اختياري — لتذكيرك قبل تحوّل التجربة إلى اشتراك مدفوع.",
+    "renewalCancelled": "تم إلغاء التجديد التلقائي (قد يبقى الاشتراك فعّالًا حتى نهاية الفترة)",
+    "duplicateWarningTitle": "يوجد حساب مشابه",
+    "duplicateWarningHint": "راجع القائمة أعلاه لتجنّب التكرار."
   },
   "onboarding": {
     "welcomeTitle": "مرحبًا في إشتراكاتي",
@@ -363,7 +373,17 @@
     "cancelledBannerBody": "تاريخ الحذف: {{date}}",
     "cancelledBannerLink": "عرض الحسابات المحذوفة",
     "paymentsDisabledCancelled": "تسجيل دفعات جديدة غير متاح للحسابات المحذوفة",
-    "paymentsReadOnlyCancelled": "يمكنك مراجعة سجل الدفعات السابق فقط. لإضافة دفعات جديدة أعد تفعيل الحساب من صفحة التفاصيل."
+    "paymentsReadOnlyCancelled": "يمكنك مراجعة سجل الدفعات السابق فقط. لإضافة دفعات جديدة أعد تفعيل الحساب من صفحة التفاصيل.",
+    "trialBannerTitle": "فترة تجريبية",
+    "trialBannerBody": "تنتهي التجربة في {{date}}",
+    "renewalCancelledTitle": "التجديد التلقائي ملغى",
+    "renewalCancelledBody": "أوقفت التجديد التلقائي؛ قد يبقى الاشتراك نشطًا حتى نهاية الفترة الحالية.",
+    "auditTitle": "تغييرات السعر والاسم",
+    "auditField": {
+      "title": "الاسم",
+      "amount_original": "المبلغ",
+      "currency_code": "العملة"
+    }
   },
   "categories": {
     "title": "التصنيفات",
@@ -542,7 +562,32 @@
     "reminderDigestSchedTitle": "ملخصات إضافية (أسبوعي / شهري)",
     "reminderWeekly": "تنبيه أسبوعي بملخص الاستحقاقات القادمة (خلال أسبوعين)",
     "reminderMonthly": "تنبيه شهري بملخص قادم",
-    "reminderSchedHint": "يُرسل كل أسبوع أو شهر تقويمي مرة واحدة عند فتح التطبيق إن وُجدت اشتراكات مستحقة ضمن الفترة المحددة للملخص."
+    "reminderSchedHint": "يُرسل كل أسبوع أو شهر تقويمي مرة واحدة عند فتح التطبيق إن وُجدت اشتراكات مستحقة ضمن الفترة المحددة للملخص.",
+    "themeMode": {
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "حسب النظام"
+    },
+    "budgetTitle": "ميزانية شهرية",
+    "budgetHint": "حد اختياري للإنفاق المتوقع هذا الشهر (بالعملة الأساسية). يظهر في الرئيسية عند التعيين.",
+    "budgetLabel": "الحد الشهري",
+    "budgetPlaceholder": "اتركه فارغًا لتعطيل",
+    "shortcutsTitle": "اختصارات لوحة المفاتيح",
+    "shortcutsHint": "تعمل خارج حقول النص. اضغط ? في أي مكان للقائمة الكاملة.",
+    "autoBackupTitle": "نسخ احتياطي تلقائي",
+    "autoBackupHint": "يحفظ نسخة JSON كاملة في مجلد على فترات، حتى عند تشغيل التطبيق من شريط النظام.",
+    "autoBackupEnable": "تفعيل النسخ الاحتياطي التلقائي",
+    "autoBackupDays": "الفترة (أيام)",
+    "autoBackupChooseDir": "اختيار مجلد النسخ",
+    "autoBackupRunNow": "نسخ الآن إلى المجلد",
+    "autoBackupOk": "تم حفظ النسخة",
+    "lastAutoBackup": "آخر نسخ تلقائي",
+    "lastManualBackup": "آخر نسخ يدوي",
+    "backupReminder": "لم يُسجَّل نسخ يدوي بعد — يُفضَّل التصدير من هذا التبويب.",
+    "checkUpdates": "التحقق من التحديثات",
+    "updateAvailable": "يتوفر تحديث: {{latest}} (لديك {{current}})",
+    "updateCurrent": "أنت على أحدث إصدار ({{version}}).",
+    "updateError": "تعذّر التحقق من التحديثات"
   },
   "pin": {
     "title": "أدخل رمز الدخول",
@@ -625,7 +670,43 @@
     "weeklyDigestTitle": "ملخص أسبوعي — إشتراكاتي",
     "weeklyDigestIntro": "قائمة بالمبالغ المستحقة قريبًا ({{count}} سجلًا):",
     "monthlyDigestTitle": "ملخص شهري — إشتراكاتي",
-    "monthlyDigestIntro": "قائمة بالمبالغ المستحقة هذا الشهر تقريبًا ({{count}} سجلًا):"
+    "monthlyDigestIntro": "قائمة بالمبالغ المستحقة هذا الشهر تقريبًا ({{count}} سجلًا):",
+    "dueTodayTitle": "مستحق اليوم — إشتراكاتي",
+    "dueTodayIntro": "{{count}} اشتراك/حساب يحتاج دفعًا اليوم:"
+  },
+  "commandPalette": {
+    "title": "لوحة الأوامر",
+    "placeholder": "ابحث أو انتقل إلى…",
+    "empty": "لا نتائج",
+    "hint": "↑↓ تنقّل · Enter فتح · Esc إغلاق",
+    "openLabel": "بحث",
+    "openHint": "فتح لوحة الأوامر (Ctrl+K)",
+    "newAccount": "إضافة حساب جديد",
+    "sectionNav": "انتقال",
+    "sectionAccount": "حساب"
+  },
+  "shortcuts": {
+    "title": "اختصارات لوحة المفاتيح",
+    "subtitle": "متاحة من أي شاشة (ما عدا أثناء الكتابة في حقل).",
+    "palette": "فتح لوحة الأوامر",
+    "paletteKeys": "Ctrl+K",
+    "new": "إضافة حساب جديد",
+    "newKeys": "n",
+    "help": "عرض هذه المساعدة",
+    "helpKeys": "?",
+    "escape": "إغلاق اللوحة أو الحوار",
+    "escapeKeys": "Esc"
+  },
+  "budget": {
+    "title": "الميزانية الشهرية",
+    "remaining": "متبقّي {{amount}} {{code}} هذا الشهر",
+    "over": "تجاوزت الميزانية بـ {{amount}} {{code}}"
+  },
+  "tray": {
+    "show": "إظهار إشتراكاتي",
+    "quit": "إنهاء",
+    "tooltip": "إشتراكاتي",
+    "tooltipDue": "مستحقات الدفع"
   },
   "fx": {
     "fetchError": "تعذر جلب الأسعار من الإنترنت. تحقّق من الشبكة أو جرّب لاحقًا؛ لا يزال بإمكانك استخدام التقدير المدمج أو التعديلات اليدوية.",

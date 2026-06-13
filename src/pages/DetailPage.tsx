@@ -12,13 +12,14 @@ import {
   insertPaymentEvent,
   insertPaymentEventsBatch,
   listPayments,
+  loadSubscriptionAuditLog,
   PAYMENT_NOTE_MARK_PAID,
   reactivateSubscription,
   setSubscriptionNextDue,
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
 } from "../db/repo";
-import type { PaymentEvent } from "../types";
+import type { PaymentEvent, SubscriptionAuditEntry } from "../types";
 import {
   addBillingSteps,
   formatDateInput,
@@ -57,6 +58,7 @@ export function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [sub, setSub] = useState<SubscriptionListRow | null>(null);
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
+  const [auditLog, setAuditLog] = useState<SubscriptionAuditEntry[]>([]);
   const [primaryCode, setPrimaryCode] = useState("QAR");
 
   const [payDate, setPayDate] = useState(() => formatDateInput(new Date()));
@@ -80,14 +82,16 @@ export function DetailPage() {
     setLoading(true);
     const sid = parseInt(id, 10);
     try {
-      const [s, p, prim] = await Promise.all([
+      const [s, p, prim, audit] = await Promise.all([
         getSubscription(sid),
         listPayments(sid),
         getPrimaryCurrencyCode(),
+        loadSubscriptionAuditLog(sid),
       ]);
       setSub(s);
       setPayments(p);
       setPrimaryCode(prim);
+      setAuditLog(audit);
       if (s) {
         setPayAmount(String(s.amount_original));
         setBackfillFrom(s.start_date?.slice(0, 10) ?? "");
@@ -332,6 +336,23 @@ export function DetailPage() {
                     {t("detail.cancelledBannerLink")}
                   </Link>
                 </div>
+              ) : null}
+              {sub.trial_ends_on ? (
+                <div className="sk-callout-muted text-sm">
+                  <p className="font-medium text-cream-900">{t("detail.trialBannerTitle")}</p>
+                  <p className="mt-1 text-cream-800">{t("detail.trialBannerBody", { date: sub.trial_ends_on.slice(0, 10) })}</p>
+                </div>
+              ) : null}
+              {sub.renewal_cancelled ? (
+                <div className="rounded-lg border border-honey-500/40 bg-honey-50/60 px-3 py-2 text-sm dark:bg-honey-950/20">
+                  <p className="font-medium text-cream-900">{t("detail.renewalCancelledTitle")}</p>
+                  <p className="mt-1 text-cream-800">{t("detail.renewalCancelledBody")}</p>
+                </div>
+              ) : null}
+              {sub.tags?.trim() ? (
+                <p className="text-sm text-cream-700">
+                  {t("form.tags")}: {sub.tags}
+                </p>
               ) : null}
               <p className="text-sm text-cream-700">
                 <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">
@@ -667,6 +688,24 @@ export function DetailPage() {
         </ul>
       </div>
       </>
+      ) : null}
+
+      {auditLog.length > 0 ? (
+        <div className="sk-card space-y-3">
+          <h3 className="text-base font-semibold text-cream-900">{t("detail.auditTitle")}</h3>
+          <ul className="space-y-2 text-sm text-cream-800">
+            {auditLog.map((e) => (
+              <li key={e.id} className="border-b border-cream-300/60 pb-2 last:border-0">
+                <span className="font-medium">{t(`detail.auditField.${e.field_name}`, { defaultValue: e.field_name })}</span>
+                {" — "}
+                <span dir="ltr">
+                  {e.old_value ?? "—"} → {e.new_value ?? "—"}
+                </span>
+                <span className="mt-0.5 block text-xs text-cream-600">{e.changed_at.slice(0, 19)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <Link to="/" className="inline-flex text-sm font-medium text-sage-800 underline-offset-2 hover:underline">

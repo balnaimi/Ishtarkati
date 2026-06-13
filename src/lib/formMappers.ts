@@ -19,6 +19,9 @@ export function defaultFormValues(): SubscriptionFormValues {
     account_label: "",
     wallet_method_id: "",
     credit_card_id: "",
+    tags: "",
+    trial_ends_on: "",
+    renewal_cancelled: false,
   };
 }
 
@@ -60,6 +63,9 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
         : s.credit_card_id != null
           ? String(s.credit_card_id)
           : "",
+    tags: s.tags ?? "",
+    trial_ends_on: s.trial_ends_on?.slice(0, 10) ?? "",
+    renewal_cancelled: Boolean(s.renewal_cancelled),
   };
 }
 
@@ -101,6 +107,9 @@ export function formToRow(
   account_label: string | null;
   credit_card_id: number | null;
   wallet_method_id: number | null;
+  tags: string | null;
+  trial_ends_on: string | null;
+  renewal_cancelled: number;
 } {
   const isFree = v.billing_model === "free_account";
   const amt = isFree ? 0 : parseFloat(v.amount_original.replace(",", "."));
@@ -134,6 +143,9 @@ export function formToRow(
       account_label: v.account_label.trim() || null,
       credit_card_id: null,
       wallet_method_id: null,
+      tags: v.tags.trim() || null,
+      trial_ends_on: null,
+      renewal_cancelled: 0,
     };
   }
 
@@ -184,5 +196,8 @@ export function formToRow(
       ? parseInt(v.credit_card_id, 10)
       : null,
     wallet_method_id: v.wallet_method_id ? parseInt(v.wallet_method_id, 10) : null,
+    tags: v.tags.trim() || null,
+    trial_ends_on: v.trial_ends_on.trim() || null,
+    renewal_cancelled: v.renewal_cancelled ? 1 : 0,
   };
 }

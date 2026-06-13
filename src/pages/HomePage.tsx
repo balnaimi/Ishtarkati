@@ -3,9 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
+  getSetting,
   loadHomePaymentMethodsStats,
   loadSubscriptionsDueSoon,
+  loadSubscriptionsNeedingAttention,
   loadSubscriptionsRecent,
+  MONTHLY_BUDGET_LIMIT_KEY,
   statsSummary,
   subscriptionNeedsPaidAttention,
   type SubscriptionListRow,
@@ -13,10 +16,12 @@ import {
 import { CashflowSummaryGrid } from "../components/CashflowSummaryGrid";
 import { HomePaymentsStats } from "../components/HomePaymentsStats";
 import { CardGridSkeleton, StatsGridSkeleton } from "../components/LoadingSkeleton";
+import { BudgetBanner } from "../components/BudgetBanner";
 import { billingModelI18nKey, isFreeAccount } from "../lib/subscriptionKind";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
+import { computeBudgetStatus } from "../lib/budget";
 import {
   computeDueProgress,
   dueListRowHighlightClass,
@@ -51,21 +56,27 @@ export function HomePage() {
   const [paymentStats, setPaymentStats] = useState<Awaited<
     ReturnType<typeof loadHomePaymentMethodsStats>
   > | null>(null);
+  const [dueToday, setDueToday] = useState<SubscriptionListRow[]>([]);
+  const [budgetLimitRaw, setBudgetLimitRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, d, r, pay] = await Promise.all([
+      const [sum, d, r, pay, today, budgetRaw] = await Promise.all([
         statsSummary(),
         loadSubscriptionsDueSoon(HOME_PREVIEW_LIMIT),
         loadSubscriptionsRecent(HOME_PREVIEW_LIMIT),
         loadHomePaymentMethodsStats(),
+        loadSubscriptionsNeedingAttention(),
+        getSetting(MONTHLY_BUDGET_LIMIT_KEY),
       ]);
       setSummary(sum);
       setDueSoon(d);
       setRecent(r);
       setPaymentStats(pay);
+      setDueToday(today);
+      setBudgetLimitRaw(budgetRaw);
     } finally {
       setLoading(false);
     }
@@ -98,6 +109,9 @@ export function HomePage() {
   }
 
   const primary = summary?.primaryCode ?? paymentStats?.primaryCode ?? "QAR";
+  const budgetStatus = summary
+    ? computeBudgetStatus(summary.currentMonth.totalPrimary, budgetLimitRaw)
+    : null;
 
   const tabs: { id: HomeTab; label: string }[] = [
     { id: "general", label: t("home.tabGeneral") },
@@ -128,6 +142,44 @@ export function HomePage() {
           </button>
         ))}
       </div>
+
+      {!loading && dueToday.length > 0 ? (
+        <section className="sk-ring-needs-pay rounded-xl border border-terracotta-500/40 bg-terracotta-50/50 p-4 shadow-sm dark:bg-terracotta-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-cream-900">{t("home.dueTodayTitle")}</h3>
+              <p className="mt-1 text-sm text-cream-800">
+                {t("home.dueTodayCount", { count: dueToday.length })}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="sk-btn-primary text-sm"
+              onClick={() => setTab("due")}
+            >
+              {t("home.dueTodayView")}
+            </button>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {dueToday.slice(0, 4).map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg bg-cream-50/80 px-3 py-2 text-start text-sm hover:bg-cream-100"
+                  onClick={() => nav(`/sub/${s.id}`)}
+                >
+                  <span className="font-medium text-cream-950">{s.title}</span>
+                  <span className="text-cream-700">
+                    {s.amount_original} {s.currency_code}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {budgetStatus?.enabled ? <BudgetBanner status={budgetStatus} primaryCode={primary} /> : null}
 
       {tab === "general" ? (
         loading || !summary ? (

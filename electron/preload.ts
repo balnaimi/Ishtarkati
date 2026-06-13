@@ -33,4 +33,15 @@ contextBridge.exposeInMainWorld("ishtarkati", {
   verifyPin: (pin: string): Promise<boolean> => ipcRenderer.invoke("security:verifyPin", pin),
   resetLocalDatabase: (): Promise<{ ok: true } | { ok: false; error?: string }> =>
     ipcRenderer.invoke("app:resetLocalDatabase"),
+  showWindow: (): Promise<{ ok: boolean }> => ipcRenderer.invoke("app:showWindow"),
+  autoBackupRun: (): Promise<
+    { ok: true; path: string } | { ok: false; error?: string; skipped?: boolean }
+  > => ipcRenderer.invoke("backup:autoRun"),
+  chooseAutoBackupDir: (): Promise<
+    { ok: true; path: string } | { ok: false; canceled?: boolean }
+  > => ipcRenderer.invoke("backup:chooseAutoDir"),
+  checkForUpdates: (): Promise<
+    | { ok: true; latest: string; updateAvailable: boolean; url: string }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke("app:checkForUpdates"),
 });

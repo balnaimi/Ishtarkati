@@ -7,6 +7,18 @@ import Database from "better-sqlite3";
 import { SCHEMA_V1_STATEMENTS } from "./schema";
 import { registerBackupIpc } from "./backup";
 import { electronUiStrings } from "./uiLocale";
+import {
+  checkForAppUpdate,
+  chooseAutoBackupDir,
+  installTray,
+  installWindowCloseToTray,
+  isAppQuitting,
+  markAppQuitting,
+  runAutoBackupNow,
+  showMainWindow,
+  startBackgroundServices,
+  destroyTray,
+} from "./backgroundServices";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -525,6 +537,32 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 12").run();
   }
+
+  if (version < 13) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      if (!cols.some((c) => c.name === "trial_ends_on")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN trial_ends_on TEXT");
+      }
+      if (!cols.some((c) => c.name === "renewal_cancelled")) {
+        database.exec(
+          "ALTER TABLE subscriptions ADD COLUMN renewal_cancelled INTEGER NOT NULL DEFAULT 0",
+        );
+      }
+    }
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS subscription_audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+        field_name TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        changed_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_sub ON subscription_audit_log(subscription_id);
+    `);
+    database.prepare("UPDATE schema_version SET version = 13").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";
@@ -717,6 +755,20 @@ function registerIpc(): void {
   });
 
   registerBackupIpc(() => db, () => win);
+
+  ipcMain.handle("app:showWindow", () => {
+    showMainWindow(win);
+    return { ok: true as const };
+  });
+
+  ipcMain.handle("backup:autoRun", async () => runAutoBackupNow(() => db));
+
+  ipcMain.handle("backup:chooseAutoDir", async () => chooseAutoBackupDir(win, () => db));
+
+  ipcMain.handle("app:checkForUpdates", async () => {
+    const current = app.getVersion();
+    return checkForAppUpdate(current);
+  });
 }
 
 function createWindow(): void {
@@ -739,6 +791,10 @@ function createWindow(): void {
   win.once("ready-to-show", () => {
     win?.show();
   });
+
+  installWindowCloseToTray(win);
+  installTray({ win, iconPath, getDb: () => db });
+  startBackgroundServices(() => db);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
@@ -784,11 +840,13 @@ if (!gotSingleInstanceLock) {
   });
 
   app.on("before-quit", () => {
+    markAppQuitting();
+    destroyTray();
     closeDatabase();
   });
 
   app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
+    if (isAppQuitting()) {
       win = null;
       app.quit();
     }

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { CreditCard, SubscriptionFormValues, WalletMethod } from "../types";
 import { amountToPrimaryFromUsdBase } from "../lib/fx";
 import type { FxState } from "../lib/fxState";
-import { addCategory, loadCreditCards, loadWalletMethods } from "../db/repo";
+import { addCategory, findSimilarSubscriptions, loadCreditCards, loadWalletMethods } from "../db/repo";
 import { listCurrenciesSorted } from "../lib/currenciesData";
 import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
@@ -26,6 +26,8 @@ interface SubscriptionFormProps {
   /** When set with `blockPaidWithoutMethods`, blocks saving a paid account without a payment method. */
   paymentMethodCount?: number | null;
   blockPaidWithoutMethods?: boolean;
+  /** When editing, pass subscription id to exclude from duplicate check. */
+  excludeId?: number;
 }
 
 export function SubscriptionForm({
@@ -40,11 +42,13 @@ export function SubscriptionForm({
   submitLabel,
   paymentMethodCount = null,
   blockPaidWithoutMethods = false,
+  excludeId,
 }: SubscriptionFormProps) {
   const { t } = useTranslation();
   const [v, setV] = useState<SubscriptionFormValues>(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [duplicates, setDuplicates] = useState<{ id: number; title: string }[]>([]);
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [addCatBusy, setAddCatBusy] = useState(false);
@@ -61,6 +65,25 @@ export function SubscriptionForm({
       setCards(c);
     });
   }, []);
+
+  useEffect(() => {
+    const title = v.title.trim();
+    if (title.length < 2) {
+      setDuplicates([]);
+      return;
+    }
+    const tmr = window.setTimeout(() => {
+      void findSimilarSubscriptions(
+        {
+          title,
+          website_url: v.website_url.trim() || null,
+          account_label: v.account_label.trim() || null,
+        },
+        excludeId,
+      ).then((rows) => setDuplicates(rows.map((r) => ({ id: r.id, title: r.title }))));
+    }, 400);
+    return () => window.clearTimeout(tmr);
+  }, [v.title, v.website_url, v.account_label, excludeId]);
 
   const paymentSelectValue =
     v.wallet_method_id.trim() !== ""
@@ -626,6 +649,54 @@ export function SubscriptionForm({
           />
         </div>
       </div>
+      ) : null}
+
+      {duplicates.length > 0 ? (
+        <div className="sk-callout-muted text-sm" role="status">
+          <p className="font-medium text-cream-900">{t("form.duplicateWarningTitle")}</p>
+          <ul className="mt-2 list-inside list-disc text-cream-800">
+            {duplicates.slice(0, 5).map((d) => (
+              <li key={d.id}>{d.title}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-cream-700">{t("form.duplicateWarningHint")}</p>
+        </div>
+      ) : null}
+
+      <div>
+        <label className="sk-label">{t("form.tags")}</label>
+        <input
+          className="sk-input"
+          value={v.tags}
+          onChange={(e) => setField("tags", e.target.value)}
+          placeholder={t("form.tagsPlaceholder")}
+        />
+      </div>
+
+      {!isFree ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <label className="sk-label">{t("form.trialEndsOn")}</label>
+            <input
+              type="date"
+              className="sk-input"
+              value={v.trial_ends_on}
+              onChange={(e) => setField("trial_ends_on", e.target.value)}
+            />
+            <p className="mt-1 text-xs text-cream-600">{t("form.trialEndsOnHint")}</p>
+          </div>
+          <div className="flex items-end pb-1">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+                checked={v.renewal_cancelled}
+                onChange={(e) => setField("renewal_cancelled", e.target.checked)}
+              />
+              {t("form.renewalCancelled")}
+            </label>
+          </div>
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-3 border-t border-cream-400/80 pt-6 sm:flex-row sm:flex-wrap">

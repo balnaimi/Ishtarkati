@@ -1,9 +1,13 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
 import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 import { useDesktopReminders } from "../hooks/useDesktopReminders";
 import { useUiDir } from "../hooks/useUiDir";
+import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
+import { CommandPalette } from "./CommandPalette";
+import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
 
 const linkCls = (active: boolean) =>
   `inline-flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -15,10 +19,25 @@ const linkCls = (active: boolean) =>
 export function Layout() {
   const { t } = useTranslation();
   const loc = useLocation();
+  const nav = useNavigate();
   const dir = useUiDir();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   useDesktopReminders();
 
-  const nav = [
+  useGlobalShortcuts({
+    paletteOpen,
+    helpOpen,
+    onPalette: () => setPaletteOpen(true),
+    onNew: () => nav("/new"),
+    onHelp: () => setHelpOpen(true),
+    onCloseOverlay: () => {
+      setPaletteOpen(false);
+      setHelpOpen(false);
+    },
+  });
+
+  const navItems = [
     { to: "/", label: t("nav.home") },
     { to: "/accounts", label: t("nav.accounts") },
     { to: "/payments", label: t("nav.payments") },
@@ -46,37 +65,49 @@ export function Layout() {
               </p>
             </div>
           </div>
-          <nav className="flex flex-wrap gap-2">
-            {nav.map(({ to, label }) => {
-              const homeMatch =
-                to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
-              const accountsMatch =
-                to === "/accounts" && (loc.pathname === "/accounts" || loc.pathname === "/list");
-              const paymentsMatch = to === "/payments" && loc.pathname === "/payments";
-              const insightsMatch = to === "/insights" && loc.pathname === "/insights";
-              const active =
-                accountsMatch ||
-                paymentsMatch ||
-                insightsMatch ||
-                loc.pathname === to ||
-                (to !== "/" &&
-                  to !== "/accounts" &&
-                  to !== "/payments" &&
-                  to !== "/insights" &&
-                  loc.pathname.startsWith(to)) ||
-                homeMatch;
-              return (
-                <Link key={to} to={to} className={linkCls(active)}>
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="sk-btn-muted hidden text-xs sm:inline-flex"
+              onClick={() => setPaletteOpen(true)}
+              title={t("commandPalette.openHint")}
+            >
+              {t("commandPalette.openLabel")}
+            </button>
+            <nav className="flex flex-wrap gap-2">
+              {navItems.map(({ to, label }) => {
+                const homeMatch =
+                  to === "/" && (loc.pathname === "/" || loc.pathname.startsWith("/sub"));
+                const accountsMatch =
+                  to === "/accounts" && (loc.pathname === "/accounts" || loc.pathname === "/list");
+                const paymentsMatch = to === "/payments" && loc.pathname === "/payments";
+                const insightsMatch = to === "/insights" && loc.pathname === "/insights";
+                const active =
+                  accountsMatch ||
+                  paymentsMatch ||
+                  insightsMatch ||
+                  loc.pathname === to ||
+                  (to !== "/" &&
+                    to !== "/accounts" &&
+                    to !== "/payments" &&
+                    to !== "/insights" &&
+                    loc.pathname.startsWith(to)) ||
+                  homeMatch;
+                return (
+                  <Link key={to} to={to} className={linkCls(active)}>
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:py-8">
         <Outlet />
       </main>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

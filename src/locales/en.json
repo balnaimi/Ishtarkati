@@ -105,7 +105,10 @@
     "cardsExpiringSoonHint": "Cards that need renewal or an update in payment methods",
     "cardsExpiredCount": "Expired cards",
     "noCards": "No cards recorded yet.",
-    "allCardsExpired": "All recorded cards are expired — review payment methods."
+    "allCardsExpired": "All recorded cards are expired — review payment methods.",
+    "dueTodayTitle": "Needs payment today",
+    "dueTodayCount": "{{count}} subscription(s) reached their due date",
+    "dueTodayView": "View all due"
   },
   "list": {
     "title": "All records",
@@ -266,7 +269,14 @@
     "needsPaymentMethodBody": "Add a payment service or wallet, or register a credit card from Settings → Payment Methods so the subscription can be linked when saving.",
     "goAddPaymentMethod": "Go to payment methods",
     "editCancelledHint": "This subscription is in the cancelled archive (since {{date}}). You can edit data for review; to restore it to active lists, use «Reactivate» from the details page.",
-    "editCancelledHintBody": "Cancellation will not be removed automatically when saving."
+    "editCancelledHintBody": "Cancellation will not be removed automatically when saving.",
+    "tags": "Tags",
+    "tagsPlaceholder": "work, family, streaming…",
+    "trialEndsOn": "Trial ends on",
+    "trialEndsOnHint": "Optional — reminds you before the trial converts to paid.",
+    "renewalCancelled": "Auto-renew cancelled (subscription may still run until period ends)",
+    "duplicateWarningTitle": "Similar account already exists",
+    "duplicateWarningHint": "Review the list above to avoid duplicate entries."
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Ishtarkati",
@@ -363,7 +373,17 @@
     "cancelledBannerBody": "Deleted on: {{date}}",
     "cancelledBannerLink": "View deleted accounts",
     "paymentsDisabledCancelled": "Recording new payments is not available for deleted accounts",
-    "paymentsReadOnlyCancelled": "You can only review previous payment history. To add new payments, reactivate the account from the details page."
+    "paymentsReadOnlyCancelled": "You can only review previous payment history. To add new payments, reactivate the account from the details page.",
+    "trialBannerTitle": "Trial period",
+    "trialBannerBody": "Trial ends on {{date}}",
+    "renewalCancelledTitle": "Auto-renew cancelled",
+    "renewalCancelledBody": "You turned off auto-renewal; the subscription may remain active until the current period ends.",
+    "auditTitle": "Price & name changes",
+    "auditField": {
+      "title": "Name",
+      "amount_original": "Amount",
+      "currency_code": "Currency"
+    }
   },
   "categories": {
     "title": "Categories",
@@ -542,7 +562,32 @@
     "reminderDigestSchedTitle": "Extra digests (weekly / monthly)",
     "reminderWeekly": "Weekly alert with upcoming due summary (within two weeks)",
     "reminderMonthly": "Monthly alert with upcoming summary",
-    "reminderSchedHint": "Sent once per calendar week or month when the app opens if subscriptions are due within the digest period."
+    "reminderSchedHint": "Sent once per calendar week or month when the app opens if subscriptions are due within the digest period.",
+    "themeMode": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "budgetTitle": "Monthly budget",
+    "budgetHint": "Optional cap for projected spending this month (primary currency). Shown on Home when set.",
+    "budgetLabel": "Monthly limit",
+    "budgetPlaceholder": "Leave empty to disable",
+    "shortcutsTitle": "Keyboard shortcuts",
+    "shortcutsHint": "Works outside text fields. Press ? anywhere for the full list.",
+    "autoBackupTitle": "Automatic backup",
+    "autoBackupHint": "Saves a full JSON backup to a folder on a schedule, even when the app runs in the tray.",
+    "autoBackupEnable": "Enable automatic backup",
+    "autoBackupDays": "Interval (days)",
+    "autoBackupChooseDir": "Choose backup folder",
+    "autoBackupRunNow": "Backup now to folder",
+    "autoBackupOk": "Backup saved",
+    "lastAutoBackup": "Last automatic backup",
+    "lastManualBackup": "Last manual backup",
+    "backupReminder": "No manual backup recorded yet — consider exporting from this tab.",
+    "checkUpdates": "Check for updates",
+    "updateAvailable": "Update available: {{latest}} (you have {{current}})",
+    "updateCurrent": "You are on the latest version ({{version}}).",
+    "updateError": "Could not check for updates"
   },
   "pin": {
     "title": "Enter login PIN",
@@ -625,7 +670,43 @@
     "weeklyDigestTitle": "Weekly digest — Ishtarkati",
     "weeklyDigestIntro": "Amounts due soon ({{count}} record(s)):",
     "monthlyDigestTitle": "Monthly digest — Ishtarkati",
-    "monthlyDigestIntro": "Amounts due this month (about {{count}} record(s)):"
+    "monthlyDigestIntro": "Amounts due this month (about {{count}} record(s)):",
+    "dueTodayTitle": "Due today — Ishtarkati",
+    "dueTodayIntro": "{{count}} subscription(s) need payment today:"
+  },
+  "commandPalette": {
+    "title": "Command palette",
+    "placeholder": "Search or jump to…",
+    "empty": "No matches",
+    "hint": "↑↓ navigate · Enter open · Esc close",
+    "openLabel": "Search",
+    "openHint": "Open command palette (Ctrl+K)",
+    "newAccount": "Add new account",
+    "sectionNav": "Go to",
+    "sectionAccount": "Account"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "subtitle": "Available from any screen (except while typing in a field).",
+    "palette": "Open command palette",
+    "paletteKeys": "Ctrl+K",
+    "new": "Add new account",
+    "newKeys": "n",
+    "help": "Show this help",
+    "helpKeys": "?",
+    "escape": "Close palette or dialog",
+    "escapeKeys": "Esc"
+  },
+  "budget": {
+    "title": "Monthly budget",
+    "remaining": "{{amount}} {{code}} remaining this month",
+    "over": "Over budget by {{amount}} {{code}}"
+  },
+  "tray": {
+    "show": "Show Ishtarkati",
+    "quit": "Quit",
+    "tooltip": "Ishtarkati",
+    "tooltipDue": "Due payments"
   },
   "fx": {
     "fetchError": "Could not fetch rates from the internet. Check your network or try later; you can still use the built-in estimate or manual overrides.",
