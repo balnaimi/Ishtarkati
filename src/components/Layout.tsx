@@ -40,6 +40,16 @@ export function Layout() {
     void getSetting(THEME_MODE_KEY).then((raw) => setThemeMode(parseThemeMode(raw)));
   }, []);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncFromDom = () => {
+      setThemeMode(root.classList.contains("dark") ? "dark" : "light");
+    };
+    const obs = new MutationObserver(syncFromDom);
+    obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
   useGlobalShortcuts({
     paletteOpen,
     helpOpen,
@@ -80,7 +90,7 @@ export function Layout() {
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-cream-950">{t("app.title")}</p>
-            <p className="text-[11px] text-cream-600">{t("layout.desktopOnly")}</p>
+            <p className="text-[11px] sk-text-hint">{t("layout.desktopOnly")}</p>
           </div>
         </div>
 

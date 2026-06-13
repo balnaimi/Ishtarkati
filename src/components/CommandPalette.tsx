@@ -86,12 +86,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-cream-950/40 p-4 pt-[12vh] backdrop-blur-sm"
+      className="sk-modal-overlay items-start pt-[12vh]"
       role="presentation"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-xl border border-cream-400 bg-cream-50 shadow-xl"
+        className="sk-card w-full max-w-lg overflow-hidden border-cream-500/70 p-0 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={t("commandPalette.title")}
@@ -134,7 +134,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                 <button
                   type="button"
                   className={`flex w-full items-center gap-2 px-4 py-2.5 text-start text-sm ${
-                    idx === active ? "bg-sage-600/15 text-cream-950" : "text-cream-800 hover:bg-cream-200/80"
+                    idx === active
+                      ? "bg-violet-500/12 text-cream-950 dark:bg-violet-500/20"
+                      : "text-cream-800 hover:bg-cream-200/80"
                   }`}
                   onMouseEnter={() => setActive(idx)}
                   onClick={() => go(item.to)}

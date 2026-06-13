@@ -544,13 +544,13 @@ export function SubscriptionsListPage() {
                             {t("list.summaryActive")}
                           </span>
                         ) : tone === "overdue" || tone === "due" ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-danger/15 px-2.5 py-1 text-xs font-medium text-brand-danger">
+                          <span className="dash-status-danger">
                             <span className="size-1.5 rounded-full bg-brand-danger" aria-hidden />
                             {t("list.summaryOverdue")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-400">
-                            <span className="size-1.5 rounded-full bg-amber-400" aria-hidden />
+                          <span className="dash-status-warn">
+                            <span className="size-1.5 rounded-full bg-brand-warn" aria-hidden />
                             {t("list.summaryDueSoon")}
                           </span>
                         )}
@@ -567,20 +567,20 @@ export function SubscriptionsListPage() {
             <div className="dash-summary-bar">
               <div className="flex flex-wrap gap-4 text-sm">
                 <span>
-                  <span className="text-cream-600">{t("list.summaryActive")}: </span>
+                  <span className="sk-text-hint">{t("list.summaryActive")}: </span>
                   <span className="font-semibold text-cream-950">{listSummary.active}</span>
                 </span>
                 <span>
-                  <span className="text-cream-600">{t("list.summaryDueSoon")}: </span>
-                  <span className="font-semibold text-amber-400">{listSummary.dueSoonCount}</span>
+                  <span className="sk-text-hint">{t("list.summaryDueSoon")}: </span>
+                  <span className="font-semibold dash-text-warn">{listSummary.dueSoonCount}</span>
                 </span>
                 <span>
-                  <span className="text-cream-600">{t("list.summaryOverdue")}: </span>
+                  <span className="sk-text-hint">{t("list.summaryOverdue")}: </span>
                   <span className="font-semibold text-brand-danger">{listSummary.overdueCount}</span>
                 </span>
               </div>
               <div className="text-end">
-                <div className="text-xs text-cream-600">{t("list.summaryMonthly")}</div>
+                <div className="text-xs sk-text-hint">{t("list.summaryMonthly")}</div>
                 <div className="text-lg font-bold text-cream-950">
                   {listSummary.monthlyApprox.toFixed(2)} {primaryCode}
                 </div>

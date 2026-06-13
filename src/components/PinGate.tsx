@@ -58,7 +58,7 @@ export function PinGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="sk-modal-overlay p-6">
       <div className="sk-card w-full max-w-sm rounded-2xl border-cream-400/40 p-8 shadow-2xl">
-        <p className="text-center text-lg font-semibold text-cream-900">{t("pin.title")}</p>
+        <p className="text-center text-lg font-semibold text-cream-950">{t("pin.title")}</p>
         <p className="sk-text-hint mt-2 text-center text-sm">{t("pin.subtitle")}</p>
         <input
           type="password"

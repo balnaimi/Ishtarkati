@@ -17,20 +17,16 @@ export function ShortcutsHelpDialog({ open, onClose }: ShortcutsHelpDialogProps)
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-cream-950/40 p-4 backdrop-blur-sm"
-      role="presentation"
-      onClick={onClose}
-    >
+    <div className="sk-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-xl border border-cream-400 bg-cream-50 p-5 shadow-xl"
+        className="sk-card w-full max-w-md border-cream-500/70 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={t("shortcuts.title")}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-cream-900">{t("shortcuts.title")}</h2>
-        <p className="mt-1 text-sm text-cream-700">{t("shortcuts.subtitle")}</p>
+        <h2 className="text-lg font-semibold text-cream-950">{t("shortcuts.title")}</h2>
+        <p className="mt-1 text-sm sk-text-hint">{t("shortcuts.subtitle")}</p>
         <dl className="mt-4 space-y-3">
           {rows.map((r) => (
             <div key={r.keys} className="flex items-start justify-between gap-4">

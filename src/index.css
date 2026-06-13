@@ -50,11 +50,11 @@
   --color-violet-600: #4f46e5;
   --color-violet-700: #4338ca;
 
-  --color-dash-bg: #0b0f17;
-  --color-dash-sidebar: #111827;
-  --color-dash-card: #1a2234;
-  --color-dash-border: #2a3548;
-  --color-dash-muted: #94a3b8;
+  --color-dash-bg: #f3f0ea;
+  --color-dash-sidebar: #f6f3ed;
+  --color-dash-card: #faf8f4;
+  --color-dash-border: #ddd5c8;
+  --color-dash-muted: #7a736c;
 }
 
 html,
@@ -300,8 +300,17 @@ body {
     background: linear-gradient(90deg, #9a7b5f, #a85d52);
   }
 
-  .sk-due-bar-fill-overdue {
-    background: linear-gradient(90deg, #a85d52, #6d5540);
+  /** Primary / secondary copy — follows cream scale in both themes */
+  .sk-text-primary {
+    @apply text-cream-950;
+  }
+
+  .sk-text-secondary {
+    @apply text-cream-800;
+  }
+
+  .sk-text-link {
+    @apply font-medium text-sage-800 underline-offset-2 hover:underline;
   }
 }
 
@@ -340,6 +349,12 @@ body {
   --color-walnut-500: #fbbf24;
   --color-walnut-600: #fcd34d;
   --color-walnut-800: #fde68a;
+
+  --color-dash-bg: #0b0f17;
+  --color-dash-sidebar: #111827;
+  --color-dash-card: #1a2234;
+  --color-dash-border: #2a3548;
+  --color-dash-muted: #94a3b8;
 }
 
 .dark body {
@@ -575,7 +590,11 @@ body {
 }
 
 .dash-nav-item-active {
-  @apply bg-violet-500/20 text-violet-400 ring-1 ring-violet-500/30;
+  @apply bg-violet-500/12 text-violet-700 ring-1 ring-violet-500/25;
+}
+
+.dark .dash-nav-item-active {
+  @apply bg-violet-500/20 text-violet-400 ring-violet-500/30;
 }
 
 .dash-main {
@@ -663,19 +682,67 @@ body {
 }
 
 .dash-tag-violet {
-  @apply bg-violet-500/20 text-violet-400;
+  @apply bg-violet-500/12 text-violet-700;
 }
 
 .dash-tag-teal {
-  @apply bg-teal-500/15 text-teal-300;
+  @apply bg-teal-600/10 text-teal-800;
 }
 
 .dash-tag-blue {
+  @apply bg-sky-600/10 text-sky-800;
+}
+
+.dark .dash-tag-violet {
+  @apply bg-violet-500/20 text-violet-400;
+}
+
+.dark .dash-tag-teal {
+  @apply bg-teal-500/15 text-teal-300;
+}
+
+.dark .dash-tag-blue {
   @apply bg-sky-500/15 text-sky-300;
 }
 
 .dash-status-active {
-  @apply inline-flex items-center gap-1.5 rounded-full bg-sage-400/15 px-2.5 py-1 text-xs font-medium text-sage-400;
+  @apply inline-flex items-center gap-1.5 rounded-full bg-sage-500/12 px-2.5 py-1 text-xs font-medium text-sage-700;
+}
+
+.dark .dash-status-active {
+  @apply bg-sage-400/15 text-sage-400;
+}
+
+.dash-status-warn {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-brand-warn/16 px-2.5 py-1 text-xs font-medium text-walnut-800;
+}
+
+.dark .dash-status-warn {
+  @apply bg-brand-warn/14 text-brand-warn;
+}
+
+.dash-status-danger {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-brand-danger/14 px-2.5 py-1 text-xs font-medium text-brand-danger;
+}
+
+.dark .dash-status-danger {
+  @apply bg-brand-danger/15 text-brand-danger;
+}
+
+.dash-text-accent {
+  @apply text-sage-700;
+}
+
+.dark .dash-text-accent {
+  @apply text-sage-400;
+}
+
+.dash-text-warn {
+  @apply text-walnut-800;
+}
+
+.dark .dash-text-warn {
+  @apply text-brand-warn;
 }
 
 .dash-summary-bar {

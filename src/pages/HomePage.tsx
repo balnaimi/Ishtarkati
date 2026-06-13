@@ -127,7 +127,7 @@ export function HomePage() {
                     >
                       <SiteFavicon websiteUrl={s.website_url} size="sm" />
                       <span className="font-medium text-cream-950">{s.title}</span>
-                      <span className="text-sm text-cream-600">
+                      <span className="text-sm sk-text-hint">
                         {s.amount_original} {s.currency_code}
                       </span>
                     </button>

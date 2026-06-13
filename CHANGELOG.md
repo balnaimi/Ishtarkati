@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.23.0] - 2026-06-13
+
+### Fixed
+- Light/dark theme contrast: dashboard shell background, tag/status colors, modal overlays, and hint text now adapt correctly in both appearance modes.
 ## [4.22.0] - 2026-06-13
 
 ### Changed

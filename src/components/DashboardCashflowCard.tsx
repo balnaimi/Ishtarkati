@@ -40,26 +40,26 @@ export function DashboardCashflowCard({ summary, primaryCode }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="dash-card-title">{t("home.cashflowTitle")}</h3>
-          <p className="mt-1 text-xs text-cream-600">{t("home.cashflowHint")}</p>
+          <p className="mt-1 text-xs sk-text-hint">{t("home.cashflowHint")}</p>
         </div>
         <span className="dash-chip dash-chip-idle">{t("home.cashflowPeriod")}</span>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-3 text-center sm:grid-cols-3">
         <div>
-          <p className="text-xs text-cream-600">{t("home.cashflowPaid")}</p>
-          <p className="mt-1 text-lg font-bold text-sage-400">
+          <p className="text-xs sk-text-hint">{t("home.cashflowPaid")}</p>
+          <p className="mt-1 text-lg font-bold dash-text-accent">
             {summary.currentMonth.totalPrimary.toFixed(0)} {primaryCode}
           </p>
         </div>
         <div>
-          <p className="text-xs text-cream-600">{t("home.cashflowRemaining")}</p>
+          <p className="text-xs sk-text-hint">{t("home.cashflowRemaining")}</p>
           <p className="mt-1 text-lg font-bold text-cream-950">
             {summary.nextMonth.totalPrimary.toFixed(0)} {primaryCode}
           </p>
         </div>
         <div>
-          <p className="text-xs text-cream-600">{t("home.cashflowSpent")}</p>
+          <p className="text-xs sk-text-hint">{t("home.cashflowSpent")}</p>
           <p className="mt-1 text-lg font-bold text-brand-danger">
             {summary.due30Projected.totalPrimary.toFixed(0)} {primaryCode}
           </p>
@@ -76,7 +76,7 @@ export function DashboardCashflowCard({ summary, primaryCode }: Props) {
                 title={`${b.paid.toFixed(0)} ${primaryCode}`}
               />
             </div>
-            <span className="line-clamp-2 text-center text-[10px] text-cream-600">{b.label}</span>
+            <span className="line-clamp-2 text-center text-[10px] sk-text-hint">{b.label}</span>
           </div>
         ))}
       </div>
