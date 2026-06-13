@@ -87,7 +87,7 @@
         "AppImage"
       ],
       "category": "Office",
-      "artifactName": "${productName}-${version}-linux.${ext}"
+      "artifactName": "${productName}-linux.${ext}"
     },
     "win": {
       "target": [
@@ -98,12 +98,12 @@
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-win-x64.${ext}"
+      "artifactName": "${productName}-win-x64.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-${version}-win-x64-setup.${ext}"
+      "artifactName": "${productName}-win-x64-setup.${ext}"
     },
     "mac": {
       "target": [
@@ -115,13 +115,13 @@
         }
       ],
       "category": "public.app-category.finance",
-      "artifactName": "${productName}-${version}-mac-arm64.${ext}",
+      "artifactName": "${productName}-mac-arm64.${ext}",
       "identity": null,
       "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
     "dmg": {
-      "artifactName": "${productName}-${version}-mac-arm64.${ext}"
+      "artifactName": "${productName}-mac-arm64.${ext}"
     }
   }
 }

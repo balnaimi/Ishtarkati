@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- Product README with screenshots, platform download icons, and stable `releases/latest/download/` asset names.
+- Release artifacts use fixed filenames (`Ishtarkati-linux.AppImage`, etc.) so download links stay valid across versions.
 
 ## [4.21.0] - 2026-06-13
 

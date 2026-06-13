@@ -83,9 +83,9 @@ jobs:
         run: |
           mkdir -p upload
           find artifacts -type f \( \
-            -name '*-linux.AppImage' -o \
-            -name '*-win-x64-setup.exe' -o \
-            -name '*-mac-arm64.dmg' \
+            -name 'Ishtarkati-linux.AppImage' -o \
+            -name 'Ishtarkati-win-x64-setup.exe' -o \
+            -name 'Ishtarkati-mac-arm64.dmg' \
           \) -exec cp -v {} upload/ \;
           ls -la upload/
 

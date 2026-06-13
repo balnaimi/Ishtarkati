@@ -1,110 +1,149 @@
-# Ishtarkati
+<p align="center">
+  <img src="public/ishtarkati-mark.svg" width="72" alt="Ishtarkati" />
+</p>
 
-Arabic **desktop-only** app to track online subscriptions, renewals, and multi-currency payments with QAR estimates. It does **not** run on phones or tablets. Distribution: **Linux AppImage**, **Windows x64 (NSIS installer)**, **macOS Apple Silicon (DMG)** — Electron + **React** + **TypeScript** + **SQLite**, local only, no backend. No `.deb` bundle.
+<h1 align="center">Ishtarkati</h1>
 
-## Prerequisites (build machine)
+<p align="center">
+  <strong>Arabic-first desktop app to track subscriptions, renewals, and online accounts.</strong><br>
+  Local-only · Encrypted-friendly backups · No cloud account required
+</p>
 
-You need **Node.js 24** (see `.nvmrc` / `package.json` `engines`) and **npm**.
+<p align="center">
+  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest">
+    <img src="https://img.shields.io/github/v/release/balnaimi/Ishtarkati?label=latest%20release" alt="Latest release" />
+  </a>
+</p>
 
-On minimal Linux distros, **electron-builder** may need **`xdg-utils`** (for `xdg-open`) when producing the AppImage. Example: `sudo apt install xdg-utils` on Debian/Ubuntu.
+---
+
+## Download
+
+**Desktop only** — not for phones or tablets. Pick your platform (links always point to the **latest release**):
+
+<p align="center">
+  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-linux.AppImage" title="Linux AppImage">
+    <img src="docs/assets/download-linux.svg" width="52" alt="Linux" /><br>
+    <strong>Linux</strong><br>
+    <sub>AppImage</sub>
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-win-x64-setup.exe" title="Windows 64-bit installer">
+    <img src="docs/assets/download-windows.svg" width="52" alt="Windows" /><br>
+    <strong>Windows</strong><br>
+    <sub>x64 installer</sub>
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-mac-arm64.dmg" title="macOS Apple Silicon">
+    <img src="docs/assets/download-macos.svg" width="52" alt="macOS" /><br>
+    <strong>macOS</strong><br>
+    <sub>Apple Silicon (M1+)</sub>
+  </a>
+</p>
+
+| Platform | File | Notes |
+|----------|------|--------|
+| **Linux** | `Ishtarkati-linux.AppImage` | Most distros; make executable (`chmod +x`) then run. No `.deb` / Flatpak. |
+| **Windows** | `Ishtarkati-win-x64-setup.exe` | **64-bit only** (x64). |
+| **macOS** | `Ishtarkati-mac-arm64.dmg` | **Apple Silicon only** (M1/M2/M3…). Intel Macs are not supported. |
+
+If a download fails, open the full [Releases](https://github.com/balnaimi/Ishtarkati/releases/latest) page.
+
+**Linux tip:** if an older AppImage reports FUSE/`libfuse` errors, run:
 
 ```bash
+APPIMAGE_EXTRACT_AND_RUN=1 ./Ishtarkati-linux.AppImage
+```
+
+Unsigned Windows/macOS builds may show SmartScreen or Gatekeeper warnings until code signing is configured.
+
+---
+
+## Screenshots
+
+_Demo data — not real accounts._
+
+<p align="center">
+  <img src="docs/screenshots/screenshot-home.png" width="720" alt="Home dashboard with due-today card and stats" />
+</p>
+
+<p align="center">
+  <em>Home — overview, due today, cashflow, and payment methods</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/screenshot-accounts.png" width="720" alt="Subscriptions list with search and due dates" />
+</p>
+
+<p align="center">
+  <em>Accounts — recurring and one-time subscriptions with search and filters</em>
+</p>
+
+---
+
+## Why Ishtarkati?
+
+- **Built for Arabic** — RTL UI, Tajawal font, full **English** interface option
+- **Everything in one place** — paid subscriptions, free accounts, domains, trials
+- **Multi-currency** — track original amounts with optional primary-currency estimates
+- **Due dates & reminders** — see what is due today, soon, or overdue
+- **Payment methods** — cards, wallets, and linked services per subscription
+- **Insights** — calendar and spending views from your real payment history
+- **Backup & restore** — export/import JSON snapshots; optional scheduled auto-backup
+- **Privacy** — SQLite database stays on **your** machine; no vendor backend
+
+---
+
+## Quick start
+
+1. Download and install for your OS (table above).
+2. Complete the short **onboarding** wizard (language, currency, optional PIN).
+3. Add accounts from **Add** or the command palette (`Ctrl+K`).
+4. Mark payments when due; use **Settings** for backups, budget, and reminders.
+
+### Where is my data?
+
+Your database (`ishtarkati.db`) lives in the Electron **user data** folder for your OS user — not beside the AppImage or installer. Copying the app to another PC **does not** move your data unless you export a backup or copy that file manually.
+
+---
+
+## System requirements
+
+| | Minimum |
+|---|---------|
+| **Linux** | x86_64, glibc-based distro; FUSE optional on recent AppImages |
+| **Windows** | Windows 10/11 **64-bit** |
+| **macOS** | macOS 12+ on **Apple Silicon** (arm64) |
+| **RAM** | 4 GB recommended |
+| **Network** | Optional (FX rates, update check only) |
+
+---
+
+## For developers
+
+Requires **Node.js 24** (see `.nvmrc`).
+
+```bash
+git clone https://github.com/balnaimi/Ishtarkati.git
+cd Ishtarkati
 npm install
+npm run dev          # Vite + Electron
+npm test             # unit tests
+npm run build:pack   # local Linux AppImage (no version bump)
 ```
 
-## Development
+Release pipeline (maintainers):
 
 ```bash
-npm run dev
+npm run build:release   # bump version, build, push tag → GitHub Actions builds all platforms
 ```
 
-Runs Vite + Electron in development mode.
+See [`CHANGELOG.md`](CHANGELOG.md) and [`release-notes/`](release-notes/) for version history.
 
-## Production build
-
-**Linux (local):**
-
-```bash
-npm run build
-```
-
-Runs TypeScript, Vite, then **electron-builder** AppImage. Output:
-
-- `release/Ishtarkati-{version}-linux.AppImage`
-
-**Windows x64 / macOS Apple Silicon** require the matching OS (or GitHub Actions — see below):
-
-```bash
-npm run build:win    # NSIS installer → release/Ishtarkati-{version}-win-x64-setup.exe
-npm run build:mac    # DMG arm64 → release/Ishtarkati-{version}-mac-arm64.dmg
-```
-
-`npm run build:pack` is the same as `build:linux` without bumping the version.
-
-Run the AppImage:
-
-```bash
-chmod +x release/Ishtarkati-*.AppImage
-./release/Ishtarkati-*.AppImage
-```
-
-If an **old** AppImage (before 4.0.1) prints `libfuse.so.2` / FUSE errors, use the latest build or:
-
-```bash
-./scripts/run-appimage.sh
-# or: APPIMAGE_EXTRACT_AND_RUN=1 ./release/Ishtarkati-*.AppImage
-```
-
-Emergency copy of your local database (before experiments):
-
-```bash
-./scripts/backup-user-db.sh
-```
-
-Machines that only **run** the AppImage do not need Node or a compiler toolchain.
-
-### Data
-
-SQLite database **`ishtarkati.db`** is stored under the Electron **userData** directory for your OS user (not next to the AppImage). Copying the AppImage to another machine does **not** copy your subscriptions unless you also copy that database manually.
-
-## Versioning
-
-Each production **`npm run build`** auto-bumps **PATCH** (e.g. `1.0.0` → `1.0.1`) in `package.json` and `src/version.ts` before packaging, so the AppImage name matches the in-app version.
-
-- Rebuild without bumping (handy while iterating): **`npm run build:pack`**
-
-**Auto-rebuild on save** (watches `src/` and `electron/`, runs `build:pack` after a short debounce):
-
-```bash
-npm run watch:build
-```
-
-Manual bump:
-
-```bash
-npm run version:bump -- patch   # or minor | major
-```
-
-Updates `package.json` and `src/version.ts`.
-
-**Commit messages** must be **English only** (Arabic belongs in `src/locales/ar.json`). This repo sets `core.hooksPath` to `.githooks` to reject Arabic in commit messages.
+**Commit messages** must be English only. Enable hooks: `git config core.hooksPath .githooks`
 
 ---
 
-## GitHub Releases (all platforms)
-
-Push a version tag to build Linux, Windows, and Mac on GitHub Actions and publish a Release:
-
-```bash
-npm run build:release   # bumps version, builds AppImage, writes release-notes/vX.Y.Z.md, pushes tag
-```
-
-**Release notes:** before `build:release`, list user-facing changes in **English** under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md). The workflow attaches [`release-notes/vX.Y.Z.md`](release-notes/) as the GitHub Release description.
-
-Artifacts also appear under the workflow run when using **Actions → Release → Run workflow**.
-
-Unsigned Windows/macOS builds may show SmartScreen / Gatekeeper warnings until code signing is configured.
-
----
-
-**English (short):** `npm run build` on Linux → **`release/*.AppImage`**. Tag `v*` on GitHub for Win + Mac builds. No Debian package by design.
+<p align="center">
+  <sub>Ishtarkati · إشتراكاتي — stay on top of what you pay for</sub>
+</p>
