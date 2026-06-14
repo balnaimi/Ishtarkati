@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.31.3] - 2026-06-14
+
+### Changed
+- About dialog copy updated with revised project story (Arabic and English).
 ## [4.31.2] - 2026-06-14
 
 ### Changed
