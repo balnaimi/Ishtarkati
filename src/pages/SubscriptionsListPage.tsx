@@ -29,7 +29,6 @@ import {
   type DueProgressInput,
 } from "../lib/dueProgress";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
-import { sumMonthlyEquivalentPrimary } from "../lib/schedule";
 import { parseTags } from "../lib/tags";
 import {
   accountPaymentStatus,
@@ -185,8 +184,7 @@ export function SubscriptionsListPage() {
       if (tone === "overdue" || tone === "due") overdueCount += 1;
       else if (tone === "urgent" || tone === "warn") dueSoonCount += 1;
     }
-    const monthlyApprox = sumMonthlyEquivalentPrimary(visibleItems);
-    return { dueSoonCount, overdueCount, monthlyApprox, active: visibleItems.length };
+    return { dueSoonCount, overdueCount, active: visibleItems.length };
   }, [visibleItems]);
 
   useEffect(() => {
@@ -636,12 +634,6 @@ export function SubscriptionsListPage() {
                   <span className="sk-text-hint">{t("list.summaryOverdue")}: </span>
                   <span className="font-semibold text-brand-danger">{listSummary.overdueCount}</span>
                 </span>
-              </div>
-              <div className="text-end">
-                <div className="text-[11px] sk-text-hint">{t("list.summaryMonthly")}</div>
-                <div className="text-base font-bold text-cream-950">
-                  {listSummary.monthlyApprox.toFixed(2)} {primaryCode}
-                </div>
               </div>
             </div>
           ) : null}

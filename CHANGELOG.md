@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.33.0] - 2026-06-14
+
+### Removed
+- Accounts list «monthly total (approx.)» — misleading with mixed billing cycles; use Home or Insights for actual due amounts per period.
 ## [4.32.1] - 2026-06-14
 
 ### Fixed

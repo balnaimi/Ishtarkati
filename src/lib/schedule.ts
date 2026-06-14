@@ -52,50 +52,6 @@ export function subtractBillingSteps(end: Date, unit: IntervalUnit, count: numbe
   }
 }
 
-/** Approximate length of one period in months (for monthly-equivalent stats). */
-export function intervalToApproxMonths(unit: IntervalUnit | null, count: number): number {
-  const c = Math.max(1, count || 1);
-  if (!unit) return 0;
-  switch (unit) {
-    case "day":
-      return c / 30;
-    case "week":
-      return (c * 7) / 30;
-    case "month":
-      return c;
-    case "year":
-      return c * 12;
-    default:
-      return 0;
-  }
-}
-
-export type MonthlyEquivalentPick = {
-  billing_model: string;
-  interval_unit: IntervalUnit | null;
-  interval_count?: number | null;
-  amount_qar_snapshot: number | null;
-};
-
-/** Recurring subscriptions only: payment amount spread to an approximate monthly cost in primary currency. */
-export function subscriptionMonthlyEquivalentPrimary(sub: MonthlyEquivalentPick): number {
-  if (sub.billing_model === "free_account" || sub.billing_model !== "recurring") return 0;
-  const amount = sub.amount_qar_snapshot;
-  if (amount == null || !Number.isFinite(amount)) return 0;
-  const periodMonths = intervalToApproxMonths(
-    sub.interval_unit,
-    Math.max(1, sub.interval_count ?? 1),
-  );
-  if (periodMonths <= 0) return 0;
-  return amount / periodMonths;
-}
-
-export function sumMonthlyEquivalentPrimary(subs: MonthlyEquivalentPick[]): number {
-  let total = 0;
-  for (const s of subs) total += subscriptionMonthlyEquivalentPrimary(s);
-  return total;
-}
-
 export function formatDateInput(d: Date): string {
   return formatISO(d, { representation: "date" });
 }
