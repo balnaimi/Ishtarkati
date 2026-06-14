@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.33.1] - 2026-06-14
+
+### Changed
+- Cashflow and Insights labels no longer say «estimate» — totals are summed from each subscription’s scheduled due dates in the calendar period (Jan 1–Dec 31 for the year).
 ## [4.33.0] - 2026-06-14
 
 ### Removed
