@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.32.0] - 2026-06-14
+
+### Added
+- Close-window choice: run in background (system tray) or quit completely; optional remember preference; default asks each time. Configurable in Settings.
 ## [4.31.3] - 2026-06-14
 
 ### Changed

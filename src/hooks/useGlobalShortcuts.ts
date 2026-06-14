@@ -17,13 +17,15 @@ export function useGlobalShortcuts(opts: {
   paletteOpen: boolean;
   helpOpen: boolean;
   aboutOpen: boolean;
+  closeChoiceOpen: boolean;
   onCloseOverlay: () => void;
 }): void {
-  const { onPalette, onNew, onHelp, paletteOpen, helpOpen, aboutOpen, onCloseOverlay } = opts;
+  const { onPalette, onNew, onHelp, paletteOpen, helpOpen, aboutOpen, closeChoiceOpen, onCloseOverlay } =
+    opts;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (paletteOpen || helpOpen || aboutOpen) {
+      if (paletteOpen || helpOpen || aboutOpen || closeChoiceOpen) {
         if (e.key === "Escape") {
           e.preventDefault();
           onCloseOverlay();
@@ -53,5 +55,5 @@ export function useGlobalShortcuts(opts: {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onPalette, onNew, onHelp, paletteOpen, helpOpen, aboutOpen, onCloseOverlay]);
+  }, [onPalette, onNew, onHelp, paletteOpen, helpOpen, aboutOpen, closeChoiceOpen, onCloseOverlay]);
 }

@@ -13,6 +13,9 @@ let appQuitting = false;
 
 const REMINDER_SENT_PREFIX = "bg_reminder_";
 const DUE_TODAY_SENT_PREFIX = "bg_due_today_";
+export const CLOSE_ACTION_KEY = "close_action";
+
+export type StoredCloseAction = "ask" | "tray" | "quit";
 
 export function markAppQuitting(): void {
   appQuitting = true;
@@ -55,12 +58,83 @@ function loadTrayIcon(iconPath: string | undefined): Electron.NativeImage {
   return nativeImage.createEmpty();
 }
 
-export function installWindowCloseToTray(win: BrowserWindow): void {
+function closeChoiceStrings(database: Database.Database | null) {
+  const loc = readUiLocale(database);
+  return loc === "en" ? localeEn.closeChoice : localeAr.closeChoice;
+}
+
+function readStoredCloseAction(database: Database.Database | null): StoredCloseAction {
+  if (!database) return "ask";
+  const raw = dbGetSetting(database, CLOSE_ACTION_KEY);
+  if (raw === "tray" || raw === "quit") return raw;
+  return "ask";
+}
+
+async function promptNativeCloseChoice(
+  win: BrowserWindow,
+  database: Database.Database | null,
+): Promise<void> {
+  const t = closeChoiceStrings(database);
+  const { response } = await dialog.showMessageBox(win, {
+    type: "question",
+    title: t.title,
+    message: t.message,
+    buttons: [t.background, t.quit, t.cancel],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  if (response === 0) win.hide();
+  else if (response === 1) {
+    markAppQuitting();
+    app.quit();
+  }
+}
+
+export function applyCloseAction(
+  win: BrowserWindow,
+  action: StoredCloseAction | "tray" | "quit",
+): void {
+  if (action === "tray") {
+    win.hide();
+    return;
+  }
+  markAppQuitting();
+  app.quit();
+}
+
+export function installWindowCloseHandler(
+  win: BrowserWindow,
+  getDb: () => Database.Database | null,
+): void {
   win.on("close", (e) => {
     if (appQuitting) return;
     e.preventDefault();
-    win.hide();
+
+    const database = getDb();
+    const stored = readStoredCloseAction(database);
+    if (stored === "tray") {
+      win.hide();
+      return;
+    }
+    if (stored === "quit") {
+      markAppQuitting();
+      app.quit();
+      return;
+    }
+
+    if (win.webContents.isDestroyed() || win.webContents.isLoading()) {
+      void promptNativeCloseChoice(win, database);
+      return;
+    }
+
+    win.webContents.send("app:closeRequested");
   });
+}
+
+/** @deprecated Use installWindowCloseHandler */
+export function installWindowCloseToTray(win: BrowserWindow): void {
+  installWindowCloseHandler(win, () => null);
 }
 
 export function installTray(opts: {

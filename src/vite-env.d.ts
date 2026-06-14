@@ -47,6 +47,11 @@ declare global {
           }
         | { ok: false; error: string }
       >;
+      onCloseRequested: (handler: () => void) => () => void;
+      resolveClose: (payload: {
+        action: "tray" | "quit";
+        remember?: boolean;
+      }) => Promise<{ ok: boolean }>;
     };
   }
 }

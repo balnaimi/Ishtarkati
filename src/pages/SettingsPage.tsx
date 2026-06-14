@@ -23,6 +23,7 @@ import { TagsPage } from "./TagsPage";
 import { ImportBackupDialog } from "../components/ImportBackupDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { listCurrenciesSorted } from "../lib/currenciesData";
+import { CLOSE_ACTION_KEY } from "../lib/settingsKeys";
 import { tCurrency } from "../lib/i18nLabels";
 import { formatUiError } from "../lib/uiErrors";
 import type { BackupImportPreview } from "../types/backupIPC";
@@ -38,6 +39,7 @@ const OVERRIDES_KEY = "fx_overrides_json";
 const CACHE_KEY = "fx_rates_cache";
 
 type TabId = "app" | "categories" | "tags" | "export" | "danger";
+type CloseActionPref = "ask" | "tray" | "quit";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -77,6 +79,7 @@ export function SettingsPage() {
   const [importApplying, setImportApplying] = useState(false);
   const [appLanguage, setAppLanguage] = useState<AppLocale>("ar");
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
+  const [closeAction, setCloseAction] = useState<CloseActionPref>("ask");
   const [monthlyBudget, setMonthlyBudget] = useState("");
   const [autoBackupOn, setAutoBackupOn] = useState(false);
   const [autoBackupDays, setAutoBackupDays] = useState("7");
@@ -143,6 +146,8 @@ export function SettingsPage() {
       setAutoBackupDir(abDir ?? "");
       setLastAutoBackup(await getSetting(LAST_AUTO_BACKUP_AT_KEY));
       setLastManualBackup(await getSetting(LAST_MANUAL_BACKUP_AT_KEY));
+      const ca = await getSetting(CLOSE_ACTION_KEY);
+      setCloseAction(ca === "tray" || ca === "quit" ? ca : "ask");
       await syncPinStateFromDb();
     })();
   }, [syncFxAt, syncPinStateFromDb]);
@@ -191,6 +196,11 @@ export function SettingsPage() {
     if (next === appLanguage) return;
     await persistAppLocale(next);
     setAppLanguage(next);
+  }
+
+  async function changeCloseAction(next: CloseActionPref) {
+    setCloseAction(next);
+    await setSetting(CLOSE_ACTION_KEY, next);
   }
 
   async function changeThemeMode(next: ThemeMode) {
@@ -625,6 +635,29 @@ export function SettingsPage() {
                   onClick={() => void changeThemeMode(mode)}
                 >
                   {t(`settings.themeMode.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="sk-card space-y-4">
+            <h3 className="text-base font-semibold text-cream-900">{t("settings.closeActionTitle")}</h3>
+            <p className="text-sm leading-relaxed text-cream-700">{t("settings.closeActionHint")}</p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["ask", t("settings.closeActionAsk")] as const,
+                  ["tray", t("settings.closeActionTray")] as const,
+                  ["quit", t("settings.closeActionQuit")] as const,
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={closeAction === id ? "sk-choice-active" : "sk-choice-idle"}
+                  onClick={() => void changeCloseAction(id)}
+                >
+                  {label}
                 </button>
               ))}
             </div>

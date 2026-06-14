@@ -11,7 +11,7 @@ import {
   checkForAppUpdate,
   chooseAutoBackupDir,
   installTray,
-  installWindowCloseToTray,
+  installWindowCloseHandler,
   isAppQuitting,
   markAppQuitting,
   runAutoBackupNow,
@@ -796,6 +796,25 @@ function registerIpc(): void {
     const current = app.getVersion();
     return checkForAppUpdate(current);
   });
+
+  ipcMain.handle(
+    "app:resolveClose",
+    (_evt, payload: { action?: string; remember?: boolean }) => {
+      if (!win || win.isDestroyed()) return { ok: false as const };
+      const action = payload?.action;
+      if (action !== "tray" && action !== "quit") return { ok: true as const };
+      if (payload?.remember && db) {
+        dbSetSetting(db, "close_action", action);
+      }
+      if (action === "tray") {
+        win.hide();
+        return { ok: true as const };
+      }
+      markAppQuitting();
+      app.quit();
+      return { ok: true as const };
+    },
+  );
 }
 
 function createWindow(): void {
@@ -819,7 +838,7 @@ function createWindow(): void {
     win?.show();
   });
 
-  installWindowCloseToTray(win);
+  installWindowCloseHandler(win, () => db);
   installTray({ win, iconPath, getDb: () => db });
   startBackgroundServices(() => db);
 

@@ -7,10 +7,12 @@ import { useDesktopReminders } from "../hooks/useDesktopReminders";
 import { useUiDir } from "../hooks/useUiDir";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { AboutDialog } from "./AboutDialog";
+import { CloseChoiceDialog } from "./CloseChoiceDialog";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
 import { UpdateDialog } from "./UpdateDialog";
 import { useAppUpdateCheck } from "../hooks/useAppUpdateCheck";
+import { useCloseChoiceListener } from "../hooks/useCloseChoiceListener";
 import {
   IconAccounts,
   IconHome,
@@ -40,6 +42,7 @@ export function Layout() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const { state: updateState, dialogOpen, setDialogOpen, check, dismissDialog, openDialog, currentVersion } =
     useAppUpdateCheck();
+  const { open: closeChoiceOpen, setOpen: setCloseChoiceOpen } = useCloseChoiceListener();
   useDesktopReminders();
 
   useEffect(() => {
@@ -60,6 +63,7 @@ export function Layout() {
     paletteOpen,
     helpOpen,
     aboutOpen,
+    closeChoiceOpen,
     onPalette: () => setPaletteOpen(true),
     onNew: () => nav("/new"),
     onHelp: () => setHelpOpen(true),
@@ -67,6 +71,7 @@ export function Layout() {
       setPaletteOpen(false);
       setHelpOpen(false);
       setAboutOpen(false);
+      setCloseChoiceOpen(false);
     },
   });
 
@@ -216,6 +221,7 @@ export function Layout() {
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <CloseChoiceDialog open={closeChoiceOpen} onCancel={() => setCloseChoiceOpen(false)} />
       <UpdateDialog
         open={dialogOpen}
         state={updateState}

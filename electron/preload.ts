@@ -51,4 +51,13 @@ contextBridge.exposeInMainWorld("ishtarkati", {
       }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("app:checkForUpdates"),
+  onCloseRequested: (handler: () => void): (() => void) => {
+    const listener = () => handler();
+    ipcRenderer.on("app:closeRequested", listener);
+    return () => ipcRenderer.removeListener("app:closeRequested", listener);
+  },
+  resolveClose: (payload: {
+    action: "tray" | "quit";
+    remember?: boolean;
+  }): Promise<{ ok: boolean }> => ipcRenderer.invoke("app:resolveClose", payload),
 });

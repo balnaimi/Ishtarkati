@@ -650,6 +650,11 @@
     "budgetPlaceholder": "Leave empty to disable",
     "shortcutsTitle": "Keyboard shortcuts",
     "shortcutsHint": "Works outside text fields. Press ? anywhere for the full list.",
+    "closeActionTitle": "When closing the window",
+    "closeActionHint": "Choose what happens when you click the window close button (X).",
+    "closeActionAsk": "Ask every time",
+    "closeActionTray": "Run in background (tray icon)",
+    "closeActionQuit": "Quit completely",
     "autoBackupTitle": "Automatic backup",
     "autoBackupHint": "Saves a full JSON backup to a folder on a schedule, even when the app runs in the tray.",
     "autoBackupEnable": "Enable automatic backup",
@@ -664,6 +669,14 @@
     "updateAvailable": "Update available: {{latest}} (you have {{current}})",
     "updateCurrent": "You are on the latest version ({{version}}).",
     "updateError": "Could not check for updates"
+  },
+  "closeChoice": {
+    "title": "Close Ishtarkati?",
+    "message": "Keep the app running in the background (system tray icon) or quit completely?",
+    "background": "Run in background",
+    "quit": "Quit completely",
+    "cancel": "Cancel",
+    "remember": "Remember my choice"
   },
   "about": {
     "title": "About Ishtarkati",
