@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
 import { formatUiError } from "../lib/uiErrors";
@@ -9,19 +9,24 @@ import {
   type UpdateCheckState,
 } from "../lib/appUpdate";
 
+const UPDATE_POLL_MS = 5 * 60 * 1000;
+
 export function useAppUpdateCheck() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<UpdateCheckState>({ status: "idle" });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const checkedRef = useRef(false);
 
   const check = useCallback(
-    async (opts?: { autoPrompt?: boolean }) => {
-      setState((s) => ({ ...s, status: "checking", error: undefined }));
+    async (opts?: { autoPrompt?: boolean; silent?: boolean }) => {
+      if (!opts?.silent) {
+        setState((s) => ({ ...s, status: "checking", error: undefined }));
+      }
       try {
         const r = await window.ishtarkati.checkForUpdates();
         if (!r.ok) {
-          setState({ status: "error", error: r.error });
+          if (!opts?.silent) {
+            setState({ status: "error", error: r.error });
+          }
           return;
         }
         const localized = await fetchLocalizedReleaseNotes(
@@ -42,16 +47,20 @@ export function useAppUpdateCheck() {
           setDialogOpen(true);
         }
       } catch (e) {
-        setState({ status: "error", error: formatUiError(t, e) });
+        if (!opts?.silent) {
+          setState({ status: "error", error: formatUiError(t, e) });
+        }
       }
     },
     [i18n.language, t],
   );
 
   useEffect(() => {
-    if (checkedRef.current) return;
-    checkedRef.current = true;
     void check({ autoPrompt: true });
+    const timer = window.setInterval(() => {
+      void check({ autoPrompt: true, silent: true });
+    }, UPDATE_POLL_MS);
+    return () => window.clearInterval(timer);
   }, [check]);
 
   const dismissDialog = useCallback(() => {

@@ -70,6 +70,39 @@ body {
   background-color: var(--color-brand-surface);
 }
 
+/* Themed scrollbars — match cream/violet palette in light and dark */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-cream-500) 72%, var(--color-violet-500) 28%)
+    color-mix(in srgb, var(--color-cream-300) 55%, transparent);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-cream-300) 35%, transparent);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-cream-500) 65%, var(--color-violet-500) 35%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-cream-600) 45%, var(--color-violet-500) 55%);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer components {
   .sk-label {
     @apply mb-1.5 block text-sm font-medium text-cream-800;
@@ -376,6 +409,25 @@ body {
 .dark body {
   color: var(--color-cream-900);
   background-color: var(--color-brand-surface);
+}
+
+.dark * {
+  scrollbar-color: color-mix(in srgb, var(--color-cream-500) 80%, var(--color-violet-500) 20%)
+    color-mix(in srgb, var(--color-cream-200) 70%, transparent);
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-cream-200) 55%, transparent);
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-cream-500) 55%, var(--color-violet-500) 45%);
+  background-clip: padding-box;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-cream-600) 35%, var(--color-violet-500) 65%);
+  background-clip: padding-box;
 }
 
 .dark .sk-panel-nested {

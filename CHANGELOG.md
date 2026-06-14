@@ -8,6 +8,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.31.2] - 2026-06-14
+
+### Changed
+- Scrollbars styled to match light/dark theme (cream and violet tones).
+- Update check runs on startup and every 5 minutes while the app is open (background polls do not flash "checking" in the sidebar).
 ## [4.31.1] - 2026-06-14
 
 ### Added
