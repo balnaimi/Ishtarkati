@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.31.1] - 2026-06-14
+
+### Added
+- About dialog from the sidebar (and mobile footer) with the project story and GitHub link.
 ## [4.31.0] - 2026-06-13
 
 ### Added

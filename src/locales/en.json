@@ -665,6 +665,17 @@
     "updateCurrent": "You are on the latest version ({{version}}).",
     "updateError": "Could not check for updates"
   },
+  "about": {
+    "title": "About Ishtarkati",
+    "sidebarLabel": "About the app",
+    "footerLabel": "About",
+    "storyOrigin": "The idea for this app came when I was looking for a way to manage all the sites and accounts I'm subscribed to—and all the bills I pay.",
+    "storyPurpose": "I wanted one place to keep every account and site I've signed up for, what I pay, and which cards I use for those payments.",
+    "storyShare": "That's how Ishtarkati came about. If it helps me, it might help you too.",
+    "storyFree": "The app is free and open source.",
+    "viewSource": "View on GitHub",
+    "versionLine": "Version {{version}}"
+  },
   "updates": {
     "checking": "Checking for updates…",
     "sidebarCurrent": "v{{version}} — up to date",

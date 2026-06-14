@@ -6,6 +6,7 @@ import { ISHTARKATI_MARK_SRC } from "../lib/publicAssets";
 import { useDesktopReminders } from "../hooks/useDesktopReminders";
 import { useUiDir } from "../hooks/useUiDir";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
+import { AboutDialog } from "./AboutDialog";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelpDialog } from "./ShortcutsHelpDialog";
 import { UpdateDialog } from "./UpdateDialog";
@@ -35,6 +36,7 @@ export function Layout() {
   const dir = useUiDir();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const { state: updateState, dialogOpen, setDialogOpen, check, dismissDialog, openDialog, currentVersion } =
     useAppUpdateCheck();
@@ -57,12 +59,14 @@ export function Layout() {
   useGlobalShortcuts({
     paletteOpen,
     helpOpen,
+    aboutOpen,
     onPalette: () => setPaletteOpen(true),
     onNew: () => nav("/new"),
     onHelp: () => setHelpOpen(true),
     onCloseOverlay: () => {
       setPaletteOpen(false);
       setHelpOpen(false);
+      setAboutOpen(false);
     },
   });
 
@@ -133,6 +137,13 @@ export function Layout() {
           </label>
           <button
             type="button"
+            className="dash-btn-ghost w-full text-start text-xs"
+            onClick={() => setAboutOpen(true)}
+          >
+            {t("about.sidebarLabel")}
+          </button>
+          <button
+            type="button"
             className={`dash-btn-ghost w-full text-start text-xs ${
               updateState.status === "available" ? "text-violet-600 dark:text-violet-300" : ""
             }`}
@@ -183,8 +194,17 @@ export function Layout() {
         </div>
 
         <footer className="dash-footer">
-          <span>
-            {t("settings.version")} {APP_VERSION}
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              {t("settings.version")} {APP_VERSION}
+            </span>
+            <button
+              type="button"
+              className="text-violet-600 underline-offset-2 hover:underline md:hidden dark:text-violet-300"
+              onClick={() => setAboutOpen(true)}
+            >
+              {t("about.footerLabel")}
+            </button>
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 animate-pulse rounded-full bg-sage-400" aria-hidden />
@@ -195,6 +215,7 @@ export function Layout() {
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <UpdateDialog
         open={dialogOpen}
         state={updateState}
