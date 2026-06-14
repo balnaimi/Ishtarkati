@@ -29,6 +29,7 @@ import {
   type DueProgressInput,
 } from "../lib/dueProgress";
 import { subscriptionBillingPeriodLine } from "../lib/billingPeriodLabel";
+import { sumMonthlyEquivalentPrimary } from "../lib/schedule";
 import { parseTags } from "../lib/tags";
 import {
   accountPaymentStatus,
@@ -176,9 +177,7 @@ export function SubscriptionsListPage() {
   const listSummary = useMemo(() => {
     let dueSoonCount = 0;
     let overdueCount = 0;
-    let monthlyApprox = 0;
     for (const s of visibleItems) {
-      if (!isFreeAccount(s)) monthlyApprox += s.amount_qar_snapshot ?? 0;
       if (isFreeAccount(s) || !s.next_due_date) continue;
       const prog = computeDueProgress(progressInput(s));
       if (!prog) continue;
@@ -186,6 +185,7 @@ export function SubscriptionsListPage() {
       if (tone === "overdue" || tone === "due") overdueCount += 1;
       else if (tone === "urgent" || tone === "warn") dueSoonCount += 1;
     }
+    const monthlyApprox = sumMonthlyEquivalentPrimary(visibleItems);
     return { dueSoonCount, overdueCount, monthlyApprox, active: visibleItems.length };
   }, [visibleItems]);
 

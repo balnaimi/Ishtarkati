@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.32.1] - 2026-06-14
+
+### Fixed
+- Accounts list «monthly total (approx.)» now normalizes recurring billing intervals to a monthly equivalent instead of summing raw payment amounts.
 ## [4.32.0] - 2026-06-14
 
 ### Added
