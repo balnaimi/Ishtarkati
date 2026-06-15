@@ -25,7 +25,7 @@
 |----------|----------|--------|
 | **Linux** | [Ishtarkati-linux.AppImage](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-linux.AppImage) | Most distros; `chmod +x` then run. No `.deb` / Flatpak. |
 | **Windows** | [Ishtarkati-win-x64-setup.exe](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-win-x64-setup.exe) | **64-bit only** (x64). |
-| **macOS** | [Ishtarkati-mac-arm64.dmg](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-mac-arm64.dmg) | **Apple Silicon only** (M1/M2/M3…). Intel Macs are not supported. |
+| **macOS** | [Ishtarkati-mac-arm64.dmg](https://github.com/balnaimi/Ishtarkati/releases/latest/download/Ishtarkati-mac-arm64.dmg) | **Apple Silicon only** (M1/M2/M3…). Intel Macs are not supported. See [macOS first launch](#macos-first-launch) below. |
 
 If a download fails, open the full [Releases](https://github.com/balnaimi/Ishtarkati/releases/latest) page.
 
@@ -35,7 +35,22 @@ If a download fails, open the full [Releases](https://github.com/balnaimi/Ishtar
 APPIMAGE_EXTRACT_AND_RUN=1 ./Ishtarkati-linux.AppImage
 ```
 
-Unsigned Windows/macOS builds may show SmartScreen or Gatekeeper warnings until code signing is configured.
+Unsigned Windows/macOS builds may show SmartScreen or Gatekeeper warnings until Apple/Microsoft code signing is configured.
+
+### macOS first launch
+
+Ishtarkati is **not notarized** with Apple yet. After you download the DMG, macOS may say the app **“is damaged and can’t be opened”** or **“move it to the Trash”** — the file is fine; Gatekeeper is blocking an unsigned download.
+
+1. Open the DMG and drag **Ishtarkati** to **Applications**.
+2. Open **Terminal** and run (removes the download quarantine flag):
+
+```bash
+xattr -cr /Applications/Ishtarkati.app
+```
+
+3. Open **Ishtarkati** from Applications. The first time, you can also **right‑click → Open → Open** if macOS still asks.
+
+If the app still won’t open, confirm the Mac is **Apple Silicon** (arm64), not Intel-only.
 
 ---
 

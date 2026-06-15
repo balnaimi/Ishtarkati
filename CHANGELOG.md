@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.33.2] - 2026-06-15
+
+### Fixed
+- macOS DMG: ad-hoc code signing on CI to reduce false “app is damaged” Gatekeeper errors on first launch.
+
+### Changed
+- README: macOS first-launch steps (`xattr -cr`) when Gatekeeper blocks unsigned downloads.
 ## [4.33.1] - 2026-06-14
 
 ### Changed
