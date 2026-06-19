@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.33.3] - 2026-06-19
+
+### Added
+- Home dashboard: «Recently added accounts» panel below «Needs your attention», showing the latest active accounts.
 ## [4.33.2] - 2026-06-15
 
 ### Fixed

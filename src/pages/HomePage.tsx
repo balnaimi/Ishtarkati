@@ -9,6 +9,7 @@ import {
   loadSubscriptions,
   loadSubscriptionsDueSoon,
   loadSubscriptionsNeedingAttention,
+  loadSubscriptionsRecent,
   MONTHLY_BUDGET_LIMIT_KEY,
   statsSummary,
   type HomeCardStat,
@@ -17,6 +18,7 @@ import {
 import { StatsGridSkeleton } from "../components/LoadingSkeleton";
 import { BudgetBanner } from "../components/BudgetBanner";
 import { HomeAttentionPanel } from "../components/HomeAttentionPanel";
+import { HomeRecentAccountsPanel } from "../components/HomeRecentAccountsPanel";
 import { HomeCashflowCompact } from "../components/HomeCashflowCompact";
 import { HomePaymentsSnapshot } from "../components/HomePaymentsSnapshot";
 import { computeBudgetStatus } from "../lib/budget";
@@ -62,6 +64,7 @@ export function HomePage() {
   > | null>(null);
   const [dueToday, setDueToday] = useState<SubscriptionListRow[]>([]);
   const [dueSoonPool, setDueSoonPool] = useState<SubscriptionListRow[]>([]);
+  const [recentAccounts, setRecentAccounts] = useState<SubscriptionListRow[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [budgetLimitRaw, setBudgetLimitRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,13 +72,14 @@ export function HomePage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, pay, today, soon, budgetRaw, active] = await Promise.all([
+      const [sum, pay, today, soon, budgetRaw, active, recent] = await Promise.all([
         statsSummary(),
         loadHomePaymentMethodsStats(),
         loadSubscriptionsNeedingAttention(),
         loadSubscriptionsDueSoon(24),
         getSetting(MONTHLY_BUDGET_LIMIT_KEY),
         loadSubscriptions({}),
+        loadSubscriptionsRecent(6),
       ]);
       setSummary(sum);
       setPaymentStats(pay);
@@ -83,6 +87,7 @@ export function HomePage() {
       setDueSoonPool(soon);
       setBudgetLimitRaw(budgetRaw);
       setActiveCount(active.length);
+      setRecentAccounts(recent);
     } finally {
       setLoading(false);
     }
@@ -183,6 +188,12 @@ export function HomePage() {
               expiringCards={expiringCards}
               onMarkPaid={(e, id) => void onConfirmPaid(e, id)}
             />
+          )}
+
+          {loading ? (
+            <StatsGridSkeleton />
+          ) : (
+            <HomeRecentAccountsPanel accounts={recentAccounts} />
           )}
 
           {budgetStatus?.enabled ? (
