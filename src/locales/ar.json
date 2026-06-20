@@ -167,7 +167,11 @@
   "layout": {
     "desktopOnly": "تطبيق سطح مكتب",
     "darkMode": "الوضع الداكن",
-    "systemOk": "جميع الأنظمة تعمل بشكل جيد"
+    "systemOk": "جميع الأنظمة تعمل بشكل جيد",
+    "autoBackupStatusReady": "النسخ التلقائي جاهز",
+    "autoBackupStatusRunning": "جارٍ النسخ الاحتياطي…",
+    "autoBackupStatusOk": "تم حفظ النسخة الاحتياطية",
+    "autoBackupStatusError": "فشل النسخ الاحتياطي"
   },
   "list": {
     "title": "كل الحسابات",
@@ -730,7 +734,8 @@
     "background": "العمل في الخلفية",
     "quit": "إغلاق البرنامج بالكامل",
     "cancel": "إلغاء",
-    "remember": "تذكّر اختياري"
+    "remember": "تذكّر اختياري",
+    "backupBusy": "انتظر حتى ينتهي النسخ الاحتياطي قبل إغلاق البرنامج بالكامل."
   },
   "about": {
     "title": "عن البرنامج",

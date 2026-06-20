@@ -21,9 +21,15 @@ import {
 } from "./backgroundServices";
 import {
   isMutatingSql,
+  refreshAutoBackupStatusFromDb,
   scheduleBackupAfterDataChange,
   sqlBatchIsMutating,
 } from "./autoBackup";
+import {
+  getAutoBackupStatus,
+  isAutoBackupBusy,
+  setAutoBackupStatusNotifier,
+} from "./autoBackupStatus";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -691,6 +697,7 @@ function openDatabase(): void {
     db.pragma("busy_timeout = 5000");
     db.pragma("foreign_keys = ON");
     runMigrations(db);
+    refreshAutoBackupStatusFromDb(db);
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     console.error(`[ishtarkati] failed to open database (${fp}): ${detail}`);
@@ -708,6 +715,18 @@ function reportFatalStartup(title: string, detail: string): void {
 }
 
 function registerIpc(): void {
+  setAutoBackupStatusNotifier((status) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("backup:autoStatusChanged", status);
+    }
+  });
+
+  ipcMain.handle("backup:getAutoStatus", () => getAutoBackupStatus());
+  ipcMain.handle("backup:refreshAutoStatus", () => {
+    if (db) refreshAutoBackupStatusFromDb(db);
+    return getAutoBackupStatus();
+  });
+
   ipcMain.handle(
     "db:select",
     (_evt, sql: string, params: unknown[]) => {
@@ -855,6 +874,9 @@ function registerIpc(): void {
       if (!win || win.isDestroyed()) return { ok: false as const };
       const action = payload?.action;
       if (action !== "tray" && action !== "quit") return { ok: true as const };
+      if (action === "quit" && isAutoBackupBusy()) {
+        return { ok: false as const, error: "backup-in-progress" };
+      }
       if (payload?.remember && db) {
         dbSetSetting(db, "close_action", action);
       }

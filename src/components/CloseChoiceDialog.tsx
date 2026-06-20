@@ -7,18 +7,21 @@ export type CloseAction = "tray" | "quit";
 interface CloseChoiceDialogProps {
   open: boolean;
   onCancel: () => void;
+  backupBusy?: boolean;
 }
 
-export function CloseChoiceDialog({ open, onCancel }: CloseChoiceDialogProps) {
+export function CloseChoiceDialog({ open, onCancel, backupBusy = false }: CloseChoiceDialogProps) {
   const { t } = useTranslation();
   const dir = useUiDir();
   const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [backupBlockMsg, setBackupBlockMsg] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setRemember(false);
       setBusy(false);
+      setBackupBlockMsg(false);
     }
   }, [open]);
 
@@ -32,9 +35,18 @@ export function CloseChoiceDialog({ open, onCancel }: CloseChoiceDialogProps) {
   }, [open, onCancel]);
 
   async function choose(action: CloseAction) {
+    if (action === "quit" && backupBusy) {
+      setBackupBlockMsg(true);
+      return;
+    }
     setBusy(true);
+    setBackupBlockMsg(false);
     try {
-      await window.ishtarkati.resolveClose({ action, remember });
+      const r = await window.ishtarkati.resolveClose({ action, remember });
+      if (!r.ok && r.error === "backup-in-progress") {
+        setBackupBlockMsg(true);
+        return;
+      }
       onCancel();
     } finally {
       setBusy(false);
@@ -58,6 +70,11 @@ export function CloseChoiceDialog({ open, onCancel }: CloseChoiceDialogProps) {
             {t("closeChoice.title")}
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-cream-800">{t("closeChoice.message")}</p>
+          {backupBusy || backupBlockMsg ? (
+            <p className="mt-2 text-sm font-medium text-orange-800 dark:text-orange-200">
+              {t("closeChoice.backupBusy")}
+            </p>
+          ) : null}
         </div>
 
         <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
@@ -82,7 +99,7 @@ export function CloseChoiceDialog({ open, onCancel }: CloseChoiceDialogProps) {
           <button
             type="button"
             className="sk-btn-secondary w-full"
-            disabled={busy}
+            disabled={busy || backupBusy}
             onClick={() => void choose("quit")}
           >
             {t("closeChoice.quit")}

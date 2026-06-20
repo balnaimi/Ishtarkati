@@ -2,6 +2,13 @@ import type Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { buildBackupPayloadFromDatabase } from "./backup";
+import {
+  isAutoBackupBusy,
+  publishAutoBackupStatus,
+  refreshAutoBackupStatusFromDb,
+} from "./autoBackupStatus";
+
+export { isAutoBackupBusy, refreshAutoBackupStatusFromDb };
 
 export const LATEST_BACKUP_FILENAME = "ishtarkati-latest.json";
 export const AUTO_BACKUP_PREFIX = "ishtarkati-auto-";
@@ -147,20 +154,38 @@ export function runChangeTriggeredBackup(
   database: Database.Database,
   opts?: AutoBackupOptions,
 ): AutoBackupResult {
-  if (!autoBackupConfigured(database)) return { ran: false };
+  if (!autoBackupConfigured(database)) {
+    refreshAutoBackupStatusFromDb(database);
+    return { ran: false };
+  }
   const skip = autoBackupSkipReason(database, opts?.now);
-  if (skip === "disabled") return { ran: false };
-  if (skip === "no-dir") return { ran: false, error: "no-dir" };
+  if (skip === "disabled") {
+    refreshAutoBackupStatusFromDb(database);
+    return { ran: false };
+  }
+  if (skip === "no-dir") {
+    refreshAutoBackupStatusFromDb(database);
+    return { ran: false, error: "no-dir" };
+  }
 
+  publishAutoBackupStatus("running");
   const result = writeAutoBackupSnapshot(database, opts);
-  if (!result.ok) return { ran: false, error: result.error };
+  if (!result.ok) {
+    publishAutoBackupStatus("error", result.error);
+    return { ran: false, error: result.error };
+  }
+  publishAutoBackupStatus("ok");
   return { ran: true, path: result.path };
 }
 
 /** Debounced backup after UI/database mutations (coalesces rapid edits). */
 export function scheduleBackupAfterDataChange(database: Database.Database): void {
   if (backupSideEffects > 0) return;
-  if (!autoBackupConfigured(database)) return;
+  if (!autoBackupConfigured(database)) {
+    refreshAutoBackupStatusFromDb(database);
+    return;
+  }
+  publishAutoBackupStatus("pending");
   pendingDb = database;
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
@@ -203,6 +228,9 @@ export function runManualAutoBackup(
   const dir = dbGetSetting(database, "auto_backup_dir")?.trim();
   if (!dir) return { ok: false, error: "no-dir" };
   const now = opts?.now ?? Date.now();
+  if (autoBackupConfigured(database)) {
+    publishAutoBackupStatus("running");
+  }
   backupSideEffects += 1;
   try {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -213,9 +241,15 @@ export function runManualAutoBackup(
     fs.writeFileSync(filePath, json, "utf8");
     writeJsonAtomic(path.join(dir, LATEST_BACKUP_FILENAME), json);
     dbSetSetting(database, "last_auto_backup_at", new Date(now).toISOString());
+    if (autoBackupConfigured(database)) {
+      publishAutoBackupStatus("ok");
+    }
     return { ok: true, path: filePath };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    if (autoBackupConfigured(database)) {
+      publishAutoBackupStatus("error", msg);
+    }
     return { ok: false, error: msg };
   } finally {
     backupSideEffects -= 1;

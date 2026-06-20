@@ -167,7 +167,11 @@
   "layout": {
     "desktopOnly": "Desktop app",
     "darkMode": "Dark mode",
-    "systemOk": "All systems operational"
+    "systemOk": "All systems operational",
+    "autoBackupStatusReady": "Auto-backup ready",
+    "autoBackupStatusRunning": "Backing up…",
+    "autoBackupStatusOk": "Backup saved",
+    "autoBackupStatusError": "Backup failed"
   },
   "list": {
     "title": "All accounts",
@@ -730,7 +734,8 @@
     "background": "Run in background",
     "quit": "Quit completely",
     "cancel": "Cancel",
-    "remember": "Remember my choice"
+    "remember": "Remember my choice",
+    "backupBusy": "Wait until the backup finishes before quitting completely."
   },
   "about": {
     "title": "About Hesabati",

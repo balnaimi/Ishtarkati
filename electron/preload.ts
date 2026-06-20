@@ -51,6 +51,34 @@ contextBridge.exposeInMainWorld("ishtarkati", {
       }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("app:checkForUpdates"),
+  getAutoBackupStatus: (): Promise<{
+    phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+    updatedAt: string;
+    error?: string;
+  }> => ipcRenderer.invoke("backup:getAutoStatus"),
+  refreshAutoBackupStatus: (): Promise<{
+    phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+    updatedAt: string;
+    error?: string;
+  }> => ipcRenderer.invoke("backup:refreshAutoStatus"),
+  onAutoBackupStatusChanged: (
+    handler: (status: {
+      phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+      updatedAt: string;
+      error?: string;
+    }) => void,
+  ): (() => void) => {
+    const listener = (
+      _evt: Electron.IpcRendererEvent,
+      status: {
+        phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+        updatedAt: string;
+        error?: string;
+      },
+    ) => handler(status);
+    ipcRenderer.on("backup:autoStatusChanged", listener);
+    return () => ipcRenderer.removeListener("backup:autoStatusChanged", listener);
+  },
   onCloseRequested: (handler: () => void): (() => void) => {
     const listener = () => handler();
     ipcRenderer.on("app:closeRequested", listener);
@@ -59,5 +87,5 @@ contextBridge.exposeInMainWorld("ishtarkati", {
   resolveClose: (payload: {
     action: "tray" | "quit";
     remember?: boolean;
-  }): Promise<{ ok: boolean }> => ipcRenderer.invoke("app:resolveClose", payload),
+  }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke("app:resolveClose", payload),
 });

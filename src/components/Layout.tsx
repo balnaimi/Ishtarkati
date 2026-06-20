@@ -22,6 +22,8 @@ import {
 } from "./NavIcons";
 import { getSetting } from "../db/repo";
 import { THEME_MODE_KEY } from "../lib/settingsKeys";
+import { FooterAutoBackupStatus } from "./FooterAutoBackupStatus";
+import { useAutoBackupStatus, isAutoBackupStatusBusy } from "../hooks/useAutoBackupStatus";
 import { parseThemeMode, persistThemeMode, type ThemeMode } from "../lib/theme";
 
 function navActive(pathname: string, to: string): boolean {
@@ -43,6 +45,7 @@ export function Layout() {
   const { state: updateState, dialogOpen, setDialogOpen, check, dismissDialog, openDialog, currentVersion } =
     useAppUpdateCheck();
   const { open: closeChoiceOpen, setOpen: setCloseChoiceOpen } = useCloseChoiceListener();
+  const autoBackupStatus = useAutoBackupStatus();
   useDesktopReminders();
 
   useEffect(() => {
@@ -215,17 +218,24 @@ export function Layout() {
               {t("about.footerLabel")}
             </button>
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2 animate-pulse rounded-full bg-sage-400" aria-hidden />
-            {t("layout.systemOk")}
-          </span>
+          <div className="flex flex-col items-end gap-1 text-end">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2 animate-pulse rounded-full bg-sage-400" aria-hidden />
+              {t("layout.systemOk")}
+            </span>
+            <FooterAutoBackupStatus status={autoBackupStatus} />
+          </div>
         </footer>
       </div>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ShortcutsHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
-      <CloseChoiceDialog open={closeChoiceOpen} onCancel={() => setCloseChoiceOpen(false)} />
+      <CloseChoiceDialog
+        open={closeChoiceOpen}
+        onCancel={() => setCloseChoiceOpen(false)}
+        backupBusy={isAutoBackupStatusBusy(autoBackupStatus.phase)}
+      />
       <UpdateDialog
         open={dialogOpen}
         state={updateState}

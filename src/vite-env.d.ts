@@ -47,11 +47,28 @@ declare global {
           }
         | { ok: false; error: string }
       >;
+      refreshAutoBackupStatus: () => Promise<{
+        phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+        updatedAt: string;
+        error?: string;
+      }>;
+      getAutoBackupStatus: () => Promise<{
+        phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+        updatedAt: string;
+        error?: string;
+      }>;
+      onAutoBackupStatusChanged: (
+        handler: (status: {
+          phase: "hidden" | "ready" | "pending" | "running" | "ok" | "error";
+          updatedAt: string;
+          error?: string;
+        }) => void,
+      ) => () => void;
       onCloseRequested: (handler: () => void) => () => void;
       resolveClose: (payload: {
         action: "tray" | "quit";
         remember?: boolean;
-      }) => Promise<{ ok: boolean }>;
+      }) => Promise<{ ok: boolean; error?: string }>;
     };
   }
 }

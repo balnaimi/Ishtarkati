@@ -3,6 +3,7 @@ import type Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { runAutoBackupIfDue, runManualAutoBackup } from "./autoBackup";
+import { isAutoBackupBusy } from "./autoBackupStatus";
 import { readUiLocale } from "./uiLocale";
 import localeAr from "../src/locales/ar.json";
 import localeEn from "../src/locales/en.json";
@@ -86,6 +87,7 @@ async function promptNativeCloseChoice(
   });
   if (response === 0) win.hide();
   else if (response === 1) {
+    if (isAutoBackupBusy()) return;
     markAppQuitting();
     app.quit();
   }
@@ -118,6 +120,10 @@ export function installWindowCloseHandler(
       return;
     }
     if (stored === "quit") {
+      if (isAutoBackupBusy()) {
+        win.webContents.send("app:closeRequested");
+        return;
+      }
       markAppQuitting();
       app.quit();
       return;
@@ -161,6 +167,11 @@ export function installTray(opts: {
       {
         label: t.quit,
         click: () => {
+          if (isAutoBackupBusy()) {
+            showMainWindow(win);
+            win.webContents.send("app:closeRequested");
+            return;
+          }
           markAppQuitting();
           app.quit();
         },

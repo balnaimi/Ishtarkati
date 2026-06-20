@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.41.0] - 2026-06-20
+
+### Added
+- Footer auto-backup status under «All systems operational»: orange while backing up, green when saved/ready, red on failure; blocks full quit until backup finishes.
 ## [4.40.0] - 2026-06-20
 
 ### Changed
