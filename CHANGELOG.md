@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.38.1] - 2026-06-20
+
+### Changed
+- Arabic account platform labels: «تطبيق» instead of «برنامج» (website / app / both) across filters, forms, badges, and related copy.
 ## [4.38.0] - 2026-06-20
 
 ### Changed
