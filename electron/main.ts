@@ -19,6 +19,11 @@ import {
   startBackgroundServices,
   destroyTray,
 } from "./backgroundServices";
+import {
+  isMutatingSql,
+  scheduleBackupAfterDataChange,
+  sqlBatchIsMutating,
+} from "./autoBackup";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -717,6 +722,9 @@ function registerIpc(): void {
       if (!db) throw new Error("Database not ready");
       const stmt = db.prepare(normalizeSql(sql));
       const info = stmt.run(...params);
+      if (info.changes > 0 && isMutatingSql(sql)) {
+        scheduleBackupAfterDataChange(db);
+      }
       return {
         changes: info.changes,
         lastInsertRowid: Number(info.lastInsertRowid),
@@ -730,6 +738,7 @@ function registerIpc(): void {
       if (!Array.isArray(raw) || raw.length === 0) {
         throw new Error("db_transaction_invalid");
       }
+      const sqls: string[] = [];
       const txn = db.transaction(() => {
         for (const item of raw) {
           const rec =
@@ -743,12 +752,16 @@ function registerIpc(): void {
           ) {
             throw new Error("db_transaction_op_invalid");
           }
+          sqls.push(rec.sql);
           const params = rec.params ?? [];
           const stmt = db!.prepare(normalizeSql(rec.sql));
           stmt.run(...params);
         }
       });
       txn();
+      if (sqlBatchIsMutating(sqls)) {
+        scheduleBackupAfterDataChange(db);
+      }
     },
   );
   ipcMain.handle("shell:openExternal", (_evt, url: string) => {
@@ -818,7 +831,9 @@ function registerIpc(): void {
     return verifyPinScrypt(pin, salt, hash);
   });
 
-  registerBackupIpc(() => db, () => win);
+  registerBackupIpc(() => db, () => win, () => {
+    if (db) scheduleBackupAfterDataChange(db);
+  });
 
   ipcMain.handle("app:showWindow", () => {
     showMainWindow(win);

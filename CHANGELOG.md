@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.40.0] - 2026-06-20
+
+### Changed
+- Auto-backup: save after each data change (debounced), always update `ishtarkati-latest.json`, and keep dated copies; «days» setting now controls retention instead of backup interval.
 ## [4.39.0] - 2026-06-20
 
 ### Changed

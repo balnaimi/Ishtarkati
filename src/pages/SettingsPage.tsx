@@ -82,7 +82,7 @@ export function SettingsPage() {
   const [closeAction, setCloseAction] = useState<CloseActionPref>("ask");
   const [monthlyBudget, setMonthlyBudget] = useState("");
   const [autoBackupOn, setAutoBackupOn] = useState(false);
-  const [autoBackupDays, setAutoBackupDays] = useState("7");
+  const [autoBackupDays, setAutoBackupDays] = useState("30");
   const [autoBackupDir, setAutoBackupDir] = useState("");
   const [lastAutoBackup, setLastAutoBackup] = useState<string | null>(null);
   const [lastManualBackup, setLastManualBackup] = useState<string | null>(null);
@@ -219,7 +219,7 @@ export function SettingsPage() {
   }
 
   async function saveAutoBackupDays() {
-    const d = Math.max(1, Math.min(90, parseInt(autoBackupDays, 10) || 7));
+    const d = Math.max(1, Math.min(365, parseInt(autoBackupDays, 10) || 30));
     setAutoBackupDays(String(d));
     await setSetting(AUTO_BACKUP_DAYS_KEY, String(d));
   }
@@ -1096,12 +1096,13 @@ export function SettingsPage() {
                 <input
                   type="number"
                   min={1}
-                  max={90}
+                  max={365}
                   className="sk-input mt-1 max-w-[8rem]"
                   value={autoBackupDays}
                   onChange={(e) => setAutoBackupDays(e.target.value)}
                   onBlur={() => void saveAutoBackupDays()}
                 />
+                <p className="mt-1 text-xs sk-text-hint">{t("settings.autoBackupDaysHint")}</p>
               </div>
               <button type="button" className="sk-btn-secondary" onClick={() => void pickAutoBackupDir()}>
                 {t("settings.autoBackupChooseDir")}

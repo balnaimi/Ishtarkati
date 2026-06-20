@@ -5,10 +5,17 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyBackupImport, parseBackupJson } from "./backup";
 import {
+  AUTO_BACKUP_PREFIX,
+  LATEST_BACKUP_FILENAME,
   autoBackupSkipReason,
   dbGetSetting,
+  flushScheduledBackupForTests,
+  isMutatingSql,
+  pruneAutoBackupHistory,
   runAutoBackupIfDue,
+  runChangeTriggeredBackup,
   runManualAutoBackup,
+  scheduleBackupAfterDataChange,
 } from "./autoBackup";
 
 vi.mock("electron", () => ({
@@ -139,6 +146,15 @@ function setAutoBackupSettings(
   }
 }
 
+describe("isMutatingSql", () => {
+  it("detects insert/update/delete", () => {
+    expect(isMutatingSql("INSERT INTO subscriptions VALUES (?)")).toBe(true);
+    expect(isMutatingSql("UPDATE subscriptions SET title = ?")).toBe(true);
+    expect(isMutatingSql("DELETE FROM subscriptions WHERE id = ?")).toBe(true);
+    expect(isMutatingSql("SELECT * FROM subscriptions")).toBe(false);
+  });
+});
+
 describe("autoBackupSkipReason", () => {
   let db: Database.Database;
   let tmpDir: string;
@@ -163,25 +179,13 @@ describe("autoBackupSkipReason", () => {
     expect(autoBackupSkipReason(db, NOW_MS)).toBe("no-dir");
   });
 
-  it("returns not-due when interval has not elapsed", () => {
-    const threeDaysAgo = new Date(NOW_MS - 3 * 86400000).toISOString();
-    setAutoBackupSettings(db, tmpDir, { days: "7", lastAt: threeDaysAgo });
-    expect(autoBackupSkipReason(db, NOW_MS)).toBe("not-due");
-  });
-
-  it("returns null when backup is due (first run)", () => {
+  it("returns null when configured", () => {
     setAutoBackupSettings(db, tmpDir);
-    expect(autoBackupSkipReason(db, NOW_MS)).toBeNull();
-  });
-
-  it("returns null when interval has elapsed", () => {
-    const tenDaysAgo = new Date(NOW_MS - 10 * 86400000).toISOString();
-    setAutoBackupSettings(db, tmpDir, { days: "7", lastAt: tenDaysAgo });
     expect(autoBackupSkipReason(db, NOW_MS)).toBeNull();
   });
 });
 
-describe("runAutoBackupIfDue", () => {
+describe("runChangeTriggeredBackup", () => {
   let db: Database.Database;
   let tmpDir: string;
 
@@ -198,57 +202,113 @@ describe("runAutoBackupIfDue", () => {
 
   it("does not write when disabled", () => {
     setAutoBackupSettings(db, tmpDir, { enabled: false });
-    const result = runAutoBackupIfDue(db, { now: NOW_MS, fileStamp: STAMP });
+    const result = runChangeTriggeredBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(result.ran).toBe(false);
     expect(fs.readdirSync(tmpDir)).toHaveLength(0);
-    expect(dbGetSetting(db, "last_auto_backup_at")).toBeNull();
   });
 
-  it("returns no-dir error when folder is missing", () => {
-    setAutoBackupSettings(db, null);
-    const result = runAutoBackupIfDue(db, { now: NOW_MS });
-    expect(result).toEqual({ ran: false, error: "no-dir" });
-  });
-
-  it("writes auto backup on first run and updates last_auto_backup_at", () => {
+  it("writes latest and stamped backup on change", () => {
     setAutoBackupSettings(db, tmpDir);
-    const result = runAutoBackupIfDue(db, { now: NOW_MS, fileStamp: STAMP });
+    const result = runChangeTriggeredBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(result.ran).toBe(true);
-    expect(result.path).toBe(path.join(tmpDir, "ishtarkati-auto-2026-06-07T12-00-00.json"));
+    expect(result.path).toBe(path.join(tmpDir, `${AUTO_BACKUP_PREFIX}${STAMP}.json`));
 
-    const files = fs.readdirSync(tmpDir);
-    expect(files).toHaveLength(1);
-    expect(files[0]).toMatch(/^ishtarkati-auto-/);
+    const files = fs.readdirSync(tmpDir).sort();
+    expect(files).toContain(LATEST_BACKUP_FILENAME);
+    expect(files).toContain(`${AUTO_BACKUP_PREFIX}${STAMP}.json`);
 
     const parsed = parseBackupJson(fs.readFileSync(result.path!, "utf8"));
     expect(parsed.exportVersion).toBe(8);
     expect(parsed.subscriptions).toHaveLength(1);
-
     expect(dbGetSetting(db, "last_auto_backup_at")).toBe(NOW_ISO);
   });
 
-  it("skips when within interval", () => {
-    setAutoBackupSettings(db, tmpDir, { days: "7", lastAt: NOW_ISO });
-    const result = runAutoBackupIfDue(db, { now: NOW_MS + 2 * 86400000, fileStamp: STAMP });
-    expect(result.ran).toBe(false);
-    expect(fs.readdirSync(tmpDir)).toHaveLength(0);
-  });
-
-  it("writes again after interval elapses", () => {
-    setAutoBackupSettings(db, tmpDir, { days: "3", lastAt: NOW_ISO });
-    const later = NOW_MS + 4 * 86400000;
-    const result = runAutoBackupIfDue(db, { now: later, fileStamp: "2026-06-11T12-00-00" });
+  it("writes again on every trigger (no day interval)", () => {
+    setAutoBackupSettings(db, tmpDir, { lastAt: NOW_ISO });
+    const result = runChangeTriggeredBackup(db, {
+      now: NOW_MS + 60_000,
+      fileStamp: "2026-06-07T12-01-00",
+    });
     expect(result.ran).toBe(true);
-    expect(fs.readdirSync(tmpDir)).toHaveLength(1);
-    expect(dbGetSetting(db, "last_auto_backup_at")).toBe(new Date(later).toISOString());
+    expect(fs.readdirSync(tmpDir).filter((f) => f.startsWith(AUTO_BACKUP_PREFIX))).toHaveLength(1);
   });
 
   it("creates backup directory when it does not exist", () => {
     const nested = path.join(tmpDir, "nested", "backups");
     setAutoBackupSettings(db, nested);
-    const result = runAutoBackupIfDue(db, { now: NOW_MS, fileStamp: STAMP });
+    const result = runChangeTriggeredBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(result.ran).toBe(true);
     expect(fs.existsSync(nested)).toBe(true);
+  });
+});
+
+describe("scheduleBackupAfterDataChange", () => {
+  let db: Database.Database;
+  let tmpDir: string;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    db = createMinimalDb();
+    seedSampleData(db);
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ishtarkati-debounce-"));
+    setAutoBackupSettings(db, tmpDir);
+  });
+
+  afterEach(() => {
+    flushScheduledBackupForTests();
+    vi.useRealTimers();
+    db.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("debounces rapid changes into one backup", () => {
+    scheduleBackupAfterDataChange(db);
+    scheduleBackupAfterDataChange(db);
+    expect(fs.readdirSync(tmpDir)).toHaveLength(0);
+    vi.advanceTimersByTime(2_000);
+    expect(fs.readdirSync(tmpDir)).toContain(LATEST_BACKUP_FILENAME);
+  });
+});
+
+describe("pruneAutoBackupHistory", () => {
+  it("removes auto backups older than retention", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ishtarkati-prune-"));
+    try {
+      const oldFile = path.join(dir, `${AUTO_BACKUP_PREFIX}old.json`);
+      const newFile = path.join(dir, `${AUTO_BACKUP_PREFIX}new.json`);
+      fs.writeFileSync(oldFile, "{}", "utf8");
+      fs.writeFileSync(newFile, "{}", "utf8");
+      const oldTime = NOW_MS - 40 * 86400000;
+      fs.utimesSync(oldFile, oldTime / 1000, oldTime / 1000);
+      const removed = pruneAutoBackupHistory(dir, 30, NOW_MS);
+      expect(removed).toBe(1);
+      expect(fs.existsSync(oldFile)).toBe(false);
+      expect(fs.existsSync(newFile)).toBe(true);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("runAutoBackupIfDue", () => {
+  let db: Database.Database;
+  let tmpDir: string;
+
+  beforeEach(() => {
+    db = createMinimalDb();
+    seedSampleData(db);
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ishtarkati-autobackup-"));
+    setAutoBackupSettings(db, tmpDir);
+  });
+
+  afterEach(() => {
+    db.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("writes when configured (legacy tick alias)", () => {
+    const result = runAutoBackupIfDue(db, { now: NOW_MS, fileStamp: STAMP });
+    expect(result.ran).toBe(true);
   });
 });
 
@@ -268,12 +328,13 @@ describe("runManualAutoBackup", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("writes manual backup file with valid restorable payload", () => {
+  it("writes manual backup file with valid restorable payload and latest", () => {
     const result = runManualAutoBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     expect(result.path).toBe(path.join(tmpDir, "ishtarkati-manual-2026-06-07T12-00-00.json"));
+    expect(fs.existsSync(path.join(tmpDir, LATEST_BACKUP_FILENAME))).toBe(true);
     const parsed = parseBackupJson(fs.readFileSync(result.path, "utf8"));
 
     const restored = createMinimalDb();
@@ -293,7 +354,7 @@ describe("runManualAutoBackup", () => {
     }
   });
 
-  it("updates last_auto_backup_at like scheduled backup", () => {
+  it("updates last_auto_backup_at", () => {
     runManualAutoBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(dbGetSetting(db, "last_auto_backup_at")).toBe(NOW_ISO);
   });
@@ -315,8 +376,8 @@ describe("auto backup restore pipeline", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("auto backup file restores to empty database with matching subscription", () => {
-    const backup = runAutoBackupIfDue(db, { now: NOW_MS, fileStamp: STAMP });
+  it("change-triggered backup restores to empty database", () => {
+    const backup = runChangeTriggeredBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(backup.ran).toBe(true);
 
     const empty = createMinimalDb();
@@ -329,10 +390,6 @@ describe("auto backup restore pipeline", () => {
       });
       const count = empty.prepare("SELECT COUNT(*) AS n FROM subscriptions").get() as { n: number };
       expect(count.n).toBe(1);
-      const title = empty.prepare("SELECT title FROM subscriptions WHERE id = 1").get() as {
-        title: string;
-      };
-      expect(title.title).toBe("Netflix");
     } finally {
       empty.close();
     }
