@@ -3,7 +3,7 @@ import fs from "node:fs";
 import type Database from "better-sqlite3";
 import { electronUiStrings } from "./uiLocale";
 
-export const BACKUP_EXPORT_VERSION = 6;
+export const BACKUP_EXPORT_VERSION = 7;
 
 export type BackupExportScope = "full" | "without_settings";
 
@@ -102,7 +102,8 @@ function validatePayload(raw: unknown): BackupPayload {
     exportVersion !== 3 &&
     exportVersion !== 4 &&
     exportVersion !== 5 &&
-    exportVersion !== 6
+    exportVersion !== 6 &&
+    exportVersion !== 7
   ) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
@@ -201,13 +202,17 @@ function normalizeTitle(t: unknown): string {
 }
 
 /** Similarity key: normalized title + normalized hostname from URL when present. */
-function subscriptionSimilarityKey(title: unknown, websiteUrl: unknown, accountLabel?: unknown): string {
+function subscriptionSimilarityKey(title: unknown, websiteUrl: unknown, accountLabel?: unknown, loginUsername?: unknown): string {
   const acc =
     accountLabel == null || String(accountLabel).trim() === ""
       ? ""
       : String(accountLabel).trim().toLowerCase();
+  const user =
+    loginUsername == null || String(loginUsername).trim() === ""
+      ? ""
+      : String(loginUsername).trim().toLowerCase();
   const host = hostnameNorm(websiteUrl == null ? undefined : String(websiteUrl));
-  return `${normalizeTitle(title)}|${host}|${acc}`;
+  return `${normalizeTitle(title)}|${host}|${acc}|${user}`;
 }
 
 type LocalSubBrief = {
@@ -244,6 +249,11 @@ type NormalizedImportSubscription = {
   wallet_method_id: number | null;
   account_label: string | null;
   cancelled_at: string | null;
+  platform_type: string;
+  login_username: string | null;
+  login_phone: string | null;
+  recovery_contact: string | null;
+  recovery_contact_kind: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -259,6 +269,16 @@ type NormalizedImportPayment = {
   renewal_step_count: number | null;
   note: string | null;
 };
+
+function normalizePlatformTypeImport(raw: unknown): string {
+  const v = String(raw ?? "website").trim();
+  return v === "app" || v === "both" ? v : "website";
+}
+
+function normalizeRecoveryKindImport(raw: unknown): string | null {
+  const v = String(raw ?? "").trim();
+  return v === "email" || v === "phone" ? v : null;
+}
 
 function normalizeImportedSubscription(row: Record<string, unknown>): NormalizedImportSubscription {
   let billing_model = String(row.billing_model ?? "one_time");
@@ -328,6 +348,24 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
       "cancelled_at" in row && row.cancelled_at != null && String(row.cancelled_at).trim() !== ""
         ? String(row.cancelled_at).trim().slice(0, 10)
         : null,
+    platform_type: normalizePlatformTypeImport(row.platform_type),
+    login_username:
+      "login_username" in row &&
+      row.login_username != null &&
+      String(row.login_username).trim() !== ""
+        ? String(row.login_username).trim()
+        : null,
+    login_phone:
+      "login_phone" in row && row.login_phone != null && String(row.login_phone).trim() !== ""
+        ? String(row.login_phone).trim()
+        : null,
+    recovery_contact:
+      "recovery_contact" in row &&
+      row.recovery_contact != null &&
+      String(row.recovery_contact).trim() !== ""
+        ? String(row.recovery_contact).trim()
+        : null,
+    recovery_contact_kind: normalizeRecoveryKindImport(row.recovery_contact_kind),
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
   };
@@ -548,6 +586,11 @@ function subscriptionRowParams(
     r.cancelled_at,
     r.trial_ends_on,
     r.renewal_cancelled,
+    r.platform_type,
+    r.login_username,
+    r.login_phone,
+    r.recovery_contact,
+    r.recovery_contact_kind,
     r.created_at,
     r.updated_at,
   ];
@@ -615,8 +658,10 @@ function insertBackupPayloadSnapshot(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, trial_ends_on, renewal_cancelled,
+        platform_type, login_username, login_phone, recovery_contact, recovery_contact_kind,
+        created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
   for (const row of data.subscriptions) {
     if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -855,8 +900,10 @@ function mergeImportIntoDb(
         id, title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
         interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
-        account_label, cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        account_label, cancelled_at, trial_ends_on, renewal_cancelled,
+        platform_type, login_username, login_phone, recovery_contact, recovery_contact_kind,
+        created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     const updSub = database.prepare(`
       UPDATE subscriptions SET
@@ -864,7 +911,9 @@ function mergeImportIntoDb(
         interval_months = ?, interval_count = ?, auto_renew = ?, amount_original = ?, currency_code = ?,
         amount_qar_snapshot = ?, fx_rate_used = ?, fx_quote_at = ?, start_date = ?, next_due_date = ?,
         end_date = ?, is_domain = ?, tags = ?, credit_card_id = ?, wallet_method_id = ?,
-        account_label = ?, cancelled_at = ?, trial_ends_on = ?, renewal_cancelled = ?, created_at = ?, updated_at = ?
+        account_label = ?, cancelled_at = ?, trial_ends_on = ?, renewal_cancelled = ?,
+        platform_type = ?, login_username = ?, login_phone = ?, recovery_contact = ?, recovery_contact_kind = ?,
+        created_at = ?, updated_at = ?
       WHERE id = ?
     `);
     const delSub = database.prepare("DELETE FROM subscriptions WHERE id = ?");
@@ -899,6 +948,11 @@ function mergeImportIntoDb(
           imp.cancelled_at,
           imp.trial_ends_on,
           imp.renewal_cancelled,
+          imp.platform_type,
+          imp.login_username,
+          imp.login_phone,
+          imp.recovery_contact,
+          imp.recovery_contact_kind,
           imp.created_at,
           imp.updated_at,
           imp.sourceId,

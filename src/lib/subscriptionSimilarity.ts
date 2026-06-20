@@ -24,29 +24,35 @@ export function subscriptionSimilarityKey(
   title: unknown,
   websiteUrl: unknown,
   accountLabel?: unknown,
+  loginUsername?: unknown,
 ): string {
   const acc =
     accountLabel == null || String(accountLabel).trim() === ""
       ? ""
       : String(accountLabel).trim().toLowerCase();
+  const user =
+    loginUsername == null || String(loginUsername).trim() === ""
+      ? ""
+      : String(loginUsername).trim().toLowerCase();
   const host = hostnameNorm(websiteUrl == null ? undefined : String(websiteUrl));
   const tit = normalizeTitle(title);
-  if (host && tit) return `${tit}|${host}|${acc}`;
-  if (host) return `|${host}|${acc}`;
-  return `${tit}||${acc}`;
+  if (host && tit) return `${tit}|${host}|${acc}|${user}`;
+  if (host) return `|${host}|${acc}|${user}`;
+  return `${tit}||${acc}|${user}`;
 }
 
 export interface SimilarityFields {
   title: string;
   website_url: string | null;
   account_label?: string | null;
+  login_username?: string | null;
   id?: number;
 }
 
 export function areSubscriptionsSimilar(a: SimilarityFields, b: SimilarityFields): boolean {
   if (a.id != null && b.id != null && a.id === b.id) return false;
-  const ka = subscriptionSimilarityKey(a.title, a.website_url, a.account_label);
-  const kb = subscriptionSimilarityKey(b.title, b.website_url, b.account_label);
+  const ka = subscriptionSimilarityKey(a.title, a.website_url, a.account_label, a.login_username);
+  const kb = subscriptionSimilarityKey(b.title, b.website_url, b.account_label, b.login_username);
   if (!ka || !kb) return false;
   return ka === kb;
 }

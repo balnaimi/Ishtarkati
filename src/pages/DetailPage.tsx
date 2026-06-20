@@ -39,6 +39,7 @@ import {
   isFreeAccount,
   isPaidSubscription,
 } from "../lib/subscriptionKind";
+import { platformTypeI18nKey, recoveryKindI18nKey } from "../lib/platformIdentity";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { effectiveRenewalSteps } from "../lib/paymentRenewal";
 
@@ -365,10 +366,29 @@ export function DetailPage() {
                 <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">
                   {t(accountPaymentStatusI18nKey(payStatus))}
                 </span>
+                <span className="ms-2 rounded-md bg-sage-100/90 px-2 py-0.5 text-xs font-medium text-sage-900">
+                  {t(platformTypeI18nKey(sub.platform_type ?? "website"))}
+                </span>
               </p>
+              {sub.login_username?.trim() ? (
+                <p className="text-sm text-cream-700" dir="ltr">
+                  {t("detail.loginUsername")}: {sub.login_username.trim()}
+                </p>
+              ) : null}
               {sub.account_label?.trim() ? (
                 <p className="text-sm text-cream-700" dir="ltr">
-                  {free ? t("detail.freeEmail") : t("detail.accountLabel")}: {sub.account_label.trim()}
+                  {t("detail.loginEmail")}: {sub.account_label.trim()}
+                </p>
+              ) : null}
+              {sub.login_phone?.trim() ? (
+                <p className="text-sm text-cream-700" dir="ltr">
+                  {t("detail.loginPhone")}: {sub.login_phone.trim()}
+                </p>
+              ) : null}
+              {sub.recovery_contact?.trim() && sub.recovery_contact_kind ? (
+                <p className="text-sm text-cream-700" dir="ltr">
+                  {t("detail.recoveryContact")} ({t(recoveryKindI18nKey(sub.recovery_contact_kind))}):{" "}
+                  {sub.recovery_contact.trim()}
                 </p>
               ) : null}
               <p className="text-sm text-cream-700">
@@ -435,6 +455,24 @@ export function DetailPage() {
                 onClick={() => void copyField(sub.account_label!.trim(), "email")}
               >
                 {copiedKey === "email" ? t("detail.copied") : t("detail.copyEmail")}
+              </button>
+            ) : null}
+            {sub.login_username?.trim() ? (
+              <button
+                type="button"
+                className="sk-btn-secondary text-xs"
+                onClick={() => void copyField(sub.login_username!.trim(), "user")}
+              >
+                {copiedKey === "user" ? t("detail.copied") : t("detail.copyUsername")}
+              </button>
+            ) : null}
+            {sub.login_phone?.trim() ? (
+              <button
+                type="button"
+                className="sk-btn-secondary text-xs"
+                onClick={() => void copyField(sub.login_phone!.trim(), "phone")}
+              >
+                {copiedKey === "phone" ? t("detail.copied") : t("detail.copyPhone")}
               </button>
             ) : null}
             {needsPaid ? (

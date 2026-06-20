@@ -7,6 +7,7 @@ import {
   accountPaymentStatusI18nKey,
   isFreeAccount,
 } from "../lib/subscriptionKind";
+import { platformTypeI18nKey } from "../lib/platformIdentity";
 import { SiteFavicon } from "./SiteFavicon";
 
 type Props = {
@@ -41,7 +42,7 @@ export function HomeRecentAccountsPanel({ accounts }: Props) {
           {accounts.map((s) => {
             const period = subscriptionBillingPeriodLine(s, t);
             const statusKey = accountPaymentStatusI18nKey(accountPaymentStatus(s));
-            const meta = [t(statusKey), period, s.category_name].filter(Boolean).join(" · ");
+            const meta = [t(statusKey), period, s.category_name, t(platformTypeI18nKey(s.platform_type ?? "website"))].filter(Boolean).join(" · ");
 
             return (
               <li key={s.id}>

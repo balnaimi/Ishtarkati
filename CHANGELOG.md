@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.34.0] - 2026-06-20
+
+### Added
+- In-app rebrand to **Hesabati** (AR: **حساباتي**) with tagline «Digital account organizer».
+- Account platform type: **website** / **app** / **both**.
+- Optional login fields: username, email, phone; optional recovery contact (email or phone).
+
+### Changed
+- Add/edit form: unified «Account details» section — fill only what applies.
+- Backup export version 7 (includes new identity fields).
 ## [4.33.3] - 2026-06-19
 
 ### Added

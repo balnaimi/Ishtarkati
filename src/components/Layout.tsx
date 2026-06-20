@@ -103,7 +103,7 @@ export function Layout() {
           />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-cream-950">{t("app.title")}</p>
-            <p className="text-[11px] sk-text-hint">{t("layout.desktopOnly")}</p>
+            <p className="text-[11px] sk-text-hint">{t("app.tagline")}</p>
           </div>
         </div>
 

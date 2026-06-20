@@ -1,5 +1,10 @@
 /** Domain types and enums — code in English per project convention. */
 
+/** Where the user registers / signs in: website, app, or both. */
+export type PlatformType = "website" | "app" | "both";
+
+export type RecoveryContactKind = "email" | "phone";
+
 export type BillingModel = "one_time" | "recurring" | "free_account";
 
 /** Billing step for recurring subscriptions. */
@@ -66,6 +71,16 @@ export interface Subscription {
   renewal_cancelled: number;
   /** User-defined label for the logged-in / family account (optional). */
   account_label: string | null;
+  /** website | app | both — where the account is registered. */
+  platform_type: PlatformType;
+  /** Login username when the service supports it (optional). */
+  login_username: string | null;
+  /** Login phone number (optional). */
+  login_phone: string | null;
+  /** Email or phone used for account recovery (optional). */
+  recovery_contact: string | null;
+  /** Kind of recovery_contact: email or phone. */
+  recovery_contact_kind: RecoveryContactKind | null;
   /** When set (YYYY-MM-DD), subscription is treated as cancelled / inactive (history). */
   cancelled_at: string | null;
   credit_card_id: number | null;
@@ -103,6 +118,11 @@ export interface SubscriptionFormValues {
   next_due_date: string;
   end_date: string;
   account_label: string;
+  platform_type: PlatformType;
+  login_username: string;
+  login_phone: string;
+  recovery_contact: string;
+  recovery_contact_kind: RecoveryContactKind | "";
   wallet_method_id: string;
   credit_card_id: string;
   tags: string;

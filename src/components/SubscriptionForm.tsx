@@ -10,8 +10,10 @@ import { tCardBrand, tCurrency, tPaymentService } from "../lib/i18nLabels";
 import { creditCardPrimaryLine } from "../lib/creditCardDisplay";
 import { hostnameFromWebsiteUrl } from "../lib/siteFavicon";
 import { parseTags } from "../lib/tags";
+import type { PlatformType } from "../types";
 import { SiteFavicon } from "./SiteFavicon";
 import { TagPicker } from "./TagPicker";
+import { platformTypeI18nKey, showWebsiteField } from "../lib/platformIdentity";
 
 interface SubscriptionFormProps {
   initial: SubscriptionFormValues;
@@ -83,12 +85,13 @@ export function SubscriptionForm({
           title,
           website_url: v.website_url.trim() || null,
           account_label: v.account_label.trim() || null,
+          login_username: v.login_username.trim() || null,
         },
         excludeId,
       ).then((rows) => setDuplicates(rows.map((r) => ({ id: r.id, title: r.title }))));
     }, 400);
     return () => window.clearTimeout(tmr);
-  }, [v.title, v.website_url, v.account_label, excludeId]);
+  }, [v.title, v.website_url, v.account_label, v.login_username, excludeId]);
 
   const paymentSelectValue =
     v.wallet_method_id.trim() !== ""
@@ -305,6 +308,8 @@ export function SubscriptionForm({
 
   const primaryMetaLabel = tCurrency(t, primary);
   const websiteHost = useMemo(() => hostnameFromWebsiteUrl(v.website_url), [v.website_url]);
+  const platform = v.platform_type;
+  const websiteVisible = showWebsiteField(platform);
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 md:space-y-6">
@@ -375,37 +380,138 @@ export function SubscriptionForm({
         />
       </div>
 
-      <div>
-        <label className="sk-label">{t("form.website")}</label>
-        <input
-          type="url"
-          className="sk-input"
-          value={v.website_url}
-          onChange={(e) => setField("website_url", e.target.value)}
-          placeholder="https://"
-        />
-        {websiteHost ? (
-          <div className="mt-2 flex items-center gap-3 rounded-xl border border-cream-400/90 bg-cream-100/60 px-3 py-2">
-            <SiteFavicon websiteUrl={v.website_url} size="md" />
-            <span dir="ltr" className="min-w-0 truncate text-xs text-cream-700">{websiteHost}</span>
-          </div>
-        ) : (
-          <p className="mt-1 text-xs text-cream-600">{t("form.websiteFaviconHint")}</p>
-        )}
-      </div>
+      <div className="sk-card space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-cream-950">{t("form.identitySection")}</p>
+          <p className="mt-0.5 text-xs sk-text-hint">{t("form.identitySectionHint")}</p>
+        </div>
 
-      <div>
-        <label className="sk-label">{t("form.freeEmail")}</label>
-        <input
-          className="sk-input"
-          type="text"
-          dir="ltr"
-          value={v.account_label}
-          onChange={(e) => setField("account_label", e.target.value)}
-          placeholder={t("form.freeEmailPlaceholder")}
-          autoComplete="off"
-        />
-        <p className="mt-1.5 text-xs text-cream-600">{t("form.freeEmailHint")}</p>
+        <div>
+          <label className="sk-label">{t("form.platformType")}</label>
+          <div className="flex flex-wrap gap-2">
+            {(["website", "app", "both"] as PlatformType[]).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={platform === p ? "sk-choice-active" : "sk-choice-idle"}
+                onClick={() => {
+                  setField("platform_type", p);
+                  if (p === "app") setField("website_url", "");
+                }}
+              >
+                {t(platformTypeI18nKey(p))}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {websiteVisible ? (
+          <div>
+            <label className="sk-label">{t("form.website")}</label>
+            <input
+              type="url"
+              className="sk-input"
+              value={v.website_url}
+              onChange={(e) => setField("website_url", e.target.value)}
+              placeholder="https://"
+            />
+            {websiteHost ? (
+              <div className="mt-2 flex items-center gap-3 rounded-xl border border-cream-400/90 bg-cream-100/60 px-3 py-2">
+                <SiteFavicon websiteUrl={v.website_url} size="md" />
+                <span dir="ltr" className="min-w-0 truncate text-xs text-cream-700">{websiteHost}</span>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-cream-600">{t("form.websiteFaviconHint")}</p>
+            )}
+          </div>
+        ) : null}
+
+        <div>
+          <label className="sk-label">{t("form.loginUsername")}</label>
+          <input
+            className="sk-input"
+            dir="ltr"
+            value={v.login_username}
+            onChange={(e) => setField("login_username", e.target.value)}
+            placeholder={t("form.loginUsernamePlaceholder")}
+            autoComplete="off"
+          />
+        </div>
+
+        <div>
+          <label className="sk-label">{t("form.loginEmail")}</label>
+          <input
+            className="sk-input"
+            type="text"
+            dir="ltr"
+            value={v.account_label}
+            onChange={(e) => setField("account_label", e.target.value)}
+            placeholder={t("form.loginEmailPlaceholder")}
+            autoComplete="off"
+          />
+        </div>
+
+        <div>
+          <label className="sk-label">{t("form.loginPhone")}</label>
+          <input
+            className="sk-input"
+            type="tel"
+            dir="ltr"
+            value={v.login_phone}
+            onChange={(e) => setField("login_phone", e.target.value)}
+            placeholder={t("form.loginPhonePlaceholder")}
+            autoComplete="off"
+          />
+          <p className="mt-1.5 text-xs text-cream-600">{t("form.loginIdentityHint")}</p>
+        </div>
+
+        <div className="space-y-2 border-t border-cream-400/60 pt-3">
+          <label className="sk-label">{t("form.recoveryContact")}</label>
+          <p className="text-xs sk-text-hint">{t("form.recoveryContactHint")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={v.recovery_contact_kind === "email" ? "sk-choice-active" : "sk-choice-idle"}
+              onClick={() => setField("recovery_contact_kind", "email")}
+            >
+              {t("form.recoveryEmail")}
+            </button>
+            <button
+              type="button"
+              className={v.recovery_contact_kind === "phone" ? "sk-choice-active" : "sk-choice-idle"}
+              onClick={() => setField("recovery_contact_kind", "phone")}
+            >
+              {t("form.recoveryPhone")}
+            </button>
+            {v.recovery_contact_kind ? (
+              <button
+                type="button"
+                className="sk-choice-idle text-xs"
+                onClick={() => {
+                  setField("recovery_contact_kind", "");
+                  setField("recovery_contact", "");
+                }}
+              >
+                {t("common.none")}
+              </button>
+            ) : null}
+          </div>
+          {v.recovery_contact_kind ? (
+            <input
+              className="sk-input"
+              dir="ltr"
+              type={v.recovery_contact_kind === "phone" ? "tel" : "text"}
+              value={v.recovery_contact}
+              onChange={(e) => setField("recovery_contact", e.target.value)}
+              placeholder={
+                v.recovery_contact_kind === "phone"
+                  ? t("form.recoveryPhonePlaceholder")
+                  : t("form.recoveryEmailPlaceholder")
+              }
+              autoComplete="off"
+            />
+          ) : null}
+        </div>
       </div>
 
       <div>

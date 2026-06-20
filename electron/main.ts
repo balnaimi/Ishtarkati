@@ -590,6 +590,31 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 14").run();
   }
+
+  if (version < 15) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      const has = (n: string) => cols.some((c) => c.name === n);
+      if (!has("platform_type")) {
+        database.exec(
+          "ALTER TABLE subscriptions ADD COLUMN platform_type TEXT NOT NULL DEFAULT 'website'",
+        );
+      }
+      if (!has("login_username")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN login_username TEXT");
+      }
+      if (!has("login_phone")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN login_phone TEXT");
+      }
+      if (!has("recovery_contact")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN recovery_contact TEXT");
+      }
+      if (!has("recovery_contact_kind")) {
+        database.exec("ALTER TABLE subscriptions ADD COLUMN recovery_contact_kind TEXT");
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 15").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

@@ -1,5 +1,8 @@
 {
-  "app": { "title": "إشتراكاتي" },
+  "app": {
+    "title": "حساباتي",
+    "tagline": "منظم الحسابات الإلكترونية"
+  },
   "nav": {
     "home": "الرئيسية",
     "accounts": "حساباتي",
@@ -73,7 +76,7 @@
     "menuSelectAll": "تحديد الكل",
     "backupSaveTitle": "حفظ نسخة احتياطية كاملة",
     "backupOpenTitle": "استعادة نسخة احتياطية",
-    "fatalStartupTitle": "تعذّر تشغيل إشتراكاتي",
+    "fatalStartupTitle": "تعذّر تشغيل حساباتي",
     "fatalStartupBody": "{{detail}}\n\nبياناتك محفوظة عادةً هنا (لا تُحذف بتحديث البرنامج):\n{{dbPath}}"
   },
   "errors": {
@@ -127,7 +130,7 @@
     "dueTodayTitle": "مستحق الدفع اليوم",
     "dueTodayCount": "{{count}} اشتراك/حساب وصل موعد استحقاقه",
     "dueTodayView": "عرض الكل",
-    "welcomeHint": "إليك نظرة عامة على اشتراكاتك هذا الشهر.",
+    "welcomeHint": "منظم حساباتك الإلكترونية — مواقع وبرامج — في نظرة واحدة.",
     "statActive": "الاشتراكات النشطة",
     "statDueMonth": "مستحقة هذا الشهر",
     "cashflowTitle": "ملخص التدفقات النقدية",
@@ -227,14 +230,19 @@
     "reactivate": "إعادة تفعيل الحساب",
     "markedOn": "حُذف من الموقع في {{date}}"
   },
+  "platform": {
+    "website": "موقع",
+    "app": "برنامج",
+    "both": "موقع وبرنامج"
+  },
   "billing": {
     "one_time": "دفعة لمرة واحدة",
     "recurring": "دوري",
     "free_account": "حساب بدون دفع حالياً"
   },
   "accounts": {
-    "title": "حساباتي الإلكترونية",
-    "subtitle": "كل حساباتك على الإنترنت — مجانية أو عليها اشتراك — مع البريد والموقع وسبب التسجيل. بدون كلمات مرور.",
+    "title": "حساباتي",
+    "subtitle": "مواقع وبرامج — بريد أو هاتف أو اسم مستخدم لكل حساب. بدون كلمات مرور.",
     "addCta": "+ إضافة حساب",
     "tabActive": "الحسابات النشطة",
     "tabDeleted": "محذوفة من المواقع",
@@ -245,7 +253,7 @@
     "statusRecurring": "اشتراك دوري",
     "statusOneTime": "دفعة لمرة",
     "colPayment": "الدفع",
-    "searchExplain": "ابحث باسم الموقع أو الرابط أو البريد. الحسابات المدفوعة والمجانية معًا — يمكن تغيير الحالة لاحقًا من التفاصيل.",
+    "searchExplain": "ابحث بالاسم أو الرابط أو البريد أو الهاتف أو اسم المستخدم. المواقع والبرامج معًا.",
     "searchPlaceholder": "مثال: newsletter.com أو اسم الخدمة…",
     "filterByEmail": "تصفية حسب البريد",
     "allEmails": "كل البريدات",
@@ -272,10 +280,26 @@
     "accountPayMode": "حالة الدفع",
     "accountPayFree": "بدون دفع حالياً",
     "accountPayPaid": "مع دفع",
-    "accountPayFreeHint": "حساب مجاني: الموقع، البريد، وسبب التسجيل فقط — بدون مبالغ أو مواعيد استحقاق.",
+    "accountPayFreeHint": "حساب بدون دفع: نوع الحساب (موقع/برنامج) وبيانات الدخول وسبب التسجيل — بدون مبالغ أو مواعيد.",
     "accountPayPaidHint": "اشتراك دوري أو دفعة لمرة واحدة — أدخل المبلغ وطريقة الدفع والمواعيد.",
     "billingType": "نوع الدفع",
-    "freeTitle": "اسم الخدمة أو الموقع",
+    "freeTitle": "اسم الخدمة",
+    "identitySection": "بيانات الحساب",
+    "identitySectionHint": "املأ ما ينطبق — بعض الخدمات بالبريد، وبعضها بالهاتف أو اسم المستخدم.",
+    "platformType": "أين الحساب؟",
+    "loginUsername": "اسم المستخدم (اختياري)",
+    "loginUsernamePlaceholder": "username",
+    "loginEmail": "البريد للدخول (اختياري)",
+    "loginEmailPlaceholder": "you@example.com",
+    "loginPhone": "رقم الهاتف للدخول (اختياري)",
+    "loginPhonePlaceholder": "+974…",
+    "loginIdentityHint": "ليس مطلوبًا تعبئة الكل — اختر ما تستخدمه فعلًا للدخول.",
+    "recoveryContact": "استرجاع الحساب",
+    "recoveryContactHint": "البريد أو الهاتف الذي تستخدمه لاستعادة كلمة المرور إن وُجد.",
+    "recoveryEmail": "بريد",
+    "recoveryPhone": "هاتف",
+    "recoveryEmailPlaceholder": "recovery@example.com",
+    "recoveryPhonePlaceholder": "+974…",
     "freeEmail": "البريد المستخدم في الحساب",
     "freeEmailPlaceholder": "you@example.com",
     "freeEmailHint": "يساعدك لاحقًا في معرفة أين استخدمت هذا البريد.",
@@ -340,7 +364,7 @@
     "duplicateWarningHint": "راجع القائمة أعلاه لتجنّب التكرار."
   },
   "onboarding": {
-    "welcomeTitle": "مرحبًا في إشتراكاتي",
+    "welcomeTitle": "مرحبًا في حساباتي",
     "welcomeBody": "بخطوات قصيرة نجهّز البرنامج لك: العملة التي تعتمدها في الملخص، وقفل اختياري، ثم وسيلة دفع إن رغبت. هذا البرنامج مخصّص لأجهزة سطح المكتب (Linux) فقط وليس للهواتف أو الأجهزة اللوحية.",
     "start": "لنبدأ",
     "currencyTitle": "ما العملة الأساسية؟",
@@ -420,6 +444,12 @@
     "freeAccountHint": "حسابك ما زال على الموقع بدون دفع حاليًا. لتفعيل اشتراك مدفوع استخدم «إضافة اشتراك مدفوع» أو عدّل نوع السجل.",
     "paidAccountHint": "هذا الحساب مربوط بدفع. إن أوقفت الاشتراك لكن حسابك باقٍ على الموقع استخدم «أوقف الاشتراك — الحساب باقٍ».",
     "copyEmail": "نسخ البريد",
+    "copyUsername": "نسخ اسم المستخدم",
+    "copyPhone": "نسخ الهاتف",
+    "loginUsername": "اسم المستخدم",
+    "loginEmail": "البريد",
+    "loginPhone": "الهاتف",
+    "recoveryContact": "استرجاع الحساب",
     "addPaidBtn": "إضافة اشتراك مدفوع",
     "stopPayBtn": "أوقف الاشتراك — الحساب باقٍ",
     "stopPayTitle": "إيقاف الاشتراك مع الإبقاء على الحساب",
@@ -674,7 +704,7 @@
     "updateError": "تعذّر التحقق من التحديثات"
   },
   "closeChoice": {
-    "title": "إغلاق إشتراكاتي؟",
+    "title": "إغلاق حساباتي؟",
     "message": "هل تريد إبقاء البرنامج يعمل في الخلفية (أيقونة بجانب الساعة) أم إغلاقه بالكامل؟",
     "background": "العمل في الخلفية",
     "quit": "إغلاق البرنامج بالكامل",
@@ -781,15 +811,15 @@
     "icsHint": "تواريخ الاستحقاق كأحداث يوم كامل؛ استورد الملف في تطبيق التقويم."
   },
   "notify": {
-    "digestTitle": "إشتراكاتي",
+    "digestTitle": "حساباتي",
     "digestBody": "لديك {{count}} سجلات باستحقاق خلال أسبوع.",
     "digestIntro": "لديك {{count}} اشتراكًا مستحقًا خلال {{days}} يومًا تقريبًا:",
     "digestMore": "و{{n}} أكثر",
-    "weeklyDigestTitle": "ملخص أسبوعي — إشتراكاتي",
+    "weeklyDigestTitle": "ملخص أسبوعي — حساباتي",
     "weeklyDigestIntro": "قائمة بالمبالغ المستحقة قريبًا ({{count}} سجلًا):",
-    "monthlyDigestTitle": "ملخص شهري — إشتراكاتي",
+    "monthlyDigestTitle": "ملخص شهري — حساباتي",
     "monthlyDigestIntro": "قائمة بالمبالغ المستحقة هذا الشهر تقريبًا ({{count}} سجلًا):",
-    "dueTodayTitle": "مستحق اليوم — إشتراكاتي",
+    "dueTodayTitle": "مستحق اليوم — حساباتي",
     "dueTodayIntro": "{{count}} اشتراك/حساب يحتاج دفعًا اليوم:"
   },
   "commandPalette": {
@@ -821,9 +851,9 @@
     "over": "تجاوزت الميزانية بـ {{amount}} {{code}}"
   },
   "tray": {
-    "show": "إظهار إشتراكاتي",
+    "show": "إظهار حساباتي",
     "quit": "إنهاء",
-    "tooltip": "إشتراكاتي",
+    "tooltip": "حساباتي",
     "tooltipDue": "مستحقات الدفع"
   },
   "fx": {

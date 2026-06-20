@@ -1,5 +1,8 @@
 {
-  "app": { "title": "Ishtarkati" },
+  "app": {
+    "title": "Hesabati",
+    "tagline": "Digital account organizer"
+  },
   "nav": {
     "home": "Home",
     "accounts": "My Accounts",
@@ -73,7 +76,7 @@
     "menuSelectAll": "Select All",
     "backupSaveTitle": "Save full backup",
     "backupOpenTitle": "Restore backup",
-    "fatalStartupTitle": "Could not start Ishtarkati",
+    "fatalStartupTitle": "Could not start Hesabati",
     "fatalStartupBody": "{{detail}}\n\nYour data is usually stored here (not removed by app updates):\n{{dbPath}}"
   },
   "errors": {
@@ -127,7 +130,7 @@
     "dueTodayTitle": "Needs payment today",
     "dueTodayCount": "{{count}} subscription(s) reached their due date",
     "dueTodayView": "View all due",
-    "welcomeHint": "Here is an overview of your subscriptions this month.",
+    "welcomeHint": "Your digital accounts — websites and apps — at a glance.",
     "statActive": "Active subscriptions",
     "statDueMonth": "Due this month",
     "cashflowTitle": "Cash flow summary",
@@ -227,14 +230,19 @@
     "reactivate": "Reactivate account",
     "markedOn": "Deleted from site on {{date}}"
   },
+  "platform": {
+    "website": "Website",
+    "app": "App",
+    "both": "Website & app"
+  },
   "billing": {
     "one_time": "One-time payment",
     "recurring": "Recurring",
     "free_account": "Account with no payment currently"
   },
   "accounts": {
-    "title": "My online accounts",
-    "subtitle": "All your internet accounts — free or with a subscription — with email, site, and signup reason. No passwords stored.",
+    "title": "My accounts",
+    "subtitle": "Websites and apps — email, phone, or username per account. No passwords stored.",
     "addCta": "+ Add account",
     "tabActive": "Active accounts",
     "tabDeleted": "Deleted from sites",
@@ -245,7 +253,7 @@
     "statusRecurring": "Recurring subscription",
     "statusOneTime": "One-time payment",
     "colPayment": "Payment",
-    "searchExplain": "Search by site name, URL, or email. Paid and free accounts together — you can change status later from details.",
+    "searchExplain": "Search by name, URL, email, phone, or username. Websites and apps together.",
     "searchPlaceholder": "Example: newsletter.com or service name…",
     "filterByEmail": "Filter by email",
     "allEmails": "All emails",
@@ -272,10 +280,26 @@
     "accountPayMode": "Payment status",
     "accountPayFree": "Currently free",
     "accountPayPaid": "With payment",
-    "accountPayFreeHint": "Free account: site, email, and signup reason only — no amounts or due dates.",
+    "accountPayFreeHint": "No payment: platform type (website/app), login details, and signup reason — no amounts or due dates.",
     "accountPayPaidHint": "Recurring subscription or one-time payment — enter amount, payment method, and dates.",
     "billingType": "Payment type",
-    "freeTitle": "Service or site name",
+    "freeTitle": "Service name",
+    "identitySection": "Account details",
+    "identitySectionHint": "Fill in what applies — some services use email, others phone or username.",
+    "platformType": "Where is this account?",
+    "loginUsername": "Username (optional)",
+    "loginUsernamePlaceholder": "username",
+    "loginEmail": "Login email (optional)",
+    "loginEmailPlaceholder": "you@example.com",
+    "loginPhone": "Login phone (optional)",
+    "loginPhonePlaceholder": "+1…",
+    "loginIdentityHint": "You don't need all fields — only what you actually use to sign in.",
+    "recoveryContact": "Account recovery",
+    "recoveryContactHint": "Email or phone used to reset your password, if any.",
+    "recoveryEmail": "Email",
+    "recoveryPhone": "Phone",
+    "recoveryEmailPlaceholder": "recovery@example.com",
+    "recoveryPhonePlaceholder": "+1…",
     "freeEmail": "Email used for the account",
     "freeEmailPlaceholder": "you@example.com",
     "freeEmailHint": "Helps you remember where you used this email later.",
@@ -340,7 +364,7 @@
     "duplicateWarningHint": "Review the list above to avoid duplicate entries."
   },
   "onboarding": {
-    "welcomeTitle": "Welcome to Ishtarkati",
+    "welcomeTitle": "Welcome to Hesabati",
     "welcomeBody": "In a few short steps we'll set up the app: your summary currency, optional lock, then a payment method if you like. This app is for desktop (Linux) only — not phones or tablets.",
     "start": "Let's start",
     "currencyTitle": "What is your primary currency?",
@@ -420,6 +444,12 @@
     "freeAccountHint": "Your account is still on the site with no current payment. To enable a paid subscription use «Add paid subscription» or change the record type.",
     "paidAccountHint": "This account is linked to payment. If you stopped the subscription but your account remains on the site, use «Stop subscription — keep account».",
     "copyEmail": "Copy email",
+    "copyUsername": "Copy username",
+    "copyPhone": "Copy phone",
+    "loginUsername": "Username",
+    "loginEmail": "Email",
+    "loginPhone": "Phone",
+    "recoveryContact": "Recovery",
     "addPaidBtn": "Add paid subscription",
     "stopPayBtn": "Stop subscription — keep account",
     "stopPayTitle": "Stop subscription while keeping the account",
@@ -674,7 +704,7 @@
     "updateError": "Could not check for updates"
   },
   "closeChoice": {
-    "title": "Close Ishtarkati?",
+    "title": "Close Hesabati?",
     "message": "Keep the app running in the background (system tray icon) or quit completely?",
     "background": "Run in background",
     "quit": "Quit completely",
@@ -682,7 +712,7 @@
     "remember": "Remember my choice"
   },
   "about": {
-    "title": "About Ishtarkati",
+    "title": "About Hesabati",
     "sidebarLabel": "About the app",
     "footerLabel": "About",
     "storyOrigin": "This app was born from the need to organize and manage the many accounts spread across different sites and services—especially with so many subscriptions and payments tied to them.",
@@ -781,15 +811,15 @@
     "icsHint": "Due dates as all-day events; import the file into your calendar app."
   },
   "notify": {
-    "digestTitle": "Ishtarkati",
+    "digestTitle": "Hesabati",
     "digestBody": "You have {{count}} record(s) due within a week.",
     "digestIntro": "You have {{count}} subscription(s) due within about {{days}} days:",
     "digestMore": "and {{n}} more",
-    "weeklyDigestTitle": "Weekly digest — Ishtarkati",
+    "weeklyDigestTitle": "Weekly digest — Hesabati",
     "weeklyDigestIntro": "Amounts due soon ({{count}} record(s)):",
-    "monthlyDigestTitle": "Monthly digest — Ishtarkati",
+    "monthlyDigestTitle": "Monthly digest — Hesabati",
     "monthlyDigestIntro": "Amounts due this month (about {{count}} record(s)):",
-    "dueTodayTitle": "Due today — Ishtarkati",
+    "dueTodayTitle": "Due today — Hesabati",
     "dueTodayIntro": "{{count}} subscription(s) need payment today:"
   },
   "commandPalette": {
@@ -821,9 +851,9 @@
     "over": "Over budget by {{amount}} {{code}}"
   },
   "tray": {
-    "show": "Show Ishtarkati",
+    "show": "Show Hesabati",
     "quit": "Quit",
-    "tooltip": "Ishtarkati",
+    "tooltip": "Hesabati",
     "tooltipDue": "Due payments"
   },
   "fx": {

@@ -5,17 +5,23 @@ export type AccountSearchRow = {
   notes: string | null;
   website_url: string | null;
   account_label: string | null;
+  login_username?: string | null;
+  login_phone?: string | null;
+  recovery_contact?: string | null;
   category_name?: string | null;
   tags?: string | null;
 };
 
-/** Lowercase haystack for substring search (title, URL, host, email, notes, category, tags). */
+/** Lowercase haystack for substring search (title, URL, host, email, username, phone, notes, category, tags). */
 export function accountSearchHaystack(row: AccountSearchRow): string {
   const host = hostnameFromWebsiteUrl(row.website_url) ?? "";
   return [
     row.title,
     row.notes,
     row.account_label,
+    row.login_username,
+    row.login_phone,
+    row.recovery_contact,
     row.website_url,
     row.category_name,
     row.tags,

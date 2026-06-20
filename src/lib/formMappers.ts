@@ -1,6 +1,7 @@
 import type { SubscriptionFormValues, Subscription, IntervalUnit, BillingModel } from "../types";
 import { addBillingSteps, formatDateInput, parseDateInput } from "./schedule";
 import { joinTags } from "./tags";
+import { normalizePlatformType, normalizeRecoveryKind } from "./platformIdentity";
 
 export function defaultFormValues(): SubscriptionFormValues {
   return {
@@ -18,6 +19,11 @@ export function defaultFormValues(): SubscriptionFormValues {
     next_due_date: "",
     end_date: "",
     account_label: "",
+    platform_type: "website",
+    login_username: "",
+    login_phone: "",
+    recovery_contact: "",
+    recovery_contact_kind: "",
     wallet_method_id: "",
     credit_card_id: "",
     tags: "",
@@ -57,6 +63,11 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
     next_due_date: s.next_due_date?.slice(0, 10) ?? "",
     end_date: s.end_date?.slice(0, 10) ?? "",
     account_label: s.account_label ?? "",
+    platform_type: normalizePlatformType(s.platform_type),
+    login_username: s.login_username ?? "",
+    login_phone: s.login_phone ?? "",
+    recovery_contact: s.recovery_contact ?? "",
+    recovery_contact_kind: s.recovery_contact_kind ?? "",
     wallet_method_id: s.wallet_method_id != null ? String(s.wallet_method_id) : "",
     credit_card_id:
       s.wallet_method_id != null
@@ -111,6 +122,11 @@ export function formToRow(
   tags: string | null;
   trial_ends_on: string | null;
   renewal_cancelled: number;
+  platform_type: SubscriptionFormValues["platform_type"];
+  login_username: string | null;
+  login_phone: string | null;
+  recovery_contact: string | null;
+  recovery_contact_kind: Subscription["recovery_contact_kind"];
 } {
   const isFree = v.billing_model === "free_account";
   const amt = isFree ? 0 : parseFloat(v.amount_original.replace(",", "."));
@@ -120,6 +136,16 @@ export function formToRow(
     v.billing_model === "recurring"
       ? Math.max(1, parseInt(v.interval_count, 10) || 1)
       : 1;
+
+  const recoveryKind = normalizeRecoveryKind(v.recovery_contact_kind);
+  const recoveryVal = v.recovery_contact.trim() || null;
+  const identityExtras = {
+    platform_type: normalizePlatformType(v.platform_type),
+    login_username: v.login_username.trim() || null,
+    login_phone: v.login_phone.trim() || null,
+    recovery_contact: recoveryVal,
+    recovery_contact_kind: recoveryVal && recoveryKind ? recoveryKind : null,
+  };
 
   if (isFree) {
     return {
@@ -147,6 +173,7 @@ export function formToRow(
       tags: joinTags([v.tags]),
       trial_ends_on: null,
       renewal_cancelled: 0,
+      ...identityExtras,
     };
   }
 
@@ -200,5 +227,6 @@ export function formToRow(
     tags: joinTags([v.tags]),
     trial_ends_on: v.trial_ends_on.trim() || null,
     renewal_cancelled: v.renewal_cancelled ? 1 : 0,
+    ...identityExtras,
   };
 }

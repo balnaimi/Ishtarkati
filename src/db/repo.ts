@@ -15,6 +15,8 @@ import type {
   CreditCard,
   IntervalUnit,
   PaymentEvent,
+  PlatformType,
+  RecoveryContactKind,
   Subscription,
   SubscriptionAuditEntry,
   Tag,
@@ -568,6 +570,11 @@ export async function insertSubscription(row: {
   tags: string | null;
   trial_ends_on: string | null;
   renewal_cancelled: number;
+  platform_type: PlatformType;
+  login_username: string | null;
+  login_phone: string | null;
+  recovery_contact: string | null;
+  recovery_contact_kind: RecoveryContactKind | null;
 }): Promise<number> {
   const db = await getDb();
   const now = new Date().toISOString();
@@ -576,9 +583,10 @@ export async function insertSubscription(row: {
       title, notes, website_url, category_id, billing_model, interval_unit, interval_months,
       interval_count, auto_renew, amount_original, currency_code, amount_qar_snapshot, fx_rate_used, fx_quote_at,
       start_date, next_due_date, end_date, is_domain, tags, account_label, credit_card_id, wallet_method_id,
-      cancelled_at, trial_ends_on, renewal_cancelled, created_at, updated_at
+      cancelled_at, trial_ends_on, renewal_cancelled, platform_type, login_username, login_phone,
+      recovery_contact, recovery_contact_kind, created_at, updated_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32
     )`,
     [
       row.title,
@@ -606,6 +614,11 @@ export async function insertSubscription(row: {
       null,
       row.trial_ends_on,
       row.renewal_cancelled,
+      row.platform_type,
+      row.login_username,
+      row.login_phone,
+      row.recovery_contact,
+      row.recovery_contact_kind,
       now,
       now,
     ],
@@ -646,6 +659,11 @@ export async function updateSubscription(
     tags: string | null;
     trial_ends_on: string | null;
     renewal_cancelled: number;
+    platform_type: PlatformType;
+    login_username: string | null;
+    login_phone: string | null;
+    recovery_contact: string | null;
+    recovery_contact_kind: RecoveryContactKind | null;
   },
 ): Promise<void> {
   const db = await getDb();
@@ -658,8 +676,10 @@ export async function updateSubscription(
       amount_original = $10, currency_code = $11, amount_qar_snapshot = $12,
       fx_rate_used = $13, fx_quote_at = $14, start_date = $15, next_due_date = $16,
       end_date = $17, is_domain = $18, tags = $19, account_label = $20, credit_card_id = $21,
-      wallet_method_id = $22, trial_ends_on = $23, renewal_cancelled = $24, updated_at = $25
-    WHERE id = $26`,
+      wallet_method_id = $22, trial_ends_on = $23, renewal_cancelled = $24,
+      platform_type = $25, login_username = $26, login_phone = $27,
+      recovery_contact = $28, recovery_contact_kind = $29, updated_at = $30
+    WHERE id = $31`,
     [
       row.title,
       row.notes,
@@ -685,6 +705,11 @@ export async function updateSubscription(
       row.wallet_method_id,
       row.trial_ends_on,
       row.renewal_cancelled,
+      row.platform_type,
+      row.login_username,
+      row.login_phone,
+      row.recovery_contact,
+      row.recovery_contact_kind,
       now,
       id,
     ],
@@ -736,6 +761,7 @@ export async function findSimilarSubscriptions(
     title: string;
     website_url: string | null;
     account_label?: string | null;
+    login_username?: string | null;
   },
   excludeId?: number,
 ): Promise<SubscriptionListRow[]> {
