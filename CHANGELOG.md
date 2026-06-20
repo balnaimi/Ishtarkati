@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.38.0] - 2026-06-20
+
+### Changed
+- Arabic and English UI wording: clearer email filter labels («All email addresses» / «كل البريد الإلكتروني»), «account» instead of «record» where users see stored entries, and simpler payment-history phrasing.
 ## [4.37.1] - 2026-06-20
 
 ### Fixed
