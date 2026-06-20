@@ -1,33 +1,79 @@
+import type { ChangeEvent, MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 type Props = {
   pinned: boolean;
   onToggle: () => void;
   className?: string;
-  size?: "sm" | "md";
+  /** `compact` for account lists; `labeled` for detail with explanation. */
+  variant?: "compact" | "labeled";
 };
 
-export function PinToggleButton({ pinned, onToggle, className = "", size = "md" }: Props) {
+function stopBubble(e: MouseEvent) {
+  e.stopPropagation();
+}
+
+export function PinToggleButton({
+  pinned,
+  onToggle,
+  className = "",
+  variant = "labeled",
+}: Props) {
   const { t } = useTranslation();
-  const sizeClass = size === "sm" ? "size-7 text-sm" : "size-8 text-base";
+  const label = t("accounts.pinToHomeLabel");
+  const hint = t("accounts.pinToHomeHint");
+  const short = t("accounts.pinToHomeShort");
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    e.stopPropagation();
+    if (e.target.checked !== pinned) onToggle();
+  }
+
+  if (variant === "compact") {
+    return (
+      <label
+        className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors ${
+          pinned
+            ? "border-honey-500/50 bg-honey-100/70 text-honey-950 dark:bg-honey-950/30 dark:text-honey-100"
+            : "border-cream-400/80 bg-cream-100/50 text-cream-700 hover:border-cream-500 hover:bg-cream-200/60"
+        } ${className}`.trim()}
+        title={hint}
+        onClick={stopBubble}
+      >
+        <input
+          type="checkbox"
+          className="size-3.5 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+          checked={pinned}
+          onChange={handleChange}
+          onClick={stopBubble}
+          aria-label={label}
+        />
+        <span className="whitespace-nowrap font-medium leading-none">{short}</span>
+      </label>
+    );
+  }
 
   return (
-    <button
-      type="button"
-      className={`inline-flex shrink-0 items-center justify-center rounded-md transition-colors ${
+    <label
+      className={`flex max-w-md cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-start transition-colors ${
         pinned
-          ? "bg-honey-100/80 text-honey-900 hover:bg-honey-200/80 dark:bg-honey-950/40 dark:text-honey-200"
-          : "bg-cream-200/60 text-cream-600 hover:bg-cream-300/70 hover:text-cream-800"
-      } ${sizeClass} ${className}`.trim()}
-      title={pinned ? t("accounts.unpin") : t("accounts.pin")}
-      aria-label={pinned ? t("accounts.unpin") : t("accounts.pin")}
-      aria-pressed={pinned}
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
+          ? "border-honey-500/45 bg-honey-50/60 dark:bg-honey-950/25"
+          : "border-cream-400/70 bg-cream-100/40 hover:border-cream-500/80"
+      } ${className}`.trim()}
+      onClick={stopBubble}
     >
-      {pinned ? "★" : "☆"}
-    </button>
+      <input
+        type="checkbox"
+        className="mt-0.5 size-4 shrink-0 rounded border-cream-500 text-sage-600 focus:ring-sage-500"
+        checked={pinned}
+        onChange={handleChange}
+        onClick={stopBubble}
+        aria-label={label}
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-cream-900">{label}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed sk-text-hint">{hint}</span>
+      </span>
+    </label>
   );
 }

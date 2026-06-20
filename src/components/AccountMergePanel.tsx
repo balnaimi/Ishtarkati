@@ -113,14 +113,27 @@ export function AccountMergePanel({ sub, onChanged }: Props) {
 export function AccountPinControl({
   sub,
   onChanged,
+  variant = "labeled",
+  className,
 }: {
   sub: SubscriptionListRow;
   onChanged: () => void;
+  variant?: "compact" | "labeled";
+  className?: string;
 }) {
+  if (sub.cancelled_at) return null;
+
   async function toggle() {
     await setSubscriptionPinned(sub.id, !(sub.is_pinned ?? 0));
     onChanged();
   }
 
-  return <PinToggleButton pinned={Boolean(sub.is_pinned)} onToggle={() => void toggle()} />;
+  return (
+    <PinToggleButton
+      pinned={Boolean(sub.is_pinned)}
+      variant={variant}
+      className={className}
+      onToggle={() => void toggle()}
+    />
+  );
 }

@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.39.0] - 2026-06-20
+
+### Changed
+- Pin to Home: replace star-only control with a labeled checkbox («Show on Home page») on account detail and list rows so new users understand the feature.
 ## [4.38.1] - 2026-06-20
 
 ### Changed

@@ -424,6 +424,9 @@ export function DetailPage() {
                   </span>
                 </a>
               ) : null}
+              {!sub.cancelled_at ? (
+                <AccountPinControl sub={sub} onChanged={() => void reload()} className="max-w-md" />
+              ) : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -490,7 +493,6 @@ export function DetailPage() {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <AccountPinControl sub={sub} onChanged={() => void reload()} />
           <Link to={`/sub/${sub.id}/edit`} className="sk-btn-secondary text-sm">
             {t("common.edit")}
           </Link>

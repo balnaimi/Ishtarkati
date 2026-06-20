@@ -545,7 +545,7 @@ export function SubscriptionsListPage() {
                     <div className="flex min-w-0 items-center gap-2 lg:col-span-1">
                       <PinToggleButton
                         pinned={Boolean(s.is_pinned)}
-                        size="sm"
+                        variant="compact"
                         onToggle={() => void togglePin(s.id, Boolean(s.is_pinned))}
                       />
                       {s.website_url?.trim() ? (
@@ -558,9 +558,6 @@ export function SubscriptionsListPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                           <span className="truncate text-sm font-medium text-cream-950">{s.title}</span>
-                          {s.is_pinned ? (
-                            <span className="dash-tag shrink-0 text-[10px]">{t("accounts.pinnedBadge")}</span>
-                          ) : null}
                           {s.category_name ? (
                             <span className={`dash-tag shrink-0 ${tagClass}`}>{s.category_name}</span>
                           ) : null}
