@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.36.2] - 2026-06-20
+
+### Changed
+- Phone field placeholders no longer suggest a specific country code (+974 / +1); neutral international format instead.
 ## [4.36.1] - 2026-06-20
 
 ### Changed
