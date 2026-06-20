@@ -83,6 +83,8 @@ export interface Subscription {
   recovery_contact_kind: RecoveryContactKind | null;
   /** When set (YYYY-MM-DD), subscription is treated as cancelled / inactive (history). */
   cancelled_at: string | null;
+  /** 1 when pinned to the top of lists and shown on Home. */
+  is_pinned: number;
   credit_card_id: number | null;
   wallet_method_id: number | null;
   created_at: string;

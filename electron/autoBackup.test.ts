@@ -54,6 +54,7 @@ function createMinimalDb(): Database.Database {
       login_phone TEXT,
       recovery_contact TEXT,
       recovery_contact_kind TEXT,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -220,7 +221,7 @@ describe("runAutoBackupIfDue", () => {
     expect(files[0]).toMatch(/^ishtarkati-auto-/);
 
     const parsed = parseBackupJson(fs.readFileSync(result.path!, "utf8"));
-    expect(parsed.exportVersion).toBe(7);
+    expect(parsed.exportVersion).toBe(8);
     expect(parsed.subscriptions).toHaveLength(1);
 
     expect(dbGetSetting(db, "last_auto_backup_at")).toBe(NOW_ISO);

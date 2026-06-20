@@ -24,17 +24,32 @@ function progressInput(s: SubscriptionListRow): DueProgressInput {
   };
 }
 
+export type ExpiringCardRow = HomeCardStat & {
+  linkedAccounts: Array<{ id: number; title: string }>;
+};
+
 type Props = {
   dueToday: SubscriptionListRow[];
   dueSoon: SubscriptionListRow[];
-  expiringCards: HomeCardStat[];
+  trialEnding: SubscriptionListRow[];
+  expiringCards: ExpiringCardRow[];
   onMarkPaid: (e: React.MouseEvent, id: number) => void;
 };
 
-export function HomeAttentionPanel({ dueToday, dueSoon, expiringCards, onMarkPaid }: Props) {
+export function HomeAttentionPanel({
+  dueToday,
+  dueSoon,
+  trialEnding,
+  expiringCards,
+  onMarkPaid,
+}: Props) {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const hasItems = dueToday.length > 0 || dueSoon.length > 0 || expiringCards.length > 0;
+  const hasItems =
+    dueToday.length > 0 ||
+    dueSoon.length > 0 ||
+    trialEnding.length > 0 ||
+    expiringCards.length > 0;
 
   return (
     <section className="dash-home-panel">
@@ -121,39 +136,65 @@ export function HomeAttentionPanel({ dueToday, dueSoon, expiringCards, onMarkPai
             );
           })}
 
-          {expiringCards.map((c) => (
-            <li key={`card-${c.id}`}>
-              <Link
-                to="/payments"
-                className="dash-home-action-row dash-home-action-row-warn no-underline"
+          {trialEnding.map((s) => (
+            <li key={`trial-${s.id}`}>
+              <button
+                type="button"
+                className="dash-home-action-row dash-home-action-row-warn w-full text-start"
+                onClick={() => nav(`/sub/${s.id}`)}
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-warn/15 text-xs font-bold text-walnut-800">
-                  !
-                </span>
+                <SiteFavicon websiteUrl={s.website_url} size="xs" className="shrink-0" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-cream-950">
-                    {creditCardPrimaryLine(
-                      {
-                        id: c.id,
-                        brand: c.brand,
-                        last4: c.last4,
-                        exp_month: c.exp_month,
-                        exp_year: c.exp_year,
-                        description: c.description,
-                        created_at: "",
-                        updated_at: "",
-                      },
-                      tCardBrand(t, c.brand),
-                    )}
+                  <span className="block truncate text-sm font-medium text-cream-950">{s.title}</span>
+                  <span className="block text-[11px] sk-text-hint">
+                    {t("home.trialEndingLine", { date: s.trial_ends_on?.slice(0, 10) ?? "—" })}
                   </span>
-                  <span className="block text-[11px] sk-text-hint">{t("home.cardExpiryLine")}</span>
                 </span>
-                <span className="shrink-0 text-[11px] font-medium text-walnut-800">
-                  {t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })}
-                </span>
-              </Link>
+              </button>
             </li>
           ))}
+
+          {expiringCards.map((c) => {
+            const linkedNames = c.linkedAccounts.map((a) => a.title).join("، ");
+            return (
+              <li key={`card-${c.id}`}>
+                <Link
+                  to="/payments"
+                  className="dash-home-action-row dash-home-action-row-warn no-underline"
+                >
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-warn/15 text-xs font-bold text-walnut-800">
+                    !
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-cream-950">
+                      {creditCardPrimaryLine(
+                        {
+                          id: c.id,
+                          brand: c.brand,
+                          last4: c.last4,
+                          exp_month: c.exp_month,
+                          exp_year: c.exp_year,
+                          description: c.description,
+                          created_at: "",
+                          updated_at: "",
+                        },
+                        tCardBrand(t, c.brand),
+                      )}
+                    </span>
+                    <span className="block text-[11px] sk-text-hint">{t("home.cardExpiryLine")}</span>
+                    {linkedNames ? (
+                      <span className="block truncate text-[11px] text-cream-700">
+                        {t("home.cardLinkedAccounts", { names: linkedNames })}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-[11px] font-medium text-walnut-800">
+                    {t("payment.expiresShort", { m: c.exp_month, y: c.exp_year })}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

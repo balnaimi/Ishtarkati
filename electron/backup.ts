@@ -3,7 +3,7 @@ import fs from "node:fs";
 import type Database from "better-sqlite3";
 import { electronUiStrings } from "./uiLocale";
 
-export const BACKUP_EXPORT_VERSION = 7;
+export const BACKUP_EXPORT_VERSION = 8;
 
 export type BackupExportScope = "full" | "without_settings";
 
@@ -103,7 +103,8 @@ function validatePayload(raw: unknown): BackupPayload {
     exportVersion !== 4 &&
     exportVersion !== 5 &&
     exportVersion !== 6 &&
-    exportVersion !== 7
+    exportVersion !== 7 &&
+    exportVersion !== 8
   ) {
     throw new Error(`Unsupported backup version: ${String(exportVersion)}`);
   }
@@ -254,6 +255,7 @@ type NormalizedImportSubscription = {
   login_phone: string | null;
   recovery_contact: string | null;
   recovery_contact_kind: string | null;
+  is_pinned: number;
   created_at: string;
   updated_at: string;
 };
@@ -366,6 +368,7 @@ function normalizeImportedSubscription(row: Record<string, unknown>): Normalized
         ? String(row.recovery_contact).trim()
         : null,
     recovery_contact_kind: normalizeRecoveryKindImport(row.recovery_contact_kind),
+    is_pinned: "is_pinned" in row && Number(row.is_pinned) === 1 ? 1 : 0,
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
   };
@@ -591,6 +594,7 @@ function subscriptionRowParams(
     r.login_phone,
     r.recovery_contact,
     r.recovery_contact_kind,
+    r.is_pinned,
     r.created_at,
     r.updated_at,
   ];
@@ -660,8 +664,8 @@ function insertBackupPayloadSnapshot(
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
         account_label, cancelled_at, trial_ends_on, renewal_cancelled,
         platform_type, login_username, login_phone, recovery_contact, recovery_contact_kind,
-        created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        is_pinned, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
   for (const row of data.subscriptions) {
     if (!isRecord(row)) throw new Error("Invalid subscription row");
@@ -902,8 +906,8 @@ function mergeImportIntoDb(
         start_date, next_due_date, end_date, is_domain, tags, credit_card_id, wallet_method_id,
         account_label, cancelled_at, trial_ends_on, renewal_cancelled,
         platform_type, login_username, login_phone, recovery_contact, recovery_contact_kind,
-        created_at, updated_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        is_pinned, created_at, updated_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `);
     const updSub = database.prepare(`
       UPDATE subscriptions SET
@@ -913,7 +917,7 @@ function mergeImportIntoDb(
         end_date = ?, is_domain = ?, tags = ?, credit_card_id = ?, wallet_method_id = ?,
         account_label = ?, cancelled_at = ?, trial_ends_on = ?, renewal_cancelled = ?,
         platform_type = ?, login_username = ?, login_phone = ?, recovery_contact = ?, recovery_contact_kind = ?,
-        created_at = ?, updated_at = ?
+        is_pinned = ?, created_at = ?, updated_at = ?
       WHERE id = ?
     `);
     const delSub = database.prepare("DELETE FROM subscriptions WHERE id = ?");
@@ -953,6 +957,7 @@ function mergeImportIntoDb(
           imp.login_phone,
           imp.recovery_contact,
           imp.recovery_contact_kind,
+          imp.is_pinned,
           imp.created_at,
           imp.updated_at,
           imp.sourceId,

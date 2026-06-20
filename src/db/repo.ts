@@ -345,6 +345,9 @@ function buildSubscriptionQuery(filters: {
   dueWithinDays?: number;
   search?: string;
   recordKind?: "all" | "paid" | "free";
+  platformType?: PlatformType;
+  incompleteOnly?: boolean;
+  pinnedOnly?: boolean;
   /** Default `active`: excludes cancelled rows (`cancelled_at` set). */
   subscriptionStatus?: "active" | "cancelled" | "all";
 }): { sql: string; args: unknown[] } {
@@ -378,6 +381,17 @@ function buildSubscriptionQuery(filters: {
   } else if (filters.recordKind === "free") {
     clauses.push("s.billing_model = 'free_account'");
   }
+  if (filters.platformType) {
+    clauses.push(`s.platform_type = ${next(filters.platformType)}`);
+  }
+  if (filters.incompleteOnly) {
+    clauses.push(
+      `TRIM(IFNULL(s.account_label,'')) = '' AND TRIM(IFNULL(s.login_username,'')) = '' AND TRIM(IFNULL(s.login_phone,'')) = ''`,
+    );
+  }
+  if (filters.pinnedOnly) {
+    clauses.push("s.is_pinned = 1");
+  }
   if (filters.dueWithinDays != null && filters.dueWithinDays > 0) {
     const limit = new Date();
     limit.setDate(limit.getDate() + filters.dueWithinDays);
@@ -395,12 +409,13 @@ function buildSubscriptionQuery(filters: {
     );
   }
 
+  const pinPrefix = status === "cancelled" ? "" : "s.is_pinned DESC, ";
   const orderBy =
     status === "cancelled"
       ? "ORDER BY s.cancelled_at DESC, s.updated_at DESC, s.title ASC"
       : filters.recordKind === "free"
-        ? "ORDER BY s.title ASC, s.id ASC"
-        : "ORDER BY s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC";
+        ? `ORDER BY ${pinPrefix}s.title ASC, s.id ASC`
+        : `ORDER BY ${pinPrefix}s.next_due_date IS NULL, s.next_due_date ASC, s.title ASC`;
 
   const sql = `
     SELECT s.*, c.name AS category_name
@@ -459,6 +474,9 @@ export async function loadSubscriptions(filters: {
   dueWithinDays?: number;
   search?: string;
   recordKind?: "all" | "paid" | "free";
+  platformType?: PlatformType;
+  incompleteOnly?: boolean;
+  pinnedOnly?: boolean;
   subscriptionStatus?: "active" | "cancelled" | "all";
 }): Promise<SubscriptionListRow[]> {
   const db = await getDb();
@@ -814,6 +832,165 @@ export async function reactivateSubscription(id: number): Promise<void> {
 export async function deleteSubscription(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM subscriptions WHERE id = $1", [id]);
+}
+
+export async function countIncompleteAccounts(): Promise<number> {
+  const db = await getDb();
+  const row = await db.select<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM subscriptions
+     WHERE cancelled_at IS NULL
+       AND TRIM(IFNULL(account_label,'')) = ''
+       AND TRIM(IFNULL(login_username,'')) = ''
+       AND TRIM(IFNULL(login_phone,'')) = ''`,
+  );
+  return Number(row[0]?.n ?? 0);
+}
+
+export async function loadPinnedSubscriptions(limit: number): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const lim = Math.max(1, Math.min(20, limit));
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL AND s.is_pinned = 1
+     ORDER BY s.title ASC, s.id ASC
+     LIMIT ${lim}`,
+  );
+}
+
+export async function loadSubscriptionsTrialEnding(withinDays: number): Promise<SubscriptionListRow[]> {
+  const db = await getDb();
+  const days = Math.max(1, Math.min(90, withinDays));
+  const today = new Date().toISOString().slice(0, 10);
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + days);
+  const horizonStr = horizon.toISOString().slice(0, 10);
+  return db.select<SubscriptionListRow>(
+    `SELECT s.*, c.name AS category_name
+     FROM subscriptions s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.cancelled_at IS NULL
+       AND s.trial_ends_on IS NOT NULL
+       AND s.trial_ends_on >= $1
+       AND s.trial_ends_on <= $2
+     ORDER BY s.trial_ends_on ASC, s.title ASC`,
+    [today, horizonStr],
+  );
+}
+
+export async function loadAccountTitlesByCreditCard(
+  cardId: number,
+  limit = 6,
+): Promise<Array<{ id: number; title: string }>> {
+  const db = await getDb();
+  const lim = Math.max(1, Math.min(20, limit));
+  return db.select<{ id: number; title: string }>(
+    `SELECT id, title FROM subscriptions
+     WHERE cancelled_at IS NULL AND credit_card_id = $1
+     ORDER BY title ASC
+     LIMIT ${lim}`,
+    [cardId],
+  );
+}
+
+export async function setSubscriptionPinned(id: number, pinned: boolean): Promise<void> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.execute("UPDATE subscriptions SET is_pinned = $1, updated_at = $2 WHERE id = $3", [
+    pinned ? 1 : 0,
+    now,
+    id,
+  ]);
+}
+
+function pickMergedText(keep: string | null | undefined, merge: string | null | undefined): string | null {
+  if (keep?.trim()) return keep.trim();
+  if (merge?.trim()) return merge.trim();
+  return null;
+}
+
+function mergeNotesText(keep: string | null, merge: string | null): string | null {
+  const parts = [keep?.trim(), merge?.trim()].filter(Boolean) as string[];
+  return parts.length ? parts.join("\n\n") : null;
+}
+
+function mergeTagsText(a: string | null, b: string | null): string | null {
+  const set = new Set<string>();
+  for (const t of parseTags(a ?? "")) set.add(t);
+  for (const t of parseTags(b ?? "")) set.add(t);
+  const arr = [...set];
+  return arr.length ? arr.join(", ") : null;
+}
+
+function pickMergedPlatform(keep: PlatformType, merge: PlatformType): PlatformType {
+  if (keep === "both" || merge === "both") return "both";
+  if (keep !== "website" && merge !== "website" && keep !== merge) return "both";
+  if (keep !== "website") return keep;
+  if (merge !== "website") return merge;
+  return "website";
+}
+
+/** Merge `mergeId` into `keepId`: moves payments, fills empty fields, deletes duplicate. */
+export async function mergeSubscriptionInto(keepId: number, mergeId: number): Promise<void> {
+  if (keepId === mergeId) throw new Error("merge_same_id");
+  const keep = await getSubscription(keepId);
+  const merge = await getSubscription(mergeId);
+  if (!keep || !merge) throw new Error("merge_not_found");
+  if (keep.cancelled_at || merge.cancelled_at) throw new Error("merge_cancelled");
+
+  const mergedRow = {
+    title: keep.title.trim() || merge.title.trim(),
+    notes: mergeNotesText(keep.notes, merge.notes),
+    website_url: pickMergedText(keep.website_url, merge.website_url),
+    category_id: keep.category_id ?? merge.category_id,
+    billing_model: keep.billing_model,
+    interval_unit: keep.interval_unit ?? merge.interval_unit,
+    interval_months: keep.interval_months ?? merge.interval_months,
+    interval_count: keep.interval_count || merge.interval_count || 1,
+    auto_renew: keep.auto_renew || merge.auto_renew,
+    amount_original: keep.amount_original || merge.amount_original,
+    currency_code: keep.currency_code || merge.currency_code,
+    amount_qar_snapshot: keep.amount_qar_snapshot ?? merge.amount_qar_snapshot,
+    fx_rate_used: keep.fx_rate_used ?? merge.fx_rate_used,
+    fx_quote_at: keep.fx_quote_at ?? merge.fx_quote_at,
+    start_date: pickMergedText(keep.start_date, merge.start_date),
+    next_due_date: keep.next_due_date ?? merge.next_due_date,
+    end_date: pickMergedText(keep.end_date, merge.end_date),
+    is_domain: keep.is_domain || merge.is_domain ? 1 : 0,
+    account_label: pickMergedText(keep.account_label, merge.account_label),
+    credit_card_id: keep.credit_card_id ?? merge.credit_card_id,
+    wallet_method_id: keep.wallet_method_id ?? merge.wallet_method_id,
+    tags: mergeTagsText(keep.tags, merge.tags),
+    trial_ends_on: pickMergedText(keep.trial_ends_on, merge.trial_ends_on),
+    renewal_cancelled: keep.renewal_cancelled || merge.renewal_cancelled ? 1 : 0,
+    platform_type: pickMergedPlatform(keep.platform_type ?? "website", merge.platform_type ?? "website"),
+    login_username: pickMergedText(keep.login_username, merge.login_username),
+    login_phone: pickMergedText(keep.login_phone, merge.login_phone),
+    recovery_contact: pickMergedText(keep.recovery_contact, merge.recovery_contact),
+    recovery_contact_kind: keep.recovery_contact_kind ?? merge.recovery_contact_kind,
+  };
+  const pinned = (keep.is_pinned ?? 0) || (merge.is_pinned ?? 0) ? 1 : 0;
+
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.executeTransaction([
+    {
+      sql: "UPDATE payment_events SET subscription_id = $1 WHERE subscription_id = $2",
+      params: [keepId, mergeId],
+    },
+    {
+      sql: "UPDATE subscription_audit_log SET subscription_id = $1 WHERE subscription_id = $2",
+      params: [keepId, mergeId],
+    },
+  ]);
+  await updateSubscription(keepId, mergedRow);
+  await db.execute("UPDATE subscriptions SET is_pinned = $1, updated_at = $2 WHERE id = $3", [
+    pinned,
+    now,
+    keepId,
+  ]);
+  await deleteSubscription(mergeId);
 }
 
 export async function updateSubscriptionQarSnapshot(

@@ -3,12 +3,14 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   confirmSubscriptionPaid,
+  countIncompleteAccounts,
   loadAllAccountEmails,
   loadDistinctSubscriptionCurrencies,
   loadSubscriptions,
   loadCategories,
   loadTags,
   getPrimaryCurrencyCode,
+  setSubscriptionPinned,
   subscriptionNeedsPaidAttention,
   type AppCurrency,
   type SubscriptionListRow,
@@ -37,6 +39,8 @@ import {
   isFreeAccount,
   type RecordKindFilter,
 } from "../lib/subscriptionKind";
+import type { PlatformType } from "../types";
+import { PinToggleButton } from "../components/PinToggleButton";
 
 type SortKey = "next_due" | "title" | "category" | "amount" | "primary";
 type PageTab = "active" | "deleted";
@@ -87,6 +91,9 @@ export function SubscriptionsListPage() {
   const [emailFilter, setEmailFilter] = useState("");
   const [dueSoon, setDueSoon] = useState(false);
   const [recordKind, setRecordKind] = useState<RecordKindFilter>("all");
+  const [platformFilter, setPlatformFilter] = useState<"" | PlatformType>("");
+  const [incompleteOnly, setIncompleteOnly] = useState(false);
+  const [incompleteCount, setIncompleteCount] = useState(0);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [sortKey, setSortKey] = useState<SortKey>("next_due");
@@ -100,13 +107,15 @@ export function SubscriptionsListPage() {
     setLoading(true);
     try {
       const q = deferredSearch.trim();
-      const [list, cats, tags, curs, prim, mailRows] = await Promise.all([
+      const [list, cats, tags, curs, prim, mailRows, incompleteN] = await Promise.all([
         loadSubscriptions({
           categoryId: catFilter ? parseInt(catFilter, 10) : undefined,
           tagName: tagFilter || undefined,
           currency: curFilter || undefined,
           dueWithinDays: dueSoon ? 30 : undefined,
           recordKind,
+          platformType: platformFilter || undefined,
+          incompleteOnly: incompleteOnly || undefined,
           search: q || undefined,
         }),
         loadCategories(),
@@ -116,6 +125,7 @@ export function SubscriptionsListPage() {
         ),
         getPrimaryCurrencyCode(),
         loadAllAccountEmails(),
+        countIncompleteAccounts(),
       ]);
       setItems(list);
       setCategories(cats);
@@ -123,15 +133,23 @@ export function SubscriptionsListPage() {
       setCurrencyOptions(curs);
       setPrimaryCode(prim);
       setEmails(mailRows);
+      setIncompleteCount(incompleteN);
     } finally {
       setLoading(false);
     }
-  }, [catFilter, tagFilter, curFilter, dueSoon, recordKind, deferredSearch, pageTab]);
+  }, [catFilter, tagFilter, curFilter, dueSoon, recordKind, platformFilter, incompleteOnly, deferredSearch, pageTab]);
+
+  async function togglePin(id: number, pinned: boolean) {
+    await setSubscriptionPinned(id, !pinned);
+    void reload();
+  }
 
   const sortedItems = useMemo(() => {
     const arr = [...items];
     const mul = sortDir === "asc" ? 1 : -1;
     arr.sort((a, b) => {
+      const pinDiff = (b.is_pinned ?? 0) - (a.is_pinned ?? 0);
+      if (pinDiff !== 0) return pinDiff;
       switch (sortKey) {
         case "next_due":
           if (!a.next_due_date && !b.next_due_date) return 0;
@@ -282,6 +300,19 @@ export function SubscriptionsListPage() {
         </div>
       ) : (
         <>
+          {incompleteCount > 0 ? (
+            <div className="sk-callout-muted flex flex-wrap items-center justify-between gap-2 text-sm">
+              <p>{t("accounts.incompleteBanner", { count: incompleteCount })}</p>
+              <button
+                type="button"
+                className={`dash-chip ${incompleteOnly ? "dash-chip-active" : "dash-chip-idle"}`}
+                onClick={() => setIncompleteOnly((v) => !v)}
+              >
+                {t("accounts.incompleteFilter")}
+              </button>
+            </div>
+          ) : null}
+
           <div className="dash-accounts-sticky-top">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <label className="dash-search max-w-xl flex-1">
@@ -394,6 +425,28 @@ export function SubscriptionsListPage() {
                 </select>
               </div>
               <div>
+                <span className="sk-label">{t("accounts.filterPlatform")}</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["", t("accounts.filterPlatformAll")] as const,
+                      ["website", t("platform.website")] as const,
+                      ["app", t("platform.app")] as const,
+                      ["both", t("platform.both")] as const,
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id || "all"}
+                      type="button"
+                      className={`dash-chip ${platformFilter === id ? "dash-chip-active" : "dash-chip-idle"}`}
+                      onClick={() => setPlatformFilter(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <span className="sk-label">{t("list.recordKind")}</span>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {(
@@ -491,6 +544,11 @@ export function SubscriptionsListPage() {
                     }}
                   >
                     <div className="flex min-w-0 items-center gap-2 lg:col-span-1">
+                      <PinToggleButton
+                        pinned={Boolean(s.is_pinned)}
+                        size="sm"
+                        onToggle={() => void togglePin(s.id, Boolean(s.is_pinned))}
+                      />
                       {s.website_url?.trim() ? (
                         <SiteFavicon websiteUrl={s.website_url} size="sm" className="size-7 shrink-0" />
                       ) : (
@@ -501,6 +559,9 @@ export function SubscriptionsListPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                           <span className="truncate text-sm font-medium text-cream-950">{s.title}</span>
+                          {s.is_pinned ? (
+                            <span className="dash-tag shrink-0 text-[10px]">{t("accounts.pinnedBadge")}</span>
+                          ) : null}
                           {s.category_name ? (
                             <span className={`dash-tag shrink-0 ${tagClass}`}>{s.category_name}</span>
                           ) : null}

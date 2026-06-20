@@ -74,6 +74,7 @@ function createTestDatabase(): Database.Database {
       login_phone TEXT,
       recovery_contact TEXT,
       recovery_contact_kind TEXT,
+      is_pinned INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -573,7 +574,7 @@ describe("export payload shape", () => {
   it("includes export metadata", () => {
     seedDeviceA(db);
     const payload = buildBackupPayloadFromDatabase(db, "full");
-    expect(payload.exportVersion).toBe(7);
+    expect(payload.exportVersion).toBe(8);
     expect(payload.exportScope).toBe("full");
     expect(payload.appVersion).toBe("3.0.0-test");
     expect((payload.subscriptions[0] as BackupPayload["subscriptions"][0] & { title: string }).title).toBe(

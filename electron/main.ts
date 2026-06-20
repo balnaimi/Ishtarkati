@@ -615,6 +615,18 @@ function runMigrations(database: Database.Database): void {
     }
     database.prepare("UPDATE schema_version SET version = 15").run();
   }
+
+  if (version < 16) {
+    if (sqliteTableExists(database, "subscriptions")) {
+      const cols = database.pragma("table_info(subscriptions)") as { name: string }[];
+      if (!cols.some((c) => c.name === "is_pinned")) {
+        database.exec(
+          "ALTER TABLE subscriptions ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0",
+        );
+      }
+    }
+    database.prepare("UPDATE schema_version SET version = 16").run();
+  }
 }
 
 const PIN_SALT_KEY = "app_pin_salt";

@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.37.0] - 2026-06-20
+
+### Added
+- Accounts list: filter by platform type (website / app / both) and «Incomplete» filter for accounts missing login identity; banner shows count.
+- Pin accounts (★) — pinned accounts sort to the top and appear on Home under «Pinned accounts».
+- Home «Needs your attention»: trial ending within 7 days; expiring cards show linked account names.
+- Account detail: merge similar duplicate accounts (payments move, fields combine).
 ## [4.36.3] - 2026-06-20
 
 ### Fixed

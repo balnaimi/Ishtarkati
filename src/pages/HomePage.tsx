@@ -5,11 +5,14 @@ import { formatUiError } from "../lib/uiErrors";
 import {
   confirmSubscriptionPaid,
   getSetting,
+  loadAccountTitlesByCreditCard,
   loadHomePaymentMethodsStats,
+  loadPinnedSubscriptions,
   loadSubscriptions,
   loadSubscriptionsDueSoon,
   loadSubscriptionsNeedingAttention,
   loadSubscriptionsRecent,
+  loadSubscriptionsTrialEnding,
   MONTHLY_BUDGET_LIMIT_KEY,
   statsSummary,
   type HomeCardStat,
@@ -17,7 +20,8 @@ import {
 } from "../db/repo";
 import { StatsGridSkeleton } from "../components/LoadingSkeleton";
 import { BudgetBanner } from "../components/BudgetBanner";
-import { HomeAttentionPanel } from "../components/HomeAttentionPanel";
+import { HomeAttentionPanel, type ExpiringCardRow } from "../components/HomeAttentionPanel";
+import { HomePinnedAccountsPanel } from "../components/HomePinnedAccountsPanel";
 import { HomeRecentAccountsPanel } from "../components/HomeRecentAccountsPanel";
 import { HomeCashflowCompact } from "../components/HomeCashflowCompact";
 import { HomePaymentsSnapshot } from "../components/HomePaymentsSnapshot";
@@ -65,6 +69,9 @@ export function HomePage() {
   const [dueToday, setDueToday] = useState<SubscriptionListRow[]>([]);
   const [dueSoonPool, setDueSoonPool] = useState<SubscriptionListRow[]>([]);
   const [recentAccounts, setRecentAccounts] = useState<SubscriptionListRow[]>([]);
+  const [pinnedAccounts, setPinnedAccounts] = useState<SubscriptionListRow[]>([]);
+  const [trialEnding, setTrialEnding] = useState<SubscriptionListRow[]>([]);
+  const [expiringCardsDetailed, setExpiringCardsDetailed] = useState<ExpiringCardRow[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [budgetLimitRaw, setBudgetLimitRaw] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +79,7 @@ export function HomePage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [sum, pay, today, soon, budgetRaw, active, recent] = await Promise.all([
+      const [sum, pay, today, soon, budgetRaw, active, recent, pinned, trials] = await Promise.all([
         statsSummary(),
         loadHomePaymentMethodsStats(),
         loadSubscriptionsNeedingAttention(),
@@ -80,6 +87,8 @@ export function HomePage() {
         getSetting(MONTHLY_BUDGET_LIMIT_KEY),
         loadSubscriptions({}),
         loadSubscriptionsRecent(6),
+        loadPinnedSubscriptions(8),
+        loadSubscriptionsTrialEnding(7),
       ]);
       setSummary(sum);
       setPaymentStats(pay);
@@ -88,6 +97,16 @@ export function HomePage() {
       setBudgetLimitRaw(budgetRaw);
       setActiveCount(active.length);
       setRecentAccounts(recent);
+      setPinnedAccounts(pinned);
+      setTrialEnding(trials);
+      const expiring = pickExpiringCards(pay.cards);
+      const withLinked = await Promise.all(
+        expiring.map(async (c) => ({
+          ...c,
+          linkedAccounts: await loadAccountTitlesByCreditCard(c.id),
+        })),
+      );
+      setExpiringCardsDetailed(withLinked);
     } finally {
       setLoading(false);
     }
@@ -125,10 +144,7 @@ export function HomePage() {
     () => dueSoonPool.filter((s) => isDueSoonSub(s, dueTodayIds)).slice(0, 8),
     [dueSoonPool, dueTodayIds],
   );
-  const expiringCards = useMemo(
-    () => (paymentStats ? pickExpiringCards(paymentStats.cards) : []),
-    [paymentStats],
-  );
+  const expiringCards = expiringCardsDetailed;
 
   return (
     <div className="dash-home space-y-4">
@@ -185,9 +201,16 @@ export function HomePage() {
             <HomeAttentionPanel
               dueToday={dueToday}
               dueSoon={dueSoon}
+              trialEnding={trialEnding}
               expiringCards={expiringCards}
               onMarkPaid={(e, id) => void onConfirmPaid(e, id)}
             />
+          )}
+
+          {loading ? (
+            <StatsGridSkeleton />
+          ) : (
+            <HomePinnedAccountsPanel accounts={pinnedAccounts} />
           )}
 
           {loading ? (

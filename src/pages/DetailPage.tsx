@@ -41,6 +41,7 @@ import {
 } from "../lib/subscriptionKind";
 import { platformTypeI18nKey, recoveryKindI18nKey } from "../lib/platformIdentity";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { AccountMergePanel, AccountPinControl } from "../components/AccountMergePanel";
 import { effectiveRenewalSteps } from "../lib/paymentRenewal";
 
 function renewalStepUnitWord(t: TFunction, iu: IntervalUnit | null): string {
@@ -486,6 +487,7 @@ export function DetailPage() {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <AccountPinControl sub={sub} onChanged={() => void reload()} />
           <Link to={`/sub/${sub.id}/edit`} className="sk-btn-secondary text-sm">
             {t("common.edit")}
           </Link>
@@ -541,6 +543,8 @@ export function DetailPage() {
           <p className="text-cream-800 leading-relaxed">{sub.notes}</p>
         </div>
       ) : null}
+
+      <AccountMergePanel sub={sub} onChanged={() => void reload()} />
 
       {!free ? (
       <>
