@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.36.3] - 2026-06-20
+
+### Fixed
+- Account detail: removed broken «home.openAccounts» link from the free/paid hint box; hints now reference the action buttons already on the page.
 ## [4.36.2] - 2026-06-20
 
 ### Changed

@@ -520,6 +520,12 @@ export function DetailPage() {
         </div>
       </div>
 
+      {!sub.cancelled_at ? (
+        <div className="sk-callout-muted text-sm">
+          <p>{free ? t("detail.freeAccountHint") : t("detail.paidAccountHint")}</p>
+        </div>
+      ) : null}
+
       {!free && sub.next_due_date && !sub.cancelled_at ? (
         <div className="sk-card space-y-3">
           <h3 className="font-semibold text-cream-900">{t("detail.dueProgressTitle")}</h3>
@@ -533,15 +539,6 @@ export function DetailPage() {
             {t("form.notes")}
           </h3>
           <p className="text-cream-800 leading-relaxed">{sub.notes}</p>
-        </div>
-      ) : null}
-
-      {!sub.cancelled_at ? (
-        <div className="sk-callout-muted text-sm">
-          <p>{free ? t("detail.freeAccountHint") : t("detail.paidAccountHint")}</p>
-          <Link to="/accounts" className="mt-2 inline-block font-medium text-sage-800 underline">
-            {t("home.openAccounts")}
-          </Link>
         </div>
       ) : null}
 

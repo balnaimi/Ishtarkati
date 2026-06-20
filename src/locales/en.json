@@ -441,7 +441,7 @@
     "freeEmail": "Email",
     "freePurposeTitle": "Notes",
     "freeCreatedAt": "Created on",
-    "freeAccountHint": "Your account is still on the site with no current payment. To enable payment use «Enable payment for account» or change the record type.",
+    "freeAccountHint": "Your account is still on the site with no current payment. Use «Enable payment for account» or «Edit» to change the record type.",
     "paidAccountHint": "This account is linked to payment. If you stopped payment tracking but your account remains on the site, use «Stop payment tracking — keep account».",
     "copyEmail": "Copy email",
     "copyUsername": "Copy username",
