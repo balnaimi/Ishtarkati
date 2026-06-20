@@ -27,6 +27,13 @@ export function accountPaymentStatusI18nKey(status: AccountPaymentStatus): strin
   return "accounts.statusRecurring";
 }
 
+/** Tailwind classes for payment-status chips (list + detail). */
+export function accountPaymentBadgeClass(status: AccountPaymentStatus): string {
+  if (status === "free") return "bg-cream-200/90 text-cream-800";
+  if (status === "one_time") return "bg-walnut-100/90 text-walnut-800";
+  return "bg-sage-100/90 text-sage-900";
+}
+
 export function billingModelI18nKey(model: string): string {
   if (model === "free_account") return "billing.free_account";
   if (model === "one_time") return "billing.one_time";

@@ -35,6 +35,7 @@ import { parseTags } from "../lib/tags";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
+  accountPaymentBadgeClass,
   billingModelI18nKey,
   isFreeAccount,
   type RecordKindFilter,
@@ -64,9 +65,7 @@ function progressInput(s: SubscriptionListRow): DueProgressInput {
 }
 
 function payBadgeClass(status: ReturnType<typeof accountPaymentStatus>): string {
-  if (status === "free") return "bg-cream-200/90 text-cream-800";
-  if (status === "one_time") return "bg-walnut-100/90 text-walnut-800";
-  return "bg-sage-100/90 text-sage-900";
+  return accountPaymentBadgeClass(status);
 }
 
 /** Unified accounts list with due progress bar. */

@@ -36,6 +36,7 @@ import { displayUrlForUi } from "../lib/siteFavicon";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
+  accountPaymentBadgeClass,
   isFreeAccount,
   isPaidSubscription,
 } from "../lib/subscriptionKind";
@@ -331,7 +332,7 @@ export function DetailPage() {
               <SiteFavicon websiteUrl={sub.website_url} size="lg" className="sm:mt-0.5" />
             ) : null}
             <div className="min-w-0 flex-1 space-y-2 text-start">
-              <h1 className="dash-page-title">{sub.title}</h1>
+              <h1 className="dash-page-title break-words">{sub.title}</h1>
               {sub.cancelled_at ? (
                 <div className="sk-callout-muted text-sm">
                   <p className="font-medium text-cream-900">{t("detail.cancelledBannerTitle")}</p>
@@ -363,14 +364,16 @@ export function DetailPage() {
                   ))}
                 </div>
               ) : null}
-              <p className="text-sm text-cream-700">
-                <span className="rounded-md bg-cream-200/80 px-2 py-0.5 text-xs font-medium text-cream-900">
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <span
+                  className={`dash-tag shrink-0 whitespace-nowrap leading-normal ${accountPaymentBadgeClass(payStatus)}`}
+                >
                   {t(accountPaymentStatusI18nKey(payStatus))}
                 </span>
-                <span className="ms-2 rounded-md bg-sage-100/90 px-2 py-0.5 text-xs font-medium text-sage-900">
+                <span className="dash-tag dash-tag-teal shrink-0 whitespace-nowrap leading-normal">
                   {t(platformTypeI18nKey(sub.platform_type ?? "website"))}
                 </span>
-              </p>
+              </div>
               {sub.login_username?.trim() ? (
                 <p className="text-sm text-cream-700" dir="ltr">
                   {t("detail.loginUsername")}: {sub.login_username.trim()}

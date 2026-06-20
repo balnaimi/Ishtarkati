@@ -844,7 +844,7 @@ body {
 }
 
 .dash-tag {
-  @apply inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold;
+  @apply inline-flex max-w-full items-center rounded-md px-2.5 py-1 text-xs font-semibold leading-normal;
 }
 
 .dash-tag-violet {

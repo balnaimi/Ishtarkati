@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.37.1] - 2026-06-20
+
+### Fixed
+- Account detail: payment type and platform badges no longer clip Arabic labels (flex wrap, readable chip size).
 ## [4.37.0] - 2026-06-20
 
 ### Added
