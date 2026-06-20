@@ -63,7 +63,7 @@ export function AboutDialog({ open, onClose }: AboutDialogProps) {
             {t("about.viewSource")}
           </button>
           <button type="button" className="sk-btn-primary flex-1" onClick={onClose}>
-            {t("common.ok")}
+            {t("common.close")}
           </button>
         </div>
       </div>

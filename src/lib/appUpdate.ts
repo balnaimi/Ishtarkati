@@ -1,5 +1,11 @@
 const DISMISS_KEY = "ishtarkati_update_dismiss";
 
+/** Background retry delays after a failed check (ms), then capped at the last value. */
+export const UPDATE_RETRY_DELAYS_MS = [30_000, 60_000, 2 * 60_000, 5 * 60_000] as const;
+
+/** Regular poll interval when checks succeed or after backoff is exhausted. */
+export const UPDATE_POLL_MS = 5 * 60 * 1000;
+
 export type UpdateCheckStatus = "idle" | "checking" | "current" | "available" | "error";
 
 export interface UpdateCheckState {

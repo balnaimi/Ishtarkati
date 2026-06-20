@@ -153,7 +153,11 @@ export function Layout() {
               updateState.status === "available" ? "text-violet-600 dark:text-violet-300" : ""
             }`}
             onClick={() => {
-              if (updateState.status === "idle" || updateState.status === "checking") {
+              if (
+                updateState.status === "idle" ||
+                updateState.status === "checking" ||
+                updateState.status === "error"
+              ) {
                 void check().then(() => openDialog());
               } else {
                 openDialog();

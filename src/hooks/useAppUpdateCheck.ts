@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { APP_VERSION } from "../version";
 import { formatUiError } from "../lib/uiErrors";
@@ -6,18 +6,41 @@ import {
   dismissUpdate,
   fetchLocalizedReleaseNotes,
   isUpdateDismissed,
+  UPDATE_POLL_MS,
+  UPDATE_RETRY_DELAYS_MS,
   type UpdateCheckState,
 } from "../lib/appUpdate";
-
-const UPDATE_POLL_MS = 5 * 60 * 1000;
 
 export function useAppUpdateCheck() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<UpdateCheckState>({ status: "idle" });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const inFlightRef = useRef(false);
+  const retryAttemptRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
+
+  const clearRetryTimer = useCallback(() => {
+    if (retryTimerRef.current != null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleRetry = useCallback(
+    (run: () => void) => {
+      clearRetryTimer();
+      const idx = Math.min(retryAttemptRef.current, UPDATE_RETRY_DELAYS_MS.length - 1);
+      const delay = UPDATE_RETRY_DELAYS_MS[idx];
+      retryAttemptRef.current += 1;
+      retryTimerRef.current = window.setTimeout(run, delay);
+    },
+    [clearRetryTimer],
+  );
 
   const check = useCallback(
     async (opts?: { autoPrompt?: boolean; silent?: boolean }) => {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       if (!opts?.silent) {
         setState((s) => ({ ...s, status: "checking", error: undefined }));
       }
@@ -27,8 +50,15 @@ export function useAppUpdateCheck() {
           if (!opts?.silent) {
             setState({ status: "error", error: r.error });
           }
+          scheduleRetry(() => {
+            void check({ autoPrompt: true, silent: true });
+          });
           return;
         }
+
+        retryAttemptRef.current = 0;
+        clearRetryTimer();
+
         const localized = await fetchLocalizedReleaseNotes(
           r.latest,
           i18n.language,
@@ -50,18 +80,27 @@ export function useAppUpdateCheck() {
         if (!opts?.silent) {
           setState({ status: "error", error: formatUiError(t, e) });
         }
+        scheduleRetry(() => {
+          void check({ autoPrompt: true, silent: true });
+        });
+      } finally {
+        inFlightRef.current = false;
       }
     },
-    [i18n.language, t],
+    [clearRetryTimer, i18n.language, scheduleRetry, t],
   );
 
   useEffect(() => {
     void check({ autoPrompt: true });
-    const timer = window.setInterval(() => {
+    const pollTimer = window.setInterval(() => {
+      retryAttemptRef.current = 0;
       void check({ autoPrompt: true, silent: true });
     }, UPDATE_POLL_MS);
-    return () => window.clearInterval(timer);
-  }, [check]);
+    return () => {
+      window.clearInterval(pollTimer);
+      clearRetryTimer();
+    };
+  }, [check, clearRetryTimer]);
 
   const dismissDialog = useCallback(() => {
     if (state.latest) dismissUpdate(state.latest);

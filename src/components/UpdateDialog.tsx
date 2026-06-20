@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatReleaseNotesBody } from "../lib/appUpdate";
 import type { UpdateCheckState } from "../lib/appUpdate";
+import { formatUiError } from "../lib/uiErrors";
 
 interface UpdateDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function UpdateDialog({
 
   const lines = state.notes ? formatReleaseNotesBody(state.notes) : [];
   const hasUpdate = state.status === "available" && state.latest;
+  const hasError = state.status === "error";
 
   async function openDownload() {
     const url = state.downloadUrl ?? state.releaseUrl;
@@ -43,11 +45,18 @@ export function UpdateDialog({
       >
         <div className="border-b border-cream-400/60 px-5 py-4">
           <h2 id="update-dialog-title" className="text-lg font-semibold text-cream-950">
-            {hasUpdate
-              ? t("updates.dialogTitle", { version: state.latest })
-              : t("updates.dialogCurrentTitle", { version: currentVersion })}
+            {hasError
+              ? t("updates.dialogErrorTitle")
+              : hasUpdate
+                ? t("updates.dialogTitle", { version: state.latest })
+                : t("updates.dialogCurrentTitle", { version: currentVersion })}
           </h2>
-          {hasUpdate ? (
+          {hasError ? (
+            <p className="mt-1 text-sm text-cream-700">
+              {t("updates.dialogErrorBody")}
+              {state.error ? ` — ${formatUiError(t, state.error)}` : ""}
+            </p>
+          ) : hasUpdate ? (
             <p className="mt-1 text-sm text-cream-700">
               {t("updates.dialogSubtitle", { current: currentVersion, latest: state.latest })}
             </p>
@@ -104,7 +113,7 @@ export function UpdateDialog({
             </>
           ) : (
             <button type="button" className="sk-btn-primary" onClick={onClose}>
-              {t("common.ok")}
+              {hasError ? t("common.close") : t("common.ok")}
             </button>
           )}
         </div>

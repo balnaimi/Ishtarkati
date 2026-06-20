@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.36.0] - 2026-06-20
+
+### Fixed
+- Update check retries automatically after network or server failures (30s → 1m → 2m → 5m) instead of stopping on the first error; a successful background retry still opens the update prompt when a release is available.
+
+### Changed
+- About dialog: «Close» instead of «OK».
 ## [4.35.0] - 2026-06-20
 
 ### Changed
