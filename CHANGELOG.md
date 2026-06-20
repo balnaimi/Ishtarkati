@@ -8,6 +8,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.35.0] - 2026-06-20
+
+### Changed
+- App-wide copy: «subscription» → «account» in buttons, lists, reminders, and settings (AR/EN).
+- Add/edit account form: «Why this account?» renamed to «Notes» with a general-purpose placeholder for any details you want to remember.
 ## [4.34.0] - 2026-06-20
 
 ### Added

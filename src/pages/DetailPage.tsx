@@ -530,7 +530,7 @@ export function DetailPage() {
       {sub.notes ? (
         <div className="sk-card space-y-2">
           <h3 className="font-semibold text-cream-900">
-            {free ? t("detail.freePurposeTitle") : t("form.notes")}
+            {t("form.notes")}
           </h3>
           <p className="text-cream-800 leading-relaxed">{sub.notes}</p>
         </div>

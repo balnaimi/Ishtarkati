@@ -515,14 +515,14 @@ export function SubscriptionForm({
       </div>
 
       <div>
-        <label className="sk-label">{t("form.freePurpose")}</label>
+        <label className="sk-label">{t("form.notes")}</label>
         <textarea
           className="sk-textarea"
           value={v.notes}
           onChange={(e) => setField("notes", e.target.value)}
-          placeholder={t("form.freePurposePlaceholder")}
+          placeholder={t("form.notesPlaceholder")}
         />
-        <p className="mt-1.5 text-xs text-cream-600">{t("form.freePurposeHint")}</p>
+        <p className="mt-1.5 text-xs text-cream-600">{t("form.notesHint")}</p>
       </div>
 
       <div className="space-y-3">
