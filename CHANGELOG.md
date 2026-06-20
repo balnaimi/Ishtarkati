@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.36.1] - 2026-06-20
+
+### Changed
+- Add account form (AR): login email/phone field labels simplified to «Email (optional)» / «Phone (optional)».
 ## [4.36.0] - 2026-06-20
 
 ### Fixed
