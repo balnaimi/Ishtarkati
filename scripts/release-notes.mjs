@@ -110,10 +110,22 @@ export function writeReleaseNotesFile(version) {
 
   const arPending = join(notesDir, "ar-pending.md");
   const arOut = join(notesDir, `${tag}.ar.md`);
-  if (existsSync(arPending) && !existsSync(arOut)) {
-    const arTemplate = readFileSync(arPending, "utf8").replaceAll("{{version}}", version);
-    writeFileSync(arOut, arTemplate.endsWith("\n") ? arTemplate : `${arTemplate}\n`);
-    console.log(`[release-notes] wrote ${arOut}`);
+  if (existsSync(arPending)) {
+    const pendingRaw = readFileSync(arPending, "utf8");
+    const pendingBody = pendingRaw.replace(/^#[^\n]*\n+/, "").trim();
+    if (hasSubstance(pendingBody)) {
+      const arTemplate = pendingRaw.replaceAll("{{version}}", version);
+      writeFileSync(arOut, arTemplate.endsWith("\n") ? arTemplate : `${arTemplate}\n`);
+      console.log(`[release-notes] wrote ${arOut} (from ar-pending.md)`);
+      writeFileSync(
+        arPending,
+        `# حساباتي {{version}}\n\n<!-- قبل npm run build:release: أضف نقاط ### Added / Changed / Fixed بالعربية (لنافذة التحديث). -->\n`,
+      );
+    } else if (!existsSync(arOut)) {
+      console.warn(
+        `[release-notes] ar-pending.md has no bullets — Arabic update dialog will use English for ${version}.`,
+      );
+    }
   }
 
   return outPath;

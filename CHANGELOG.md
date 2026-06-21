@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.42.1] - 2026-06-21
+
+### Fixed
+- Update dialog (Arabic): release notes for v4.42.0 showed the previous version's changes; corrected `v4.42.0.ar.md` and fetch Arabic notes from `main` so translation fixes apply without retagging.
+
+### Changed
+- Release ship: `ar-pending.md` overwrites the version's `.ar.md` when it has bullets, then resets the pending file for the next release.
 ## [4.42.0] - 2026-06-21
 
 ### Added

@@ -10,7 +10,7 @@ End users read **what changed** on each GitHub Release. Do not ship a version wi
 ## Language
 
 - **`CHANGELOG.md`**, **`release-notes/vX.Y.Z.md`**, and **GitHub Release bodies** are **English only**.
-- Arabic copy lives only in `src/locales/ar.json` (and other locale files), not in release docs.
+- Arabic update-dialog copy: fill **`release-notes/ar-pending.md`** before `npm run build:release` (ship writes `vX.Y.Z.ar.md` and clears pending). UI strings stay in `src/locales/ar.json`.
 
 ## Before `npm run build:release`
 

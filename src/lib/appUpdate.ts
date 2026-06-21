@@ -25,7 +25,7 @@ export async function fetchLocalizedReleaseNotes(
 ): Promise<{ text: string; locale: string }> {
   if (locale.startsWith("ar")) {
     try {
-      const url = `https://raw.githubusercontent.com/balnaimi/Ishtarkati/v${version}/release-notes/v${version}.ar.md`;
+      const url = `https://raw.githubusercontent.com/balnaimi/Ishtarkati/main/release-notes/v${version}.ar.md`;
       const res = await fetch(url, { headers: { "User-Agent": "Ishtarkati" } });
       if (res.ok) {
         const text = (await res.text()).trim();
