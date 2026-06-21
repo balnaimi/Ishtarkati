@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyBackupImport, parseBackupJson } from "./backup";
 import {
   AUTO_BACKUP_PREFIX,
-  LATEST_BACKUP_FILENAME,
   autoBackupSkipReason,
   dbGetSetting,
   flushScheduledBackupForTests,
@@ -17,6 +16,13 @@ import {
   runManualAutoBackup,
   scheduleBackupAfterDataChange,
 } from "./autoBackup";
+import {
+  autoBackupStampedFilename,
+  latestBackupFilename,
+  manualBackupStampedFilename,
+} from "./deviceLabel";
+
+const TEST_DEVICE = "test-pc";
 
 vi.mock("electron", () => ({
   app: { getVersion: () => "4.20.0-test" },
@@ -124,7 +130,7 @@ function seedSampleData(db: Database.Database): void {
 function setAutoBackupSettings(
   db: Database.Database,
   dir: string | null,
-  opts?: { enabled?: boolean; days?: string; lastAt?: string },
+  opts?: { enabled?: boolean; days?: string; lastAt?: string; deviceName?: string },
 ): void {
   db.prepare(
     "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -144,6 +150,9 @@ function setAutoBackupSettings(
       "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     ).run("last_auto_backup_at", opts.lastAt);
   }
+  db.prepare(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+  ).run("device_name", opts?.deviceName ?? TEST_DEVICE);
 }
 
 describe("isMutatingSql", () => {
@@ -211,11 +220,11 @@ describe("runChangeTriggeredBackup", () => {
     setAutoBackupSettings(db, tmpDir);
     const result = runChangeTriggeredBackup(db, { now: NOW_MS, fileStamp: STAMP });
     expect(result.ran).toBe(true);
-    expect(result.path).toBe(path.join(tmpDir, `${AUTO_BACKUP_PREFIX}${STAMP}.json`));
+    expect(result.path).toBe(path.join(tmpDir, autoBackupStampedFilename(TEST_DEVICE, STAMP)));
 
     const files = fs.readdirSync(tmpDir).sort();
-    expect(files).toContain(LATEST_BACKUP_FILENAME);
-    expect(files).toContain(`${AUTO_BACKUP_PREFIX}${STAMP}.json`);
+    expect(files).toContain(latestBackupFilename(TEST_DEVICE));
+    expect(files).toContain(autoBackupStampedFilename(TEST_DEVICE, STAMP));
 
     const parsed = parseBackupJson(fs.readFileSync(result.path!, "utf8"));
     expect(parsed.exportVersion).toBe(8);
@@ -266,24 +275,29 @@ describe("scheduleBackupAfterDataChange", () => {
     scheduleBackupAfterDataChange(db);
     expect(fs.readdirSync(tmpDir)).toHaveLength(0);
     vi.advanceTimersByTime(2_000);
-    expect(fs.readdirSync(tmpDir)).toContain(LATEST_BACKUP_FILENAME);
+    expect(fs.readdirSync(tmpDir)).toContain(latestBackupFilename(TEST_DEVICE));
   });
 });
 
 describe("pruneAutoBackupHistory", () => {
-  it("removes auto backups older than retention", () => {
+  it("removes auto backups older than retention for this device only", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ishtarkati-prune-"));
+    const label = "home-pc";
     try {
-      const oldFile = path.join(dir, `${AUTO_BACKUP_PREFIX}old.json`);
-      const newFile = path.join(dir, `${AUTO_BACKUP_PREFIX}new.json`);
+      const oldFile = path.join(dir, autoBackupStampedFilename(label, "old"));
+      const newFile = path.join(dir, autoBackupStampedFilename(label, "new"));
+      const otherDevice = path.join(dir, autoBackupStampedFilename("work-laptop", "old"));
       fs.writeFileSync(oldFile, "{}", "utf8");
       fs.writeFileSync(newFile, "{}", "utf8");
+      fs.writeFileSync(otherDevice, "{}", "utf8");
       const oldTime = NOW_MS - 40 * 86400000;
       fs.utimesSync(oldFile, oldTime / 1000, oldTime / 1000);
-      const removed = pruneAutoBackupHistory(dir, 30, NOW_MS);
+      fs.utimesSync(otherDevice, oldTime / 1000, oldTime / 1000);
+      const removed = pruneAutoBackupHistory(dir, 30, label, NOW_MS);
       expect(removed).toBe(1);
       expect(fs.existsSync(oldFile)).toBe(false);
       expect(fs.existsSync(newFile)).toBe(true);
+      expect(fs.existsSync(otherDevice)).toBe(true);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -333,8 +347,8 @@ describe("runManualAutoBackup", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.path).toBe(path.join(tmpDir, "ishtarkati-manual-2026-06-07T12-00-00.json"));
-    expect(fs.existsSync(path.join(tmpDir, LATEST_BACKUP_FILENAME))).toBe(true);
+    expect(result.path).toBe(path.join(tmpDir, manualBackupStampedFilename(TEST_DEVICE, STAMP)));
+    expect(fs.existsSync(path.join(tmpDir, latestBackupFilename(TEST_DEVICE)))).toBe(true);
     const parsed = parseBackupJson(fs.readFileSync(result.path, "utf8"));
 
     const restored = createMinimalDb();

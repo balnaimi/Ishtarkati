@@ -55,6 +55,9 @@ export function ImportBackupDialog({
               when: preview.exportedAt ? preview.exportedAt : "—",
             })}
           </li>
+          {preview.deviceLabel ? (
+            <li>{t("backup.previewDeviceLabel", { device: preview.deviceLabel })}</li>
+          ) : null}
         </ul>
 
         <div className="sk-callout-warning text-sm">

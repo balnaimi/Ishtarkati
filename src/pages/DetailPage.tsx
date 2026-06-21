@@ -32,7 +32,7 @@ import type { IntervalUnit } from "../types";
 import { DueProgressBar } from "../components/DueProgressBar";
 import { DualCurrencyAmounts } from "../components/DualCurrencyAmounts";
 import { SiteFavicon } from "../components/SiteFavicon";
-import { displayUrlForUi } from "../lib/siteFavicon";
+import { displayUrlForUi, websiteUrlForHref } from "../lib/siteFavicon";
 import {
   accountPaymentStatus,
   accountPaymentStatusI18nKey,
@@ -414,7 +414,7 @@ export function DetailPage() {
               ) : null}
               {sub.website_url ? (
                 <a
-                  href={sub.website_url}
+                  href={websiteUrlForHref(sub.website_url) ?? undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="sk-link-pill"

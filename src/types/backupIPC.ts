@@ -5,6 +5,7 @@ export interface BackupImportPreview {
   exportScope: "full" | "without_settings";
   exportedAt: string;
   backupAppVersion: string;
+  deviceLabel: string | null;
   counts: {
     db: {
       subscriptions: number;

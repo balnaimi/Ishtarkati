@@ -8,6 +8,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.42.0] - 2026-06-21
+
+### Added
+- Settings: optional device name (Arabic or English) included in auto-backup filenames and backup JSON so shared backup folders stay separate per machine.
+- Account form: website URL accepts domains without `https://` — the app adds the scheme on save.
+
+### Changed
+- Auto-backup filenames: `ishtarkati-latest-{device}.json`, `ishtarkati-auto-{device}-{timestamp}.json` (retention prunes only this device's dated files).
 ## [4.41.0] - 2026-06-20
 
 ### Added

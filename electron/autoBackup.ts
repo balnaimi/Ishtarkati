@@ -3,6 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { buildBackupPayloadFromDatabase } from "./backup";
 import {
+  autoBackupHistoryPrefix,
+  autoBackupStampedFilename,
+  latestBackupFilename,
+  manualBackupStampedFilename,
+  resolveDeviceLabelFromDb,
+} from "./deviceLabel";
+import {
   isAutoBackupBusy,
   publishAutoBackupStatus,
   refreshAutoBackupStatusFromDb,
@@ -10,9 +17,13 @@ import {
 
 export { isAutoBackupBusy, refreshAutoBackupStatusFromDb };
 
+export {
+  AUTO_BACKUP_PREFIX,
+  MANUAL_BACKUP_PREFIX,
+} from "./deviceLabel";
+
+/** @deprecated Use latestBackupFilename(deviceLabel) — kept for tests importing the constant shape. */
 export const LATEST_BACKUP_FILENAME = "ishtarkati-latest.json";
-export const AUTO_BACKUP_PREFIX = "ishtarkati-auto-";
-export const MANUAL_BACKUP_PREFIX = "ishtarkati-manual-";
 
 export type AutoBackupResult = { ran: boolean; path?: string; error?: string };
 
@@ -96,12 +107,14 @@ function writeJsonAtomic(filePath: string, json: string): void {
 export function pruneAutoBackupHistory(
   dir: string,
   retentionDays: number,
+  deviceLabel: string,
   now: number = Date.now(),
 ): number {
+  const prefix = autoBackupHistoryPrefix(deviceLabel);
   const cutoff = now - retentionDays * 86400000;
   let removed = 0;
   for (const name of fs.readdirSync(dir)) {
-    if (!name.startsWith(AUTO_BACKUP_PREFIX) || !name.endsWith(".json")) continue;
+    if (!name.startsWith(prefix) || !name.endsWith(".json")) continue;
     const full = path.join(dir, name);
     try {
       const stat = fs.statSync(full);
@@ -127,17 +140,18 @@ export function writeAutoBackupSnapshot(
   backupSideEffects += 1;
   try {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const deviceLabel = resolveDeviceLabelFromDb(database);
     const payload = buildBackupPayloadFromDatabase(database, "full");
     const json = JSON.stringify(payload, null, 2);
-    const latestPath = path.join(dir, LATEST_BACKUP_FILENAME);
+    const latestPath = path.join(dir, latestBackupFilename(deviceLabel));
     writeJsonAtomic(latestPath, json);
 
     let stampedPath = latestPath;
     if (!opts?.latestOnly) {
       const stamp = opts?.fileStamp ?? fileStampFromNow(now);
-      stampedPath = path.join(dir, `${AUTO_BACKUP_PREFIX}${stamp}.json`);
+      stampedPath = path.join(dir, autoBackupStampedFilename(deviceLabel, stamp));
       fs.writeFileSync(stampedPath, json, "utf8");
-      pruneAutoBackupHistory(dir, autoBackupRetentionDays(database), now);
+      pruneAutoBackupHistory(dir, autoBackupRetentionDays(database), deviceLabel, now);
     }
 
     dbSetSetting(database, "last_auto_backup_at", new Date(now).toISOString());
@@ -234,12 +248,13 @@ export function runManualAutoBackup(
   backupSideEffects += 1;
   try {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const deviceLabel = resolveDeviceLabelFromDb(database);
     const stamp = opts?.fileStamp ?? fileStampFromNow(now);
-    const filePath = path.join(dir, `${MANUAL_BACKUP_PREFIX}${stamp}.json`);
+    const filePath = path.join(dir, manualBackupStampedFilename(deviceLabel, stamp));
     const payload = buildBackupPayloadFromDatabase(database, "full");
     const json = JSON.stringify(payload, null, 2);
     fs.writeFileSync(filePath, json, "utf8");
-    writeJsonAtomic(path.join(dir, LATEST_BACKUP_FILENAME), json);
+    writeJsonAtomic(path.join(dir, latestBackupFilename(deviceLabel)), json);
     dbSetSetting(database, "last_auto_backup_at", new Date(now).toISOString());
     if (autoBackupConfigured(database)) {
       publishAutoBackupStatus("ok");

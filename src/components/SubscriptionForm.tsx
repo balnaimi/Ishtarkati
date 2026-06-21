@@ -409,11 +409,12 @@ export function SubscriptionForm({
           <div>
             <label className="sk-label">{t("form.website")}</label>
             <input
-              type="url"
+              type="text"
               className="sk-input"
+              dir="ltr"
               value={v.website_url}
               onChange={(e) => setField("website_url", e.target.value)}
-              placeholder="https://"
+              placeholder="netflix.com"
             />
             {websiteHost ? (
               <div className="mt-2 flex items-center gap-3 rounded-xl border border-cream-400/90 bg-cream-100/60 px-3 py-2">

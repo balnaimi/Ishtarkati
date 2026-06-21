@@ -1,3 +1,23 @@
+/** Store-friendly URL — prepends https:// when the user omitted a scheme. */
+export function normalizeWebsiteUrlForStorage(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+
+/** Form input — show host/path without protocol for easier editing. */
+export function websiteUrlForFormInput(raw: string | null | undefined): string {
+  const t = raw?.trim();
+  if (!t) return "";
+  return t.replace(/^https?:\/\//i, "");
+}
+
+/** Clickable href — always includes a scheme. */
+export function websiteUrlForHref(raw: string | null | undefined): string | null {
+  return normalizeWebsiteUrlForStorage(raw);
+}
+
 /** Extract hostname from a user-entered URL (adds https if missing). */
 export function hostnameFromWebsiteUrl(raw: string | null | undefined): string | null {
   const t = raw?.trim();

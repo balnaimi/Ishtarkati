@@ -2,6 +2,7 @@ import { app, dialog, ipcMain, BrowserWindow } from "electron";
 import fs from "node:fs";
 import type Database from "better-sqlite3";
 import { electronUiStrings } from "./uiLocale";
+import { resolveDeviceLabelFromDb } from "./deviceLabel";
 
 export const BACKUP_EXPORT_VERSION = 8;
 
@@ -12,6 +13,8 @@ export interface BackupPayload {
   exportScope?: BackupExportScope;
   exportedAt: string;
   appVersion: string;
+  /** User-defined device label at export time (optional for older backups). */
+  deviceLabel?: string;
   categories: unknown[];
   subscriptions: unknown[];
   payment_events: unknown[];
@@ -27,6 +30,7 @@ export interface ImportPreviewDTO {
   exportScope: BackupExportScope;
   exportedAt: string;
   backupAppVersion: string;
+  deviceLabel: string | null;
   counts: {
     db: {
       subscriptions: number;
@@ -120,11 +124,17 @@ function validatePayload(raw: unknown): BackupPayload {
   if (!Array.isArray(subscriptions)) throw new Error("Invalid backup: subscriptions");
   if (!Array.isArray(payment_events)) throw new Error("Invalid backup: payment_events");
   if (!Array.isArray(settings)) throw new Error("Invalid backup: settings");
+  const deviceLabelRaw = raw.deviceLabel;
+  const deviceLabel =
+    typeof deviceLabelRaw === "string" && deviceLabelRaw.trim()
+      ? deviceLabelRaw.trim()
+      : undefined;
   return {
     exportVersion,
     exportScope,
     exportedAt: String(raw.exportedAt ?? ""),
     appVersion: String(raw.appVersion ?? ""),
+    ...(deviceLabel ? { deviceLabel } : {}),
     categories,
     subscriptions,
     payment_events,
@@ -166,12 +176,14 @@ export function buildBackupPayloadFromDatabase(
     .all();
   const credit_cards = database.prepare("SELECT * FROM credit_cards ORDER BY id").all();
   const wallet_methods = database.prepare("SELECT * FROM wallet_methods ORDER BY id").all();
+  const deviceLabel = resolveDeviceLabelFromDb(database);
 
   return {
     exportVersion: BACKUP_EXPORT_VERSION,
     exportScope: scope,
     exportedAt: new Date().toISOString(),
     appVersion: app.getVersion(),
+    deviceLabel,
     categories,
     subscriptions,
     payment_events,
@@ -519,6 +531,7 @@ export function buildImportPreview(
     exportScope: data.exportScope ?? "full",
     exportedAt: data.exportedAt,
     backupAppVersion: data.appVersion,
+    deviceLabel: data.deviceLabel ?? null,
     counts: {
       db: {
         subscriptions: countRow?.s ?? 0,
@@ -1084,7 +1097,8 @@ export function registerBackupIpc(
     if (!w) return { ok: false as const, error: "no-window" };
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const defaultPath = `ishtarkati-backup-${stamp}.json`;
+    const deviceLabel = resolveDeviceLabelFromDb(database);
+    const defaultPath = `ishtarkati-backup-${deviceLabel}-${stamp}.json`;
     const locale = electronUiStrings(database);
     const { filePath, canceled } = await dialog.showSaveDialog(w, {
       title: locale.backupSaveTitle,

@@ -15,6 +15,7 @@ import {
   PRIMARY_CURRENCY_KEY,
   setSetting,
 } from "../db/repo";
+import { DEVICE_NAME_KEY } from "../lib/settingsKeys";
 import { downloadSubscriptionsCsv, downloadSubscriptionsIcs } from "../lib/tableExport";
 import { useFxManager } from "../hooks/useFx";
 import { APP_VERSION } from "../version";
@@ -84,6 +85,7 @@ export function SettingsPage() {
   const [autoBackupOn, setAutoBackupOn] = useState(false);
   const [autoBackupDays, setAutoBackupDays] = useState("30");
   const [autoBackupDir, setAutoBackupDir] = useState("");
+  const [deviceName, setDeviceName] = useState("");
   const [lastAutoBackup, setLastAutoBackup] = useState<string | null>(null);
   const [lastManualBackup, setLastManualBackup] = useState<string | null>(null);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
@@ -144,6 +146,7 @@ export function SettingsPage() {
       setAutoBackupDays(String(Math.max(1, Math.min(90, parseInt(abd ?? "7", 10) || 7))));
       const abDir = await getSetting(AUTO_BACKUP_DIR_KEY);
       setAutoBackupDir(abDir ?? "");
+      setDeviceName((await getSetting(DEVICE_NAME_KEY)) ?? "");
       setLastAutoBackup(await getSetting(LAST_AUTO_BACKUP_AT_KEY));
       setLastManualBackup(await getSetting(LAST_MANUAL_BACKUP_AT_KEY));
       const ca = await getSetting(CLOSE_ACTION_KEY);
@@ -222,6 +225,10 @@ export function SettingsPage() {
     const d = Math.max(1, Math.min(365, parseInt(autoBackupDays, 10) || 30));
     setAutoBackupDays(String(d));
     await setSetting(AUTO_BACKUP_DAYS_KEY, String(d));
+  }
+
+  async function saveDeviceName() {
+    await setSetting(DEVICE_NAME_KEY, deviceName.trim());
   }
 
   async function pickAutoBackupDir() {
@@ -1081,6 +1088,18 @@ export function SettingsPage() {
           <section className="sk-card space-y-4">
             <h3 className="text-base font-semibold text-cream-900">{t("settings.autoBackupTitle")}</h3>
             <p className="text-sm leading-relaxed text-cream-700">{t("settings.autoBackupHint")}</p>
+            <div>
+              <label className="sk-label">{t("settings.deviceName")}</label>
+              <input
+                type="text"
+                className="sk-input mt-1 max-w-md"
+                value={deviceName}
+                onChange={(e) => setDeviceName(e.target.value)}
+                onBlur={() => void saveDeviceName()}
+                placeholder={t("settings.deviceNamePlaceholder")}
+              />
+              <p className="mt-1 text-xs sk-text-hint">{t("settings.deviceNameHint")}</p>
+            </div>
             <label className="flex cursor-pointer items-center gap-2.5 text-sm text-cream-800">
               <input
                 type="checkbox"

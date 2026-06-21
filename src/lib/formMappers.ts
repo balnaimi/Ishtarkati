@@ -2,6 +2,7 @@ import type { SubscriptionFormValues, Subscription, IntervalUnit, BillingModel }
 import { addBillingSteps, formatDateInput, parseDateInput } from "./schedule";
 import { joinTags } from "./tags";
 import { normalizePlatformType, normalizeRecoveryKind } from "./platformIdentity";
+import { normalizeWebsiteUrlForStorage, websiteUrlForFormInput } from "./siteFavicon";
 
 export function defaultFormValues(): SubscriptionFormValues {
   return {
@@ -51,7 +52,7 @@ export function subscriptionToForm(s: Subscription): SubscriptionFormValues {
   return {
     title: s.title,
     notes: s.notes ?? "",
-    website_url: s.website_url ?? "",
+    website_url: websiteUrlForFormInput(s.website_url),
     category_id: s.category_id != null ? String(s.category_id) : "",
     billing_model: s.billing_model as BillingModel,
     interval_unit: (s.interval_unit as IntervalUnit) ?? "",
@@ -151,7 +152,7 @@ export function formToRow(
     return {
       title: v.title.trim(),
       notes: v.notes.trim() || null,
-      website_url: v.website_url.trim() || null,
+      website_url: normalizeWebsiteUrlForStorage(v.website_url),
       category_id: v.category_id ? parseInt(v.category_id, 10) : null,
       billing_model: "free_account",
       interval_unit: null,
@@ -201,7 +202,7 @@ export function formToRow(
   return {
     title: v.title.trim(),
     notes: v.notes.trim() || null,
-    website_url: v.website_url.trim() || null,
+    website_url: normalizeWebsiteUrlForStorage(v.website_url),
     category_id: v.category_id ? parseInt(v.category_id, 10) : null,
     billing_model: v.billing_model,
     interval_unit,
