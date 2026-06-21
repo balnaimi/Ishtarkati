@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.43.0] - 2026-06-21
+
+### Changed
+- Home and Insights: rename unclear «Recurring / متكررة» stat to «Recurring billing / دفع دوري» with a short hint (monthly, yearly renewing payments).
 ## [4.42.1] - 2026-06-21
 
 ### Fixed

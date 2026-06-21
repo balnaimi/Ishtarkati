@@ -158,7 +158,6 @@
     "viewInsights": "Spending & calendar",
     "viewPayments": "Payment methods",
     "statDue30": "Due in 30 days",
-    "statRecurring": "Recurring",
     "topCategories": "Top categories this month",
     "paymentsSnapshot": "Payment methods",
     "paymentsEmpty": "No payment methods yet.",
@@ -539,7 +538,8 @@
     "yearlyFromMonthlyHint": "Equals monthly estimate × 12 based on each account's recurring rate.",
     "byCategory": "By category (monthly estimate)",
     "due30": "Due within 30 days (primary currency)",
-    "subscriptions": "Recurring payment accounts",
+    "recurringAccounts": "Recurring billing",
+    "recurringAccountsHint": "Accounts with renewing payments (monthly, yearly…)",
     "refreshFx": "Update exchange rates from the network",
     "perMonth": "per month"
   },

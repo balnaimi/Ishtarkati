@@ -70,8 +70,9 @@ export function CashflowSummaryGrid({ summary, primaryCode, compact = false }: P
       {!compact ? (
         <>
           <div className="md:col-span-2 sk-card">
-            <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.subscriptions")}</p>
+            <p className="sk-text-hint mb-1 text-sm font-medium">{t("stats.recurringAccounts")}</p>
             <p className="text-sm text-cream-800">{summary.recurringCount}</p>
+            <p className="sk-text-hint mt-1 text-xs">{t("stats.recurringAccountsHint")}</p>
           </div>
           <div className="md:col-span-2 sk-card">
             <p className="sk-text-hint mb-3 text-sm font-medium">{t("insights.byCategoryThisMonth")}</p>

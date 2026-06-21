@@ -187,8 +187,9 @@ export function HomePage() {
             </p>
           </article>
           <article className="dash-home-stat">
-            <p className="dash-stat-label">{t("home.statRecurring")}</p>
+            <p className="dash-stat-label">{t("stats.recurringAccounts")}</p>
             <p className="dash-stat-value">{summary.recurringCount}</p>
+            <p className="mt-0.5 text-[11px] sk-text-hint">{t("stats.recurringAccountsHint")}</p>
           </article>
         </div>
       )}

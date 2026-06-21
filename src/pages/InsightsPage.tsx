@@ -261,8 +261,9 @@ export function InsightsPage() {
                   </p>
                 </article>
                 <article className="dash-home-stat">
-                  <p className="dash-stat-label">{t("stats.subscriptions")}</p>
+                  <p className="dash-stat-label">{t("stats.recurringAccounts")}</p>
                   <p className="dash-stat-value">{summary.recurringCount}</p>
+                  <p className="mt-0.5 text-[11px] sk-text-hint">{t("stats.recurringAccountsHint")}</p>
                 </article>
               </div>
 

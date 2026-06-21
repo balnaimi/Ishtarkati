@@ -158,7 +158,6 @@
     "viewInsights": "المصروفات والتقويم",
     "viewPayments": "طرق الدفع",
     "statDue30": "مستحق خلال ٣٠ يوماً",
-    "statRecurring": "متكررة",
     "topCategories": "أعلى الفئات هذا الشهر",
     "paymentsSnapshot": "طرق الدفع",
     "paymentsEmpty": "لا توجد طرق دفع بعد.",
@@ -539,7 +538,8 @@
     "yearlyFromMonthlyHint": "يساوي التقدير الشهري × ١٢ بناءً على معدّل الدورية لكل حساب.",
     "byCategory": "حسب التصنيف (تقدير شهري)",
     "due30": "مستحق خلال ٣٠ يومًا (بالعملة الأساسية)",
-    "subscriptions": "عدد الحسابات بدفع دوري",
+    "recurringAccounts": "دفع دوري",
+    "recurringAccountsHint": "حسابات يتجدّد دفعها (شهري، سنوي…)",
     "refreshFx": "تحديث أسعار الصرف من الشبكة",
     "perMonth": "شهريًا"
   },
