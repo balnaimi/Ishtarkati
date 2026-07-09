@@ -7,6 +7,7 @@ import {
   parseBackupJson,
   type BackupPayload,
 } from "./backup";
+import { DEVICE_NAME_KEY } from "../src/lib/settingsKeys";
 
 vi.mock("electron", () => ({
   app: { getVersion: () => "3.0.0-test" },
@@ -243,6 +244,50 @@ describe("full backup round-trip (device A → device B)", () => {
         title: string;
       };
       expect(title.title).toBe("Netflix");
+    } finally {
+      deviceB.close();
+    }
+  });
+
+  it("replace preserves local device name when restoring from another device", () => {
+    seedDeviceA(db);
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(DEVICE_NAME_KEY, "Home PC");
+    const payload = buildBackupPayloadFromDatabase(db, "full");
+
+    const deviceB = createTestDatabase();
+    try {
+      deviceB.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(DEVICE_NAME_KEY, "Work Laptop");
+
+      applyBackupImport(deviceB, payload, {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+
+      const row = deviceB.prepare("SELECT value FROM settings WHERE key = ?").get(DEVICE_NAME_KEY) as {
+        value: string;
+      };
+      expect(row.value).toBe("Work Laptop");
+    } finally {
+      deviceB.close();
+    }
+  });
+
+  it("replace does not import device name onto empty database", () => {
+    seedDeviceA(db);
+    db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(DEVICE_NAME_KEY, "Home PC");
+    const payload = buildBackupPayloadFromDatabase(db, "full");
+
+    const deviceB = createTestDatabase();
+    try {
+      applyBackupImport(deviceB, payload, {
+        strategy: "replace",
+        onDuplicateId: "keep_local",
+        onSimilarSubscription: "keep_both",
+      });
+
+      const row = deviceB.prepare("SELECT value FROM settings WHERE key = ?").get(DEVICE_NAME_KEY);
+      expect(row).toBeUndefined();
     } finally {
       deviceB.close();
     }

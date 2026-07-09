@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 
+## [4.43.1] - 2026-07-09
+
+### Fixed
+- Backup restore: device name and other machine-local settings (auto-backup folder, last backup timestamps) are no longer overwritten when restoring a backup from another device.
 ## [4.43.0] - 2026-06-21
 
 ### Changed

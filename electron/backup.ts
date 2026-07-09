@@ -3,6 +3,7 @@ import fs from "node:fs";
 import type Database from "better-sqlite3";
 import { electronUiStrings } from "./uiLocale";
 import { resolveDeviceLabelFromDb } from "./deviceLabel";
+import { DEVICE_LOCAL_SETTINGS_KEYS } from "../src/lib/settingsKeys";
 
 export const BACKUP_EXPORT_VERSION = 8;
 
@@ -719,6 +720,32 @@ function resetBackupTableSequences(database: Database.Database): void {
   resetAutoincrement(database, "wallet_methods");
 }
 
+const deviceLocalSettingsSet = new Set<string>(DEVICE_LOCAL_SETTINGS_KEYS);
+
+function readLocalDeviceSettings(database: Database.Database): Map<string, string> {
+  const preserved = new Map<string, string>();
+  const read = database.prepare("SELECT value FROM settings WHERE key = ?");
+  for (const key of DEVICE_LOCAL_SETTINGS_KEYS) {
+    const row = read.get(key) as { value: string } | undefined;
+    if (row) preserved.set(key, row.value);
+  }
+  return preserved;
+}
+
+function restoreLocalDeviceSettings(
+  database: Database.Database,
+  preserved: Map<string, string>,
+): void {
+  if (preserved.size === 0) return;
+  const upsert = database.prepare(`
+    INSERT INTO settings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `);
+  for (const [key, value] of preserved) {
+    upsert.run(key, value);
+  }
+}
+
 function importIntoDb(database: Database.Database, data: BackupPayload): void {
   const scope = data.exportScope ?? "full";
   const tx = database.transaction(() => {
@@ -741,6 +768,7 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
     database.prepare("DELETE FROM credit_cards").run();
     database.prepare("DELETE FROM categories").run();
     database.prepare("DELETE FROM currencies").run();
+    const localDeviceSettings = readLocalDeviceSettings(database);
     database.prepare("DELETE FROM settings").run();
 
     insertBackupPayloadSnapshot(database, data, false);
@@ -750,8 +778,12 @@ function importIntoDb(database: Database.Database, data: BackupPayload): void {
     );
     for (const row of data.settings) {
       if (!isRecord(row)) throw new Error("Invalid settings row");
-      insSet.run(row.key, row.value);
+      const key = String(row.key);
+      if (deviceLocalSettingsSet.has(key)) continue;
+      insSet.run(key, row.value);
     }
+
+    restoreLocalDeviceSettings(database, localDeviceSettings);
 
     resetBackupTableSequences(database);
   });
